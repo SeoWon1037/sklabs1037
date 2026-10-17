@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    로그인 화면 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dao.UserLoginDao">
+
+    <!-- 이메일로 회원 조회 (탈퇴한 회원 제외) -->
+    <select id="selectUserByEmail"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserLoginVO"
+            resultType="com.sklabs1037.sklabs1037.vo.UserLoginVO">
+        SELECT  ID
+               ,EMAIL
+               ,PASSWORD
+               ,NICKNAME
+               ,ROLE
+          FROM T_USER
+         WHERE 1=1
+           AND EMAIL   = #{email}
+           AND DEL_DAY IS NULL
+
+    </select>
+
+</mapper>

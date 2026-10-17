@@ -3,6 +3,7 @@
 // - 백엔드 API
 //   POST /api/user/login          이메일 로그인 { email, password }
 //   GET  /api/oauth/naver/login   네이버 로그인 (팝업으로 열기)
+//   GET  /api/oauth/kakao/login   카카오 로그인 (팝업으로 열기)
 // - 로그인 성공하면 서버가 세션을 만들고, 브라우저에 번호표 쿠키(JSESSIONID)를 줌
 // ============================================
 import { useEffect, useState } from 'react'
@@ -10,12 +11,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './UserSignUpPage.css'   // 회원가입과 같은 카드 디자인(signup-xxx)을 그대로 사용
 import './UserLoginPage.css'    // 로그인 화면에만 필요한 추가 스타일
 
-// 소셜 로그인 실패 이유 → 화면에 보여줄 문구
+// ★ 소셜 로그인 실패 이유 → 화면에 보여줄 문구 (네이버/카카오 공통)
 const OAUTH_ERROR_MESSAGES = {
-  cancel: '네이버 로그인을 취소했습니다.',
+  cancel: '소셜 로그인을 취소했습니다.',
   invalid: '잘못된 요청입니다. 다시 시도해주세요.',
-  email_exists: '이미 이메일로 가입된 계정입니다. 이메일 로그인을 이용해주세요.',
-  fail: '네이버 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.',
+  email_exists: '이미 다른 방법으로 가입된 이메일입니다. 처음 가입한 방법으로 로그인해주세요.',
+  email_missing: '이메일 제공에 동의해야 가입할 수 있습니다. (인증된 이메일만 가능)',
+  fail: '소셜 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.',
 }
 
 // 팝업 창 크기
@@ -68,25 +70,28 @@ function UserLoginPage() {
   }, [navigate])
 
   // ============================================
-  // 네이버 로그인 버튼 → 팝업 열기
+  // ★ 소셜 로그인 버튼 → 팝업 열기 (provider: 'naver' 또는 'kakao')
   // ============================================
-  const handleNaverLogin = () => {
+  const handleSocialLogin = (provider) => {
 
     setErrorMessage('')
+
+    // 백엔드 주소: /api/oauth/naver/login 또는 /api/oauth/kakao/login
+    const loginUrl = `/api/oauth/${provider}/login`
 
     // 화면 가운데에 팝업 띄우기
     const left = window.screenX + (window.outerWidth - POPUP_WIDTH) / 2
     const top = window.screenY + (window.outerHeight - POPUP_HEIGHT) / 2
 
     const popup = window.open(
-      '/api/oauth/naver/login',
-      'naverLogin',
+      loginUrl,
+      `${provider}Login`,
       `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},left=${left},top=${top}`
     )
 
     // 팝업이 차단됐으면 → 현재 창에서 이동하는 방식으로
     if (!popup) {
-      window.location.href = '/api/oauth/naver/login'
+      window.location.href = loginUrl
     }
   }
 
@@ -179,9 +184,18 @@ function UserLoginPage() {
         <div className="login-divider"><span>또는</span></div>
 
         {/* 네이버 로그인 버튼 (type="button": 눌러도 form 제출 안 되게) */}
-        <button type="button" className="login-social-btn login-naver-btn" onClick={handleNaverLogin}>
+        <button type="button" className="login-social-btn login-naver-btn" onClick={() => handleSocialLogin('naver')}>
           <span className="login-naver-logo">N</span>
           네이버로 로그인
+        </button>
+
+        {/* ★ 카카오 로그인 버튼 */}
+        <button type="button" className="login-social-btn login-kakao-btn" onClick={() => handleSocialLogin('kakao')}>
+          {/* 카카오 말풍선 모양 아이콘 */}
+          <svg className="login-kakao-logo" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.86 5.22 4.66 6.6l-.95 3.48c-.08.3.26.54.52.37l4.15-2.74c.53.06 1.07.09 1.62.09 5.52 0 10-3.48 10-7.8S17.52 3 12 3z" />
+          </svg>
+          카카오로 로그인
         </button>
 
         {/* 회원가입으로 이동 */}

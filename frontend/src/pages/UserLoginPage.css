@@ -48,3 +48,25 @@
   font-size: 18px;
   font-weight: 900;
 }
+
+/* ============================================ */
+/* 카카오 로그인 버튼                              */
+/* ============================================ */
+
+/* 소셜 버튼끼리 간격 (네이버 아래 카카오) */
+.login-social-btn + .login-social-btn {
+  margin-top: 10px;
+}
+
+/* 카카오: 카카오 공식 노란색 + 검정 글씨 */
+.login-kakao-btn {
+  background: #fee500;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+/* 말풍선 아이콘 */
+.login-kakao-logo {
+  width: 20px;
+  height: 20px;
+  fill: #000;
+}

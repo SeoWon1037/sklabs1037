@@ -1,0 +1,17 @@
+package com.sklabs1037.sklabs1037.service;
+
+import com.sklabs1037.sklabs1037.vo.UserOAuthVO;
+
+/**
+ * 소셜 로그인 화면 Service
+ * - "무슨 기능이 있는지" 목록만 적는 곳
+ * - 실제 동작은 UserOAuthServiceImpl에서 구현
+ */
+public interface IUserOAuthService {
+
+    // 네이버 로그인 화면 주소 만들기
+    String getNaverLoginUrl(String state);
+
+    // 네이버 로그인 처리 (code로 회원 정보 받아서 → 기존 회원이면 그대로, 없으면 자동 가입)
+    UserOAuthVO loginWithNaver(String code, String state) throws Exception;
+}

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    소셜 로그인 화면 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dao.UserOAuthDao">
+
+    <!-- ============================================ -->
+    <!-- 회원 (T_USER)                                -->
+    <!-- ============================================ -->
+
+    <!-- 소셜 회원 조회 (가입 경로 + 고유 번호로 찾기, 탈퇴 회원 제외) -->
+    <select id="selectUserByProvider"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserOAuthVO"
+            resultType="com.sklabs1037.sklabs1037.vo.UserOAuthVO">
+        SELECT  ID
+        ,EMAIL
+        ,NICKNAME
+        ,ROLE
+        ,PROVIDER
+        ,PROVIDER_ID
+        FROM T_USER
+        WHERE 1=1
+        AND PROVIDER    = #{provider}
+        AND PROVIDER_ID = #{providerId}
+        AND DEL_DAY IS NULL
+    </select>
+
+    <!-- 같은 이메일로 가입된 회원이 있는지 (가입 경로 상관없이) -->
+    <select id="countByEmail"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserOAuthVO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM T_USER
+        WHERE 1=1
+        AND EMAIL = #{email}
+        AND DEL_DAY IS NULL
+    </select>
+
+    <!-- 소셜 회원 자동 가입 (비밀번호 없음) -->
+    <insert id="insertOAuthUser"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserOAuthVO"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            keyColumn="id">
+        INSERT INTO T_USER
+        ( EMAIL
+        ,NICKNAME
+        ,ROLE
+        ,PROVIDER
+        ,PROVIDER_ID
+        ,INS_DAY
+        ) VALUES (
+        #{email}
+        ,#{nickname}
+        ,'USER'
+        ,#{provider}
+        ,#{providerId}
+        ,NOW()
+        )
+    </insert>
+
+</mapper>

@@ -1,0 +1,33 @@
+/* ============================================
+   공통 색상 정의
+   - 화면 곳곳에서 색을 직접 쓰지 않고 var(--이름)으로 가져다 씀
+   - data-theme="dark"가 붙으면 같은 이름의 색이 다크용으로 바뀜
+   ============================================ */
+
+/* 라이트 모드 (기본) */
+:root {
+  --bg: #ffffff;            /* 페이지 배경 */
+  --bg-header: #ffffffcc;   /* 상단바 배경 (살짝 투명) */
+  --text: #111827;          /* 기본 글자 */
+  --text-muted: #6b7280;    /* 흐린 글자 */
+  --border: #e5e7eb;        /* 테두리 */
+  --hover: #f3f4f6;         /* 마우스 올렸을 때 배경 */
+  --primary: #2563eb;       /* 강조색 (회원가입 버튼 등) */
+  --primary-hover: #1d4ed8;
+  --primary-text: #ffffff;
+  color-scheme: light;      /* 스크롤바 등 브라우저 기본 요소도 라이트로 */
+}
+
+/* 다크 모드 */
+:root[data-theme='dark'] {
+  --bg: #0f172a;
+  --bg-header: #0f172acc;
+  --text: #e5e7eb;
+  --text-muted: #94a3b8;
+  --border: #1e293b;
+  --hover: #1e293b;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-text: #ffffff;
+  color-scheme: dark;
+}

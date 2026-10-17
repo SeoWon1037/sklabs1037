@@ -1,0 +1,84 @@
+/* 상단바 전체: 스크롤해도 맨 위에 고정 */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-header);
+  backdrop-filter: blur(8px);           /* 뒤 내용이 살짝 흐리게 비침 */
+  border-bottom: 1px solid var(--border);
+}
+
+/* 안쪽 영역: 가운데 정렬, 최대 폭 제한 */
+.header-inner {
+  max-width: 1200px;
+  height: 64px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;       /* 로고는 왼쪽, 버튼은 오른쪽 끝으로 */
+}
+
+.header-logo {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 테마 전환 버튼 (동그란 아이콘 버튼) */
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  font-size: 18px;
+}
+.theme-toggle:hover {
+  background: var(--hover);
+}
+
+/* 공통 버튼 모양 */
+.btn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background-color 0.15s;
+}
+
+/* 로그인: 테두리 없는 가벼운 버튼 */
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+}
+.btn-ghost:hover {
+  background: var(--hover);
+}
+
+/* 회원가입: 강조 버튼 */
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+/* 휴대폰 화면: 버튼 조금 작게 */
+@media (max-width: 480px) {
+  .btn {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}

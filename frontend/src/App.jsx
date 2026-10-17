@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 
 // 이 화면에 적용할 CSS 파일 불러오기
 import './App.css'
+import Header from './components/Header'
 
 // 컴포넌트 = 화면 조각을 만드는 함수
 // (Java로 치면 화면 하나를 담당하는 클래스 같은 느낌)
@@ -56,10 +57,16 @@ function App() {
   // HTML처럼 생겼지만 JavaScript 안에 쓰는 문법
   // { } 안에 변수를 넣으면 그 값이 화면에 출력됨 (JSP의 ${ } 같은 역할)
   return (
-    <div>
-      <h1>SKLabs 주식 분석 - 시즌1</h1>
-      <p>백엔드 응답: {message}</p>
-    </div>
+    <>
+      {/* 상단바 (components/Header.jsx) */}
+      <Header />
+
+      {/* 본문 영역 (메인 UI는 나중에 여기에) */}
+      <main className="main">
+        <h1>SKLabs 주식 분석 - 시즌1</h1>
+        <p>백엔드 응답: {message}</p>
+      </main>
+    </>
   )
 }
 

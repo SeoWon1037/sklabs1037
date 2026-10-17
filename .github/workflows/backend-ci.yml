@@ -68,7 +68,7 @@ jobs:
 
         # Docker 이미지 = "PostgreSQL 16이 설치된 상태"를 통째로 저장해둔 틀
         # 이걸로 PostgreSQL을 설치 과정 없이 바로 실행함
-        image: postgres:16
+        image: postgres:18
 
         # 임시 DB를 만들 때 쓸 설정값
         # (CI에서만 잠깐 쓰고 사라지는 DB라 비밀번호가 공개돼도 상관없음)

@@ -1,0 +1,12 @@
+### 1. 이메일 중복 체크
+GET http://localhost:8080/api/user/signup/check-email?email=test@test.com
+
+### 2. 회원가입
+POST http://localhost:8080/api/user/signup
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "1234",
+  "nickname": "테스트"
+}

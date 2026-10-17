@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 회원가입 화면 SQL -->
+
+<mapper namespace="com.sklabs1037.sklabs1037.dao.UserSignUpDao">
+
+    <!-- 이메일 중복 체크 (0이면 가입 가능, 1 이상이면 이미 있음) -->
+    <select id="countByEmail"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM T_USER
+        WHERE 1=1
+        AND EMAIL   = #{email}
+        AND DEL_DAY IS NULL
+    </select>
+
+    <!-- 회원가입 -->
+    <insert id="insertUser"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            keyColumn="id">
+        INSERT INTO T_USER
+        ( EMAIL
+         ,PASSWORD
+         ,NICKNAME
+         ,ROLE
+         ,INS_DAY
+        ) VALUES (
+          #{email}
+         ,#{password}
+         ,#{nickname}
+         ,'USER'
+         ,NOW()
+        )
+    </insert>
+
+</mapper>

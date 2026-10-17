@@ -2,9 +2,16 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<!-- 회원가입 화면 SQL -->
-
+<!--
+    회원가입 화면 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+    ※ 시간 비교는 전부 DB의 NOW()로 (Java 시간과 DB 시간대가 다를 수 있어서)
+-->
 <mapper namespace="com.sklabs1037.sklabs1037.dao.UserSignUpDao">
+
+    <!-- ============================================ -->
+    <!-- 회원 (T_USER)                                -->
+    <!-- ============================================ -->
 
     <!-- 이메일 중복 체크 (0이면 가입 가능, 1 이상이면 이미 있음) -->
     <select id="countByEmail"
@@ -17,25 +24,109 @@
         AND DEL_DAY IS NULL
     </select>
 
-    <!-- 회원가입 -->
+    <!-- 회원 등록 -->
     <insert id="insertUser"
             parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
             useGeneratedKeys="true"
             keyProperty="id"
             keyColumn="id">
-        INSERT INTO T_USER
-        ( EMAIL
-         ,PASSWORD
-         ,NICKNAME
-         ,ROLE
-         ,INS_DAY
+        INSERT INTO T_USER (
+        EMAIL
+        ,PASSWORD
+        ,NICKNAME
+        ,ROLE
+        ,INS_DAY
         ) VALUES (
-          #{email}
-         ,#{password}
-         ,#{nickname}
-         ,'USER'
-         ,NOW()
+        #{email}
+        ,#{password}
+        ,#{nickname}
+        ,'USER'
+        ,NOW()
         )
     </insert>
+
+    <!-- ============================================ -->
+    <!-- 이메일 인증 (T_EMAIL_VERIFY)                  -->
+    <!-- ============================================ -->
+
+    <!-- 최근 1분 안에 보낸 인증번호가 있는지 (재발송 제한용) -->
+    <select id="countRecentSend"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM T_EMAIL_VERIFY
+        WHERE 1=1
+        AND EMAIL   = #{email}
+        AND INS_DAY <![CDATA[ > ]]> NOW() - INTERVAL '1 minute'
+        AND DEL_DAY IS NULL
+    </select>
+
+    <!-- 인증번호 저장 (만료: 지금 + 5분) -->
+    <insert id="insertEmailVerify"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO">
+        INSERT INTO T_EMAIL_VERIFY (
+        EMAIL
+        ,CODE
+        ,EXPIRE_DAY
+        ,INS_DAY
+        ) VALUES (
+        #{email}
+        ,#{code}
+        ,NOW() + INTERVAL '5 minutes'
+        ,NOW()
+        )
+    </insert>
+
+    <!-- 가장 최근에 보낸 인증번호 1건 (만료 여부는 DB에서 계산) -->
+    <select id="selectLatestVerify"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            resultType="com.sklabs1037.sklabs1037.vo.UserSignUpVO">
+        SELECT  ID          AS VERIFY_ID
+        ,EMAIL
+        ,CODE
+        ,VERIFY_YN
+        ,CASE WHEN EXPIRE_DAY <![CDATA[ < ]]> NOW() THEN 'Y'
+        ELSE 'N'
+        END         AS EXPIRED_YN
+        FROM T_EMAIL_VERIFY
+        WHERE 1=1
+        AND EMAIL   = #{email}
+        AND DEL_DAY IS NULL
+        ORDER BY ID DESC
+        LIMIT 1
+    </select>
+
+    <!-- 인증 성공 처리 -->
+    <update id="updateVerifySuccess"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO">
+        UPDATE T_EMAIL_VERIFY
+        SET  VERIFY_YN  = 'Y'
+        ,VERIFY_DAY = NOW()
+        WHERE 1=1
+        AND ID = #{verifyId}
+    </update>
+
+    <!-- 가입 가능한 인증이 있는지 (인증 완료 후 30분 이내) -->
+    <select id="countVerified"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM T_EMAIL_VERIFY
+        WHERE 1=1
+        AND EMAIL      = #{email}
+        AND VERIFY_YN  = 'Y'
+        AND VERIFY_DAY <![CDATA[ > ]]> NOW() - INTERVAL '30 minutes'
+        AND DEL_DAY IS NULL
+    </select>
+
+    <!-- 가입 완료 후 인증 기록 사용 처리 (같은 인증으로 재가입 방지) -->
+    <update id="deleteEmailVerify"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO">
+        UPDATE T_EMAIL_VERIFY
+        SET DEL_DAY = NOW()
+        WHERE 1=1
+        AND EMAIL   = #{email}
+        AND DEL_DAY IS NULL
+    </update>
 
 </mapper>

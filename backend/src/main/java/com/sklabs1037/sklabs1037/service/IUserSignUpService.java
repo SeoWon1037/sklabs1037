@@ -12,7 +12,12 @@ public interface IUserSignUpService {
     // 이메일 중복 체크 (true면 이미 사용 중)
     boolean isEmailDuplicated(UserSignUpVO vo) throws Exception;
 
+    // 인증번호 메일 발송
+    void sendVerifyCode(UserSignUpVO vo) throws Exception;
+
+    // 인증번호 확인
+    void verifyCode(UserSignUpVO vo) throws Exception;
+
     // 회원가입
     void signUp(UserSignUpVO vo) throws Exception;
-
 }

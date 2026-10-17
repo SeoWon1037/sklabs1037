@@ -1,40 +1,67 @@
+# ============================================
+# 프론트엔드 CI
+# frontend 폴더 코드가 바뀌면, GitHub 서버에서 자동으로 코드 검사 + 빌드
+# ============================================
+
+# Actions 탭에 표시될 이름
 name: Frontend CI
 
+# ① 언제 실행할까? (트리거)
 on:
+  # main 브랜치에 push했을 때
   push:
     branches: [main]
+    # frontend 폴더가 바뀐 경우에만 실행 (백엔드만 고치면 안 돔)
     paths:
       - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - '.github/workflows/frontend-ci.yml'   # 이 CI 파일 자체가 바뀌어도 실행
+  # main으로 합쳐달라는 PR을 만들었을 때도 실행
   pull_request:
     branches: [main]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
 
+# ② 무엇을 할까?
 jobs:
   build:
+    # 깨끗한 새 Ubuntu 컴퓨터에서 실행
     runs-on: ubuntu-latest
+
+    # 아래 명령어들은 전부 frontend 폴더 안에서 실행
     defaults:
       run:
         working-directory: frontend
 
+    # ③ 실행 단계 (순서대로, 실패하면 즉시 중단 → ❌)
+    # 프론트는 DB가 필요 없어서 services, env 없음
     steps:
+      # 1단계: 저장소 코드 받아오기
       - name: 코드 받아오기
         uses: actions/checkout@v4
 
+      # 2단계: Node.js 설치 (내 PC에 설치한 LTS 버전과 동일하게)
       - name: Node.js 설치
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+          # npm으로 받은 라이브러리를 캐시 → 다음 실행부터 빨라짐
           cache: npm
+          # 이 파일이 바뀌면 캐시를 새로 만듦 (라이브러리 목록이 바뀐 거니까)
           cache-dependency-path: frontend/package-lock.json
 
+      # 3단계: 라이브러리 설치 (node_modules 만들기)
+      # .gitignore로 node_modules를 안 올렸으니 여기서 새로 받아야 함
+      # npm ci = package-lock.json에 적힌 버전 "그대로" 설치 (CI 전용 npm install)
       - name: 라이브러리 설치
         run: npm ci
 
+      # 4단계: 코드 규칙 검사 (package.json의 "lint": "eslint .")
+      # 안 쓰는 변수, React 규칙 위반 등을 잡아냄
       - name: 코드 검사 (ESLint)
         run: npm run lint
 
+      # 5단계: 배포용 파일 생성 (package.json의 "build": "vite build")
+      # 성공하면 dist/ 폴더에 HTML/CSS/JS가 만들어짐 → 나중에 CD로 S3에 업로드
       - name: 빌드
         run: npm run build

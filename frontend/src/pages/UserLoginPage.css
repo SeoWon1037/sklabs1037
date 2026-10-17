@@ -1,0 +1,17 @@
+/* "아직 회원이 아니신가요? 회원가입" 문구 */
+.login-signup-link {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+
+.login-signup-link a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-signup-link a:hover {
+  text-decoration: underline;
+}

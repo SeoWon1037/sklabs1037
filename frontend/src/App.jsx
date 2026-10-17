@@ -8,6 +8,7 @@ import './App.css'
 import Header from './components/Header'
 import MainPage from './pages/MainPage'
 import UserSignUpPage from './pages/UserSignUpPage'
+import UserLoginPage from './pages/UserLoginPage'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainPage />} />              {/* 메인 */}
         <Route path="/signup" element={<UserSignUpPage />} />  {/* 회원가입 */}
+        <Route path="/login" element={<UserLoginPage />} />    {/* 로그인 */}
       </Routes>
     </>
   )

@@ -90,3 +90,11 @@
     font-size: 13px;
   }
 }
+
+/* 로그인한 사람 닉네임 ("서원님") */
+.header-user {
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}

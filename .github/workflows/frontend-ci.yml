@@ -3,19 +3,35 @@
 # frontend 폴더 코드가 바뀌면, GitHub 서버에서 자동으로 코드 검사 + 빌드
 # ============================================
 
-# Actions 탭에 표시될 이름
+# ========================================================
+# 1 .프론트 코드를 수정해서 GitHub에 push한다
+# 2. push가 끝나면 GitHub이 Frontend CI를 시작한다
+# 3. GitHub이 가상 컴퓨터(리눅스)를 빌려서
+# 4. 저장소 코드를 내려받고
+# 5. Node.js 설치 → 라이브러리 설치 → 문법·규칙 검사(lint) → 빌드
+# 6. 하나라도 실패하면 그 자리에서 멈추고 ❌, 전부 통과하면 ✅
+# 7. 결과는 Actions 탭에 기록되고, 가상 컴퓨터는 삭제된다
+# ========================================================
+
+# 이 CI의 이름 (Actions 탭에 이렇게 보임)
 name: Frontend CI
 
-# ① 언제 실행할까? (트리거)
+# 언제 실행할까?
+# 아래 두 상황(push, PR) 중 하나라도 생기면 실행
 on:
-  # main 브랜치에 push했을 때
+
+  # [상황 1] 누군가 push 했을 때
   push:
+    # 조건 1: main 브랜치에 push한 경우만
     branches: [main]
-    # frontend 폴더가 바뀐 경우에만 실행 (백엔드만 고치면 안 돔)
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'   # 이 CI 파일 자체가 바뀌어도 실행
-  # main으로 합쳐달라는 PR을 만들었을 때도 실행
+    # 조건 2: 아래 파일 중 하나라도 바뀐 경우만
+    #  → 조건 1, 2를 둘 다 만족해야 실행됨
+    paths: # → 해당 파일들을 바꿨으면 CI를 실행해라 (CI 배포할 때 문제 없는지 테스트를 해주는 역할) 
+      - 'frontend/**'                         # frontend 폴더 안 아무 파일이나
+      - '.github/workflows/frontend-ci.yml'   # 또는 이 CI 파일 자체
+
+  # [상황 2] 누군가 "main에 합쳐주세요" PR을 만들었을 때
+  # (조건은 push와 똑같음)
   pull_request:
     branches: [main]
     paths:
@@ -24,9 +40,9 @@ on:
 
 # ② 무엇을 할까?
 jobs:
-  build:
+  build: # 작업 1: 검사 + 빌드
     # 깨끗한 새 Ubuntu 컴퓨터에서 실행
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest 
 
     # 아래 명령어들은 전부 frontend 폴더 안에서 실행
     defaults:
@@ -35,33 +51,57 @@ jobs:
 
     # ③ 실행 단계 (순서대로, 실패하면 즉시 중단 → ❌)
     # 프론트는 DB가 필요 없어서 services, env 없음
+    # 할 일 목록 (위에서부터 순서대로, 하나라도 실패하면 멈추고 ❌)
     steps:
-      # 1단계: 저장소 코드 받아오기
-      - name: 코드 받아오기
-        uses: actions/checkout@v4
+      # [1번] 코드 받아오기
+      # 새 컴퓨터는 텅 비어 있으니, GitHub에 push된 그 커밋의 코드를 먼저 내려받음
+      - name: 코드 받아오기              # Actions 화면에 보일 이름
+        uses: actions/checkout@v4        # GitHub 공식 "코드 받기" 기능 (버전 4)
 
-      # 2단계: Node.js 설치 (내 PC에 설치한 LTS 버전과 동일하게)
+      # [2번] Node.js 설치
+      # 새 컴퓨터엔 내가 원하는 버전의 Node.js가 없으니 설치
       - name: Node.js 설치
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          # npm으로 받은 라이브러리를 캐시 → 다음 실행부터 빨라짐
+        uses: actions/setup-node@v4      # GitHub 공식 "Node.js 설치" 기능
+        with:                            # 그 기능에 주는 옵션들
+          node-version: '24'             # 내 PC와 같은 버전으로
+
+          # 다운받은 라이브러리를 GitHub에 보관해뒀다가 다음에 재사용 → 빨라짐
           cache: npm
-          # 이 파일이 바뀌면 캐시를 새로 만듦 (라이브러리 목록이 바뀐 거니까)
+
+          # 이 파일(라이브러리 목록)이 바뀌면 보관함을 새로 만듦
+          # (uses의 경로는 저장소 최상위 기준이라 frontend/부터 씀)
           cache-dependency-path: frontend/package-lock.json
 
-      # 3단계: 라이브러리 설치 (node_modules 만들기)
-      # .gitignore로 node_modules를 안 올렸으니 여기서 새로 받아야 함
-      # npm ci = package-lock.json에 적힌 버전 "그대로" 설치 (CI 전용 npm install)
+      # [3번] 라이브러리 설치
+      # node_modules는 .gitignore로 안 올렸으니, 받은 코드엔 라이브러리가 없음
+      # → package-lock.json(정확한 버전 목록)을 보고 그대로 설치
+      # npm ci : CI 전용 설치 명령어
+      #  - lock 파일에 적힌 버전 "그대로만" 설치 (내 PC와 똑같은 환경)
+      #  - lock 파일과 package.json이 안 맞으면 실패 → 실수를 잡아줌
       - name: 라이브러리 설치
-        run: npm ci
+        run: npm ci # run = 터미널 명령어 직접 실행 (frontend 폴더에서)
 
-      # 4단계: 코드 규칙 검사 (package.json의 "lint": "eslint .")
-      # 안 쓰는 변수, React 규칙 위반 등을 잡아냄
+      # [4번] 코드 규칙 검사 (맞춤법 검사기 같은 것)
+      # 코드를 실행하지 않고 읽기만 해서 문제를 찾음
+      #  - 문법 오류, 오타(없는 변수), 안 쓰는 변수, React 규칙 위반 등
+      #  - 규칙은 frontend/eslint.config.js에 정의돼 있음
+      # npm run lint = package.json의 "lint": "eslint ." 를 실행
+      # error가 하나라도 있으면 ❌ (warning은 통과)
       - name: 코드 검사 (ESLint)
         run: npm run lint
 
-      # 5단계: 배포용 파일 생성 (package.json의 "build": "vite build")
-      # 성공하면 dist/ 폴더에 HTML/CSS/JS가 만들어짐 → 나중에 CD로 S3에 업로드
+      # [5번] 빌드 (운영에 올릴 완성품 만들기)
+      # npm run build = package.json의 "build": "vite build" 실행
+      #
+      # 하는 일:
+      #  - import를 따라가며 모든 파일을 연결해서 조립
+      #  - JSX → 브라우저가 읽는 자바스크립트로 변환, 합치고 압축
+      #  - 결과물은 dist/ 폴더 (HTML, CSS, JS)
+      #
+      # 검사 효과:
+      #  - 없는 파일/라이브러리 import, 대소문자 틀린 파일명 등 → ❌
+      #
+      # 지금은 만들어보고 버려짐 (성공 여부만 확인)
+      # 나중에 CD를 붙이면 이 dist를 AWS S3에 업로드
       - name: 빌드
         run: npm run build

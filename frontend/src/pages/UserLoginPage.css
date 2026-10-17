@@ -1,17 +1,50 @@
-/* "아직 회원이 아니신가요? 회원가입" 문구 */
-.login-signup-link {
-  margin: 20px 0 0;
-  text-align: center;
-  font-size: 14px;
-  color: color-mix(in srgb, var(--text) 60%, transparent);
+
+/* ============================================ */
+/* 소셜 로그인                                    */
+/* ============================================ */
+
+/* "또는" 구분선 (가운데 글자 + 양옆 선) */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 16px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
-.login-signup-link a {
-  color: var(--primary);
-  font-weight: 600;
-  text-decoration: none;
+/* 소셜 로그인 버튼 공통 */
+.login-social-btn {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.login-social-btn:hover {
+  filter: brightness(0.95);
 }
 
-.login-signup-link a:hover {
-  text-decoration: underline;
+/* 네이버: 네이버 공식 초록색 */
+.login-naver-btn {
+  background: #03c75a;
+  color: #fff;
+}
+.login-naver-logo {
+  font-size: 18px;
+  font-weight: 900;
 }

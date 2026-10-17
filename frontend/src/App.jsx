@@ -57,7 +57,7 @@ function App() {
   // { } 안에 변수를 넣으면 그 값이 화면에 출력됨 (JSP의 ${ } 같은 역할)
   return (
     <div>
-      <h1>SKLabs 주식 분석</h1>
+      <h1>SKLabs 주식 분석 - 시즌1</h1>
       <p>백엔드 응답: {message}</p>
     </div>
   )

@@ -9,9 +9,19 @@ import com.sklabs1037.sklabs1037.vo.UserOAuthVO;
  */
 public interface IUserOAuthService {
 
+    // ===== 네이버 =====
+
     // 네이버 로그인 화면 주소 만들기
     String getNaverLoginUrl(String state);
 
-    // 네이버 로그인 처리 (code로 회원 정보 받아서 → 기존 회원이면 그대로, 없으면 자동 가입)
+    // 네이버 로그인 처리 (기존 회원이면 그대로, 없으면 자동 가입)
     UserOAuthVO loginWithNaver(String code, String state) throws Exception;
+
+    // ===== 카카오 =====
+
+    // 카카오 로그인 화면 주소 만들기
+    String getKakaoLoginUrl(String state);
+
+    // 카카오 로그인 처리 (기존 회원이면 그대로, 없으면 자동 가입)
+    UserOAuthVO loginWithKakao(String code) throws Exception;
 }

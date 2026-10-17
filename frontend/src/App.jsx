@@ -1,74 +1,27 @@
 // ============================================
 // App.jsx
-// - 화면의 메인 컴포넌트 (React는 화면을 "컴포넌트" 단위로 만듦)
-// - 이 파일은 Node.js가 아니라 "브라우저"에서 실행됨
+// - 앱의 뼈대: 상단바 + "주소에 맞는 화면" 연결
+// - 백엔드의 @RequestMapping처럼 "어떤 주소 → 어떤 화면"을 정하는 곳
 // ============================================
-
-// React에서 제공하는 기능 2개 불러오기
-// - useState  : 화면에 보여줄 "값"을 저장하는 기능
-// - useEffect : 화면이 뜰 때 특정 작업(API 호출 등)을 실행하는 기능
-import { useEffect, useState } from 'react'
-
-// 이 화면에 적용할 CSS 파일 불러오기
+import { Routes, Route } from 'react-router-dom'
 import './App.css'
 import Header from './components/Header'
+import MainPage from './pages/MainPage'
+import UserSignUpPage from './pages/UserSignUpPage'
 
-// 컴포넌트 = 화면 조각을 만드는 함수
-// (Java로 치면 화면 하나를 담당하는 클래스 같은 느낌)
 function App() {
-
-  // ============================================
-  // 상태(state) 선언
-  // ============================================
-  // message      : 현재 값 (처음엔 '불러오는 중...')
-  // setMessage   : 값을 바꾸는 함수 (Java의 setter 느낌)
-  // ★ setMessage로 값을 바꾸면 React가 화면을 자동으로 다시 그려줌
-  const [message, setMessage] = useState('불러오는 중...')
-
-  // ============================================
-  // 화면이 처음 뜰 때 실행되는 부분
-  // ============================================
-  useEffect(() => {
-
-    // fetch: 서버에 HTTP 요청을 보내는 브라우저 기본 기능
-    // '/api/hello' → vite.config.js 프록시가 localhost:8080/api/hello 로 전달
-    fetch('/api/hello')
-
-      // 1단계: 응답 확인
-      // res.ok가 false면 (404, 500 등) 에러로 처리
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.text()   // 응답 본문을 문자열로 꺼냄
-      })
-
-      // 2단계: 받은 데이터를 화면 값에 저장 → 화면 자동 갱신
-      .then((data) => setMessage(data))
-
-      // 에러 발생 시 (백엔드 꺼짐, 주소 틀림 등) 실패 메시지 표시
-      .catch((err) => setMessage(`연결 실패: ${err.message}`))
-
-  }, [])
-  // ↑ 마지막의 [] : "처음 한 번만 실행해라"라는 뜻
-  //   (이게 없으면 화면이 다시 그려질 때마다 계속 API를 호출함)
-
-  // ============================================
-  // 화면에 그릴 내용 (JSX 문법)
-  // ============================================
-  // HTML처럼 생겼지만 JavaScript 안에 쓰는 문법
-  // { } 안에 변수를 넣으면 그 값이 화면에 출력됨 (JSP의 ${ } 같은 역할)
   return (
     <>
-      {/* 상단바 (components/Header.jsx) */}
+      {/* 상단바: 모든 화면에 공통으로 표시 */}
       <Header />
 
-      {/* 본문 영역 (메인 UI는 나중에 여기에) */}
-      <main className="main">
-        <h1>SKLabs 주식 분석 - 시즌1</h1>
-        <p>백엔드 응답: {message}</p>
-      </main>
+      {/* 주소에 따라 아래 화면만 바뀜 */}
+      <Routes>
+        <Route path="/" element={<MainPage />} />              {/* 메인 */}
+        <Route path="/signup" element={<UserSignUpPage />} />  {/* 회원가입 */}
+      </Routes>
     </>
   )
 }
 
-// 다른 파일(main.jsx)에서 이 컴포넌트를 쓸 수 있게 내보냄
 export default App

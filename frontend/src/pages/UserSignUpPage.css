@@ -1,0 +1,202 @@
+/* 화면 전체: 가운데 정렬 */
+.signup-page {
+  display: flex;
+  justify-content: center;
+  padding: 56px 16px;
+}
+
+/* 입력폼 카드: 배경보다 살짝 밝은 면 + 그림자로 떠 보이게 */
+.signup-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 32px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.signup-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.signup-label {
+  margin: 20px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+}
+
+/* 입력칸: 옅은 채움 색 */
+.signup-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--text);
+  font-size: 15px;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+.signup-input::placeholder {
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+}
+.signup-input:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+/* 클릭했을 때: 파란 테두리 + 은은한 빛 */
+.signup-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+/* 크롬 자동완성 배경색(진한 파랑) 막기 */
+.signup-input:-webkit-autofill,
+.signup-input:-webkit-autofill:hover,
+.signup-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* 이메일 + 버튼 한 줄 */
+.signup-row {
+  display: flex;
+  gap: 8px;
+}
+.signup-check-btn {
+  flex-shrink: 0;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+/* 안내 문구 */
+.signup-msg {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.signup-msg.ok {
+  color: #22a06b;
+}
+.signup-msg.error {
+  color: #e5484d;
+}
+/* 맨 아래 전체 에러: 빨간 박스로 강조 */
+.signup-error-box {
+  margin-top: 20px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(229, 72, 77, 0.12);
+}
+
+/* 가입하기 버튼 */
+.signup-submit {
+  width: 100%;
+  height: 50px;
+  margin-top: 28px;
+  border-radius: 10px;
+  font-size: 16px;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.signup-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ============================================ */
+/* 이메일 인증 추가분                             */
+/* ============================================ */
+
+/* 인증번호 칸 + 타이머를 겹쳐 놓기 위한 틀 */
+.signup-code-wrap {
+  position: relative;
+  flex: 1;
+}
+
+/* 남은 시간 (입력칸 오른쪽 안에 표시) */
+.signup-timer {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5484d;
+  pointer-events: none;   /* 타이머를 눌러도 입력칸이 클릭되게 */
+}
+
+/* 비활성화된 버튼 (재발송 대기, 인증 완료 등) */
+.signup-check-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 잠긴 입력칸 (인증 완료 후 이메일) */
+.signup-input:read-only {
+  opacity: 0.7;
+}
+
+
+/* ============================================ */
+/* 가입 완료(환영) 화면                           */
+/* ============================================ */
+
+/* 카드 내용 가운데 정렬 + 살짝 튀어나오는 등장 효과 */
+.signup-done {
+  align-items: center;
+  text-align: center;
+  animation: signup-pop 0.4s ease-out;
+}
+
+/* 🎉 아이콘: 크게 + 통통 튀는 효과 */
+.signup-done-icon {
+  font-size: 64px;
+  margin-bottom: 12px;
+  animation: signup-bounce 0.8s ease-out;
+}
+
+.signup-done-email {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.signup-done-text {
+  margin: 12px 0 0;
+  font-size: 15px;
+  color: color-mix(in srgb, var(--text) 70%, transparent);
+}
+
+/* 카드 등장: 작게 → 원래 크기 */
+@keyframes signup-pop {
+  0%   { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* 아이콘: 위로 통 튀었다가 제자리 */
+@keyframes signup-bounce {
+  0%   { transform: scale(0.3) rotate(-20deg); }
+  60%  { transform: scale(1.2) rotate(10deg); }
+  100% { transform: scale(1)   rotate(0); }
+}
+
+/* 애니메이션 줄이기 설정한 사람에겐 효과 끄기 */
+@media (prefers-reduced-motion: reduce) {
+  .signup-done,
+  .signup-done-icon {
+    animation: none;
+  }
+}

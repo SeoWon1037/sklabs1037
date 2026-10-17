@@ -46,7 +46,7 @@
   background: var(--hover);
 }
 
-/* 공통 버튼 모양 */
+/* 공통 버튼 모양 (<button>, <Link> 둘 다 같은 모양으로) */
 .btn {
   height: 40px;
   padding: 0 16px;
@@ -55,6 +55,14 @@
   font-weight: 600;
   border: 1px solid transparent;
   transition: background-color 0.15s;
+
+  /* ↓ Link(<a>)도 버튼처럼 보이게 */
+  display: inline-flex;
+  align-items: center;         /* 글자 세로 가운데 */
+  justify-content: center;     /* 글자 가로 가운데 */
+  text-decoration: none;       /* 밑줄 제거 */
+  box-sizing: border-box;
+  cursor: pointer;
 }
 
 /* 로그인: 테두리 없는 가벼운 버튼 */

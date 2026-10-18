@@ -27,6 +27,9 @@ const SUGGESTIONS = [
   '최근 60일 수익률이 가장 낮은 건?',
 ]
 
+// 뉴스 탭에 보여줄 종목 (종목코드, 이 순서대로 표시)
+const NEWS_TAB_SYMBOLS = ['005930', '000660', '035420']   // 삼성전자, SK하이닉스, NAVER
+
 // 한 번에 보여줄 뉴스 개수 (더보기 누르면 늘어남)
 const PAGE_SIZE = 15
 
@@ -124,11 +127,14 @@ function MainPage() {
     navigate(q ? `/ai?q=${encodeURIComponent(q)}` : '/ai')
   }
 
-  // 뉴스 탭 목록: 전체, 시장, 종목들
+  // 뉴스 탭 목록: 전체, 시장, 주요 종목 (NEWS_TAB_SYMBOLS에 있는 종목만)
   const tabs = [
     { value: 'ALL', label: '전체' },
     { value: 'MARKET', label: '시장' },
-    ...stocks.map((s) => ({ value: String(s.stockId), label: s.name })),
+    ...NEWS_TAB_SYMBOLS
+      .map((symbol) => stocks.find((s) => s.symbol === symbol))
+      .filter(Boolean)
+      .map((s) => ({ value: String(s.stockId), label: s.name })),
   ]
 
   return (

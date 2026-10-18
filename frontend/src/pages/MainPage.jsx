@@ -1,7 +1,7 @@
 // ============================================
 // 메인 화면 (주소: /) — 네이버 메인 스타일
 // - 위: 검색창(= AI 비서에게 질문) + 바로가기
-// - 왼쪽: 뉴스 (전체 / 시장 / 종목별 탭)
+// - 왼쪽: 뉴스 (전체 / 시장 / 스포츠 / 종목별 탭)
 // - 오른쪽: 로그인 박스 + 오늘의 시세 + 추천 질문
 // - 백엔드 API
 //   GET /api/news?category=&stockId=&size=   뉴스 목록
@@ -17,6 +17,7 @@ import WeatherBox from '../components/WeatherBox'
 const SHORTCUTS = [
   { icon: '📈', label: '주식 종목', to: '/stock' },
   { icon: '🤖', label: 'AI 비서', to: '/ai' },
+  { icon: '🍀', label: '오늘의 숫자', to: '/lotto' },
   { icon: '🏭', label: '기업 정보', to: `/ai?q=${encodeURIComponent('')}` },
 ]
 
@@ -47,7 +48,7 @@ const timeAgo = (dateText, now) => {
 // 탭 → 뉴스 API 주소
 const newsUrl = (tab, size) => {
   if (tab === 'ALL') return `/api/news?size=${size}`
-  if (tab === 'MARKET') return `/api/news?category=MARKET&size=${size}`
+  if (tab === 'MARKET' || tab === 'SPORTS') return `/api/news?category=${tab}&size=${size}`
   return `/api/news?stockId=${tab}&size=${size}`
 }
 
@@ -62,7 +63,7 @@ function MainPage() {
   const [query, setQuery] = useState('')
 
   // ===== 뉴스 =====
-  const [tab, setTab] = useState('ALL')          // 'ALL' | 'MARKET' | 종목 ID
+  const [tab, setTab] = useState('ALL')          // 'ALL' | 'MARKET' | 'SPORTS' | 종목 ID
   const [size, setSize] = useState(PAGE_SIZE)
   const [news, setNews] = useState({ key: null, items: [], error: '' })
   const newsKey = `${tab}-${size}`
@@ -127,10 +128,11 @@ function MainPage() {
     navigate(q ? `/ai?q=${encodeURIComponent(q)}` : '/ai')
   }
 
-  // 뉴스 탭 목록: 전체, 시장, 주요 종목 (NEWS_TAB_SYMBOLS에 있는 종목만)
+  // 뉴스 탭 목록: 전체, 시장, 스포츠, 주요 종목 (NEWS_TAB_SYMBOLS에 있는 종목만)
   const tabs = [
     { value: 'ALL', label: '전체' },
     { value: 'MARKET', label: '시장' },
+    { value: 'SPORTS', label: '스포츠' },
     ...NEWS_TAB_SYMBOLS
       .map((symbol) => stocks.find((s) => s.symbol === symbol))
       .filter(Boolean)

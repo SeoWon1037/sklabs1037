@@ -14,6 +14,7 @@ import UserOAuthResultPage from './pages/UserOAuthResultPage'
 import AiChatPage from './pages/AiChatPage'
 import AdminFeedbackPage from './pages/AdminFeedbackPage'
 import UserFindPage from './pages/UserFindPage'
+import LottoPage from './pages/LottoPage'
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         <Route path="/signup" element={<UserSignUpPage />} />            {/* 회원가입 */}
         <Route path="/login" element={<UserLoginPage />} />              {/* 로그인 */}
         <Route path="/find" element={<UserFindPage />} />                {/* 아이디·비밀번호 찾기 */}
+        <Route path="/lotto" element={<LottoPage />} />
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
       </Routes>
     </>

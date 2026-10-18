@@ -10,7 +10,7 @@
 /* ----- 제목 ----- */
 .lotto-head {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .lotto-date {
@@ -26,9 +26,43 @@
 }
 
 .lotto-desc {
-  margin: 0;
+  margin: 0 0 16px;
+  text-align: center;
   font-size: 15px;
   color: var(--muted, #8b8b93);
+}
+
+/* ----- 탭 ----- */
+.lotto-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.lotto-tab {
+  padding: 9px 18px;
+  border: 1px solid var(--border, #27272a);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted, #8b8b93);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lotto-tab:hover {
+  color: inherit;
+}
+
+.lotto-tab-active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.lotto-tab-active:hover {
+  color: #fff;
 }
 
 /* ----- 박스 ----- */
@@ -169,9 +203,90 @@
   text-align: right;
 }
 
-.lotto-row .lotto-balls {
+.lotto-row-body {
   flex: 1;
+}
+
+.lotto-row-body .lotto-balls,
+.lotto-row-body .pension {
   justify-content: flex-start;
+}
+
+/* ----- 연금복권 ----- */
+.pension {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+  animation: lotto-pop 0.25s ease-out;
+}
+
+.pension-group {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 64px;
+  height: 56px;
+  padding: 0 12px;
+  align-items: center;
+  border-radius: 12px;
+  background: #f5b301;
+  color: #1f2328;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.pension-group small {
+  margin-left: 2px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.pension-digits {
+  display: flex;
+  gap: 6px;
+}
+
+.pension-digit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 56px;
+  border: 1px solid var(--border, #27272a);
+  border-radius: 10px;
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pension-sm {
+  gap: 10px;
+  margin-bottom: 0;
+  animation: none;
+}
+
+.pension-sm .pension-group {
+  min-width: 44px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.pension-sm .pension-group small {
+  font-size: 12px;
+}
+
+.pension-sm .pension-digits {
+  gap: 4px;
+}
+
+.pension-sm .pension-digit {
+  width: 28px;
+  height: 34px;
+  border-radius: 6px;
+  font-size: 15px;
 }
 
 /* ----- 안내 ----- */
@@ -187,4 +302,8 @@
   .lotto-ball { width: 42px; height: 42px; font-size: 17px; }
   .lotto-ball-sm { width: 30px; height: 30px; font-size: 12px; }
   .lotto-balls-big { gap: 8px; }
+  .pension { gap: 8px; }
+  .pension-group { min-width: 50px; height: 46px; font-size: 20px; }
+  .pension-digits { gap: 4px; }
+  .pension-digit { width: 34px; height: 46px; font-size: 20px; }
 }

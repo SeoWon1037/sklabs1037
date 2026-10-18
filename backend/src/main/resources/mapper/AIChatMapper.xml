@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    AI 주식 비서 도구(tool) SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dao.AiChatDao">
+
+    <!-- [도구] find_stock: 종목명/코드로 종목 찾기 (검색어 없으면 전체) -->
+    <select id="selectStocks"
+            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+        SELECT  ID AS STOCK_ID
+               ,SYMBOL
+               ,NAME
+               ,MARKET
+          FROM T_STOCK
+         WHERE 1=1
+           AND DEL_DAY IS NULL
+        <if test="query != null and query != ''">
+           AND ( NAME ILIKE '%' || #{query} || '%' OR SYMBOL = #{query} )
+        </if>
+        ORDER BY ID
+    </select>
+
+    <!-- [도구] get_price_history: 최근 N일 일봉 (최신 날짜부터) -->
+    <select id="selectPriceHistory"
+            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+        SELECT  P.TRADE_DATE
+               ,P.OPEN_PRICE
+               ,P.HIGH_PRICE
+               ,P.LOW_PRICE
+               ,P.CLOSE_PRICE
+               ,P.VOLUME
+          FROM T_STOCK_PRICE P JOIN T_STOCK S
+                                 ON S.ID = P.STOCK_ID
+         WHERE 1=1
+          AND S.SYMBOL = #{symbol}
+        ORDER BY P.TRADE_DATE DESC
+        LIMIT #{days}
+    </select>
+
+    <!-- [도구] search_stock_docs: 키워드로 종목 설명 문서 검색 (RAG) -->
+    <select id="searchDocs"
+            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+        SELECT  S.SYMBOL
+               ,S.NAME
+               ,D.TITLE
+               ,D.CONTENT
+          FROM T_STOCK_DOC D JOIN T_STOCK S
+                               ON S.ID = D.STOCK_ID
+         WHERE 1=1
+          AND D.DEL_DAY IS NULL
+          AND (
+        <foreach collection="keywords" item="kw" separator=" OR ">
+            D.TITLE   ILIKE '%' || #{kw} || '%'
+            OR D.CONTENT ILIKE '%' || #{kw} || '%'
+            OR S.NAME    ILIKE '%' || #{kw} || '%'
+        </foreach>
+        )
+        ORDER BY D.ID
+        LIMIT 5
+    </select>
+
+</mapper>

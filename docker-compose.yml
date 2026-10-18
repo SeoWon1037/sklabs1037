@@ -16,7 +16,10 @@ services:
     build: ./frontend
     image: ghcr.io/seowon1037/sklabs1037-frontend:latest
     ports:
-      - "80:80"                                            # 외부에는 프론트(80)만 공개, 백엔드는 내부에서만 접근
+      - "80:80"                                            # http  → https 로 이동시키는 용도
+      - "443:443"                                          # https (실제 사이트)
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro               # EC2에 발급받은 인증서를 읽기 전용으로 연결
     depends_on:
       - backend
     restart: unless-stopped

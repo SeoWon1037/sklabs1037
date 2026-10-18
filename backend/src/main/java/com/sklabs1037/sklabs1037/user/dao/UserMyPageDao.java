@@ -3,6 +3,8 @@ package com.sklabs1037.sklabs1037.user.dao;
 import com.sklabs1037.sklabs1037.user.vo.UserMyPageVO;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.List;
+
 /**
  * 마이페이지 Dao
  * - 메서드 이름 = UserMyPageMapper.xml의 id
@@ -24,4 +26,10 @@ public interface UserMyPageDao {
 
     // 탈퇴: 관심 종목 삭제
     int deleteWatchlist(Long id);
+
+    // 내 AI 질문 기록 (최신순, limit/offset)
+    List<UserMyPageVO> selectMyChats(UserMyPageVO vo);
+
+    // 내 AI 질문 기록 전체 개수
+    int countMyChats(Long id);
 }

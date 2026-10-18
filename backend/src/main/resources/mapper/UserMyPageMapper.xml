@@ -66,6 +66,36 @@
         AND DEL_DAY IS NULL
     </update>
 
+    <!--
+        내 AI 질문 기록 (최신순)
+        - ID는 저장할 때마다 커지는 번호라 ID 역순 = 최신순
+        - 본인 기록만 (USER_ID 조건)
+    -->
+    <select id="selectMyChats"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserMyPageVO"
+            resultType="com.sklabs1037.sklabs1037.user.vo.UserMyPageVO">
+        SELECT  C.ID          AS CHAT_ID
+        ,C.QUESTION
+        ,C.ANSWER
+        ,C.TOOLS_USED
+        ,C.RATING
+        FROM T_AI_CHAT_LOG C
+        WHERE 1=1
+        AND C.USER_ID = #{id}
+        ORDER BY C.ID DESC
+        LIMIT  #{limit}
+        OFFSET  #{offset}
+    </select>
+
+    <!-- 내 AI 질문 기록 전체 개수 -->
+    <select id="countMyChats"
+            resultType="int">
+        SELECT  COUNT(*)
+        FROM T_AI_CHAT_LOG
+        WHERE 1=1
+        AND USER_ID = #{id}
+    </select>
+
     <!-- 탈퇴: 관심 종목 삭제 -->
     <delete id="deleteWatchlist">
         DELETE FROM T_WATCHLIST

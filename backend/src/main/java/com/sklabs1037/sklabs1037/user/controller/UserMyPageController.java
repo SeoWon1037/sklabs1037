@@ -11,7 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -22,6 +24,7 @@ import java.util.Map;
  *   POST /api/user/mypage/nickname   닉네임 변경  { nickname }                → { success, nickname }
  *   POST /api/user/mypage/password   비밀번호 변경 { currentPassword, newPassword } → { success }
  *   POST /api/user/mypage/withdraw   회원 탈퇴    { currentPassword, confirmText }  → { success }
+ *   GET  /api/user/mypage/chats?page=1   내 AI 질문 기록 (10개씩)       → { success, chats: [...], total, page, size }
  *
  * - 전부 로그인한 사람만, 본인 정보만 (회원 번호는 화면에서 받지 않고 세션에서 꺼냄)
  */
@@ -29,6 +32,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/user/mypage")
 public class UserMyPageController {
+
+    // AI 질문 기록 한 번에 보여줄 개수
+    private static final int CHAT_PAGE_SIZE = 10;
 
     @Autowired
     private IUserMyPageService userMyPageService;
@@ -139,6 +145,48 @@ public class UserMyPageController {
         } catch (IllegalArgumentException e) {
 
             return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        }
+
+    }
+
+    // 내 AI 질문 기록 (최신순, 10개씩)
+    @GetMapping("/chats")
+    public ResponseEntity<Map<String, Object>> myChats(@RequestParam(defaultValue = "1") int page,
+                                                       HttpServletRequest request) {
+
+        UserLoginVO loginUser = getLoginUser(request);
+        if (loginUser == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
+
+        int safePage = Math.max(1, Math.min(page, 100));   // 1~100페이지로 제한
+
+        try {
+
+            List<Map<String, Object>> chats = new ArrayList<>();
+
+            for (UserMyPageVO c : userMyPageService.getMyChats(loginUser.getId(), safePage, CHAT_PAGE_SIZE)) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("chatId", c.getChatId());
+                row.put("question", c.getQuestion());
+                row.put("answer", c.getAnswer());
+                row.put("toolsUsed", c.getToolsUsed());
+                row.put("rating", c.getRating());
+                chats.add(row);
+            }
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", true);
+            body.put("chats", chats);
+            body.put("total", userMyPageService.countMyChats(loginUser.getId()));
+            body.put("page", safePage);
+            body.put("size", CHAT_PAGE_SIZE);
+
+            return ResponseEntity.ok(body);
+
+        } catch (Exception e) {
+
+            log.error("AI 질문 기록 조회 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "질문 기록을 불러오지 못했습니다.");
 
         }
 

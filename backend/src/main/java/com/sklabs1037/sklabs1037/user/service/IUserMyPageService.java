@@ -2,6 +2,8 @@ package com.sklabs1037.sklabs1037.user.service;
 
 import com.sklabs1037.sklabs1037.user.vo.UserMyPageVO;
 
+import java.util.List;
+
 /**
  * 마이페이지 Service
  * - 검사에 걸리면 IllegalArgumentException(화면에 보여줄 메시지)을 던짐
@@ -19,4 +21,10 @@ public interface IUserMyPageService {
 
     // 회원 탈퇴
     void withdraw(Long id, String currentPassword, String confirmText);
+
+    // 내 AI 질문 기록 (page는 1부터)
+    List<UserMyPageVO> getMyChats(Long id, int page, int size);
+
+    // 내 AI 질문 기록 전체 개수
+    int countMyChats(Long id);
 }

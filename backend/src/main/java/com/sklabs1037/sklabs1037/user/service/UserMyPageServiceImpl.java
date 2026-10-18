@@ -7,6 +7,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * 마이페이지 Service 구현
  *
@@ -121,6 +123,25 @@ public class UserMyPageServiceImpl implements IUserMyPageService {
         // 3. 관심 종목 삭제 → 회원 정보 지우기 (둘 다 성공해야 반영, 중간에 실패하면 전부 되돌림)
         userMyPageDao.deleteWatchlist(id);
         userMyPageDao.withdrawUser(id);
+
+    }
+
+    @Override
+    public List<UserMyPageVO> getMyChats(Long id, int page, int size) {
+
+        UserMyPageVO vo = new UserMyPageVO();
+        vo.setId(id);
+        vo.setLimit(size);
+        vo.setOffset((Math.max(page, 1) - 1) * size);
+
+        return userMyPageDao.selectMyChats(vo);
+
+    }
+
+    @Override
+    public int countMyChats(Long id) {
+
+        return userMyPageDao.countMyChats(id);
 
     }
 

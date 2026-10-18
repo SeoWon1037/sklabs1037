@@ -134,3 +134,136 @@
 .mypage-danger-btn:disabled {
   opacity: 0.5;
 }
+
+/* ----- 내 AI 질문 기록 ----- */
+.mypage-box-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.mypage-count {
+  font-size: 13px;
+  color: var(--muted, #8b8b93);
+}
+
+.mypage-link {
+  color: #3b82f6;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mypage-link:hover {
+  text-decoration: underline;
+}
+
+.mypage-chats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mypage-chat {
+  padding: 14px 0;
+  border-top: 1px solid var(--border, #27272a);
+}
+
+.mypage-chat:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.mypage-chat-q {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mypage-chat-mark {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
+.mypage-chat-text {
+  flex: 1;
+  line-height: 1.5;
+}
+
+.mypage-chat-toggle {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted, #8b8b93);
+}
+
+.mypage-chat-a {
+  margin: 8px 0 0 28px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted, #8b8b93);
+}
+
+.mypage-chat-a.open {
+  white-space: pre-wrap;
+  color: inherit;
+}
+
+.mypage-chat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0 28px;
+  font-size: 12px;
+}
+
+.mypage-chat-rating {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #27272a);
+  color: var(--muted, #8b8b93);
+}
+
+.mypage-chat-rating.up {
+  border-color: rgba(34, 165, 91, 0.5);
+  color: #22a55b;
+}
+
+.mypage-chat-rating.down {
+  border-color: rgba(229, 72, 77, 0.5);
+  color: #e5484d;
+}
+
+.mypage-chat-tools {
+  color: var(--muted, #8b8b93);
+}
+
+.mypage-chat-meta .mypage-link {
+  margin-left: auto;
+}
+
+.mypage-more {
+  width: 100%;
+  margin-top: 12px;
+  background: transparent;
+  border: 1px solid var(--border, #27272a);
+  color: inherit;
+}

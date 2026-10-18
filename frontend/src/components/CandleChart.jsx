@@ -1,6 +1,7 @@
 // ============================================
 // 캔들 차트 (TradingView Lightweight Charts)
-// - 캔들(시가·고가·저가·종가) + 거래량 막대 + 이동평균선(선택) + 기간 최고/최저 표시
+// - 위 칸: 캔들(시가·고가·저가·종가) + 이동평균선(선택) + 기간 최고/최저 표시
+// - 아래 칸: 거래량 막대 (가격축과 섞이지 않게 별도 칸)
 // - 마우스를 올리면 위쪽 범례에 그날 시가/고가/저가/종가/거래량
 // - candles: [{ date, open, high, low, close, volume }] 오래된 날짜부터 (숫자)
 // ============================================
@@ -24,6 +25,9 @@ const MA_LINES = [
   { days: 5, color: '#f59e0b' },
   { days: 20, color: '#a855f7' },
 ]
+
+// 거래량 칸 높이 (px)
+const VOLUME_PANE_HEIGHT = 110
 
 // 테마별 차트 색 (CSS 변수와 같은 값)
 const THEME_COLORS = {
@@ -66,7 +70,7 @@ const movingAverage = (candles, n) => {
   return result
 }
 
-function CandleChart({ candles, showMA, height = 420 }) {
+function CandleChart({ candles, showMA, height = 480 }) {
 
   const containerRef = useRef(null)
   const { theme } = useTheme()
@@ -88,6 +92,7 @@ function CandleChart({ candles, showMA, height = 420 }) {
         background: { color: 'transparent' },
         textColor: colors.text,
         fontFamily: "'Pretendard Variable', Pretendard, sans-serif",
+        panes: { separatorColor: colors.border },
       },
       grid: {
         vertLines: { color: colors.grid },
@@ -95,7 +100,7 @@ function CandleChart({ candles, showMA, height = 420 }) {
       },
       rightPriceScale: {
         borderColor: colors.border,
-        scaleMargins: { top: 0.08, bottom: 0.28 },   // 아래 28%는 거래량 자리
+        scaleMargins: { top: 0.1, bottom: 0.08 },
       },
       timeScale: {
         borderColor: colors.border,
@@ -105,7 +110,7 @@ function CandleChart({ candles, showMA, height = 420 }) {
       localization: { locale: 'ko-KR', priceFormatter: formatPrice },
     })
 
-    // ===== 캔들 =====
+    // ===== 위 칸(0번 칸): 캔들 =====
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: UP,
       downColor: DOWN,
@@ -116,21 +121,7 @@ function CandleChart({ candles, showMA, height = 420 }) {
     })
     candleSeries.setData(candles.map((c) => ({ time: c.date, open: c.open, high: c.high, low: c.low, close: c.close })))
 
-    // ===== 거래량 (차트 아래 20%) =====
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceScaleId: 'volume',
-      priceFormat: { type: 'volume' },
-      lastValueVisible: false,
-      priceLineVisible: false,
-    })
-    chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } })
-    volumeSeries.setData(candles.map((c) => ({
-      time: c.date,
-      value: c.volume,
-      color: c.close >= c.open ? 'rgba(229, 72, 77, 0.45)' : 'rgba(59, 130, 246, 0.45)',
-    })))
-
-    // ===== 이동평균선 =====
+    // ===== 위 칸: 이동평균선 =====
     if (showMA) {
       MA_LINES.forEach(({ days, color }) => {
         const line = chart.addSeries(LineSeries, {
@@ -143,6 +134,19 @@ function CandleChart({ candles, showMA, height = 420 }) {
         line.setData(movingAverage(candles, days))
       })
     }
+
+    // ===== 아래 칸(1번 칸): 거래량 — 마지막 숫자 1이 "새 칸에 그려라"라는 뜻 =====
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: 'volume' },
+      lastValueVisible: false,
+      priceLineVisible: false,
+    }, 1)
+    volumeSeries.setData(candles.map((c) => ({
+      time: c.date,
+      value: c.volume,
+      color: c.close >= c.open ? 'rgba(229, 72, 77, 0.55)' : 'rgba(59, 130, 246, 0.55)',
+    })))
+    chart.panes()[1]?.setHeight(VOLUME_PANE_HEIGHT)
 
     // ===== 기간 최고 / 최저 표시 =====
     const maxCandle = candles.reduce((a, b) => (b.high > a.high ? b : a))

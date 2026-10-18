@@ -3,8 +3,9 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <!--
-    AI 주식 비서 도구(tool) SQL
-    namespace: 이 SQL을 쓸 Dao의 전체 경로
+    AI 주식 비서 SQL
+    - 도구(tool)가 사용하는 조회 SQL
+    - 대화 기록 / 피드백 저장 SQL
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.dao.AiChatDao">
 
@@ -13,14 +14,15 @@
             parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
             resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
         SELECT  ID AS STOCK_ID
-               ,SYMBOL
-               ,NAME
-               ,MARKET
-          FROM T_STOCK
-         WHERE 1=1
-           AND DEL_DAY IS NULL
+        ,SYMBOL
+        ,NAME
+        ,MARKET
+        FROM T_STOCK
+        WHERE 1=1
+        AND DEL_DAY IS NULL
         <if test="query != null and query != ''">
-           AND ( NAME ILIKE '%' || #{query} || '%' OR SYMBOL = #{query} )
+            AND ( NAME ILIKE '%' || #{query} || '%'
+            OR SYMBOL = #{query} )
         </if>
         ORDER BY ID
     </select>
@@ -30,15 +32,15 @@
             parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
             resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
         SELECT  P.TRADE_DATE
-               ,P.OPEN_PRICE
-               ,P.HIGH_PRICE
-               ,P.LOW_PRICE
-               ,P.CLOSE_PRICE
-               ,P.VOLUME
-          FROM T_STOCK_PRICE P JOIN T_STOCK S
-                                 ON S.ID = P.STOCK_ID
-         WHERE 1=1
-          AND S.SYMBOL = #{symbol}
+        ,P.OPEN_PRICE
+        ,P.HIGH_PRICE
+        ,P.LOW_PRICE
+        ,P.CLOSE_PRICE
+        ,P.VOLUME
+        FROM T_STOCK_PRICE P
+        JOIN T_STOCK S ON S.ID = P.STOCK_ID
+        WHERE 1=1
+        AND S.SYMBOL = #{symbol}
         ORDER BY P.TRADE_DATE DESC
         LIMIT #{days}
     </select>
@@ -48,14 +50,14 @@
             parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
             resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
         SELECT  S.SYMBOL
-               ,S.NAME
-               ,D.TITLE
-               ,D.CONTENT
-          FROM T_STOCK_DOC D JOIN T_STOCK S
-                               ON S.ID = D.STOCK_ID
-         WHERE 1=1
-          AND D.DEL_DAY IS NULL
-          AND (
+        ,S.NAME
+        ,D.TITLE
+        ,D.CONTENT
+        FROM T_STOCK_DOC D
+        JOIN T_STOCK S ON S.ID = D.STOCK_ID
+        WHERE 1=1
+        AND D.DEL_DAY IS NULL
+        AND (
         <foreach collection="keywords" item="kw" separator=" OR ">
             D.TITLE   ILIKE '%' || #{kw} || '%'
             OR D.CONTENT ILIKE '%' || #{kw} || '%'
@@ -65,5 +67,33 @@
         ORDER BY D.ID
         LIMIT 5
     </select>
+
+    <!-- 대화 기록 저장 (생성된 ID를 chatId에 담아줌 → 화면에서 피드백 보낼 때 사용) -->
+    <insert id="insertChatLog"
+            parameterType="com.sklabs1037.sklabs1037.vo.AiChatVO"
+            useGeneratedKeys="true" keyProperty="chatId" keyColumn="id">
+        INSERT INTO T_AI_CHAT_LOG
+        ( USER_ID
+        ,QUESTION
+        ,ANSWER
+        ,TOOLS_USED
+        ) VALUES (
+        #{userId}
+        ,#{message}
+        ,#{answer}
+        ,#{toolsText}
+        )
+    </insert>
+
+    <!-- 피드백 저장 (본인이 받은 답변에만 평가 가능) -->
+    <update id="updateRating"
+            parameterType="com.sklabs1037.sklabs1037.vo.AiChatVO">
+        UPDATE T_AI_CHAT_LOG
+        SET  RATING       = #{rating}
+        ,FEEDBACK_DAY = NOW()
+        WHERE 1=1
+        AND ID      = #{chatId}
+        AND USER_ID = #{userId}
+    </update>
 
 </mapper>

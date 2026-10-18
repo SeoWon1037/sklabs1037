@@ -20,6 +20,10 @@ import java.util.*;
  *   2. Claude가 "이 도구 써줘(tool_use)"라고 하면 → 우리가 실행해서 결과를 돌려줌
  *   3. Claude가 최종 답변(end_turn)을 줄 때까지 반복 (최대 MAX_TURNS번)
  *   → 어떤 도구를 언제 쓸지는 Claude가 스스로 판단
+ *
+ * 피드백
+ *   - 모든 질문/답변/사용 도구를 T_AI_CHAT_LOG에 기록
+ *   - 사용자가 👍/👎를 누르면 RATING 저장 → 👎 답변을 모아 프롬프트/도구 개선에 활용
  */
 @Slf4j
 @Service
@@ -100,10 +104,7 @@ public class AiChatServiceImpl implements IAiChatService {
             // 2. 도구 요청이 아니면 → 최종 답변
             if (!"tool_use".equals(response.get("stop_reason"))) {
 
-                vo.setAnswer(extractText(content));
-                vo.setToolsUsed(toolsUsed);
-
-                return vo;
+                return finish(vo, extractText(content), toolsUsed);
 
             }
 
@@ -146,8 +147,39 @@ public class AiChatServiceImpl implements IAiChatService {
         }
 
         // 최대 횟수 안에 답을 못 끝낸 경우
-        vo.setAnswer("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.");
+        return finish(vo, "질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed);
+
+    }
+
+    // ============================================
+    // 피드백 저장
+    // ============================================
+    @Override
+    public boolean saveRating(AiChatVO vo) {
+
+        return aiChatDao.updateRating(vo) > 0;
+
+    }
+
+    // ============================================
+    // 답변 마무리: 결과 담기 + 대화 기록 저장
+    // ============================================
+    private AiChatVO finish(AiChatVO vo, String answer, List<String> toolsUsed) {
+
+        vo.setAnswer(answer);
         vo.setToolsUsed(toolsUsed);
+        vo.setToolsText(String.join(", ", toolsUsed));
+
+        // 기록 저장이 실패해도 답변은 보여줘야 하니까 따로 처리 (chatId가 없으면 화면에서 피드백 버튼만 숨김)
+        try {
+
+            aiChatDao.insertChatLog(vo);
+
+        } catch (Exception e) {
+
+            log.warn("AI 대화 기록 저장 실패", e);
+
+        }
 
         return vo;
 

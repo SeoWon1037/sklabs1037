@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClientResponseException;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,7 +20,8 @@ import java.util.Map;
  * AI 주식 비서 Controller
  *
  * API 목록
- *   POST /api/ai/chat   질문하기 { "message" } → { success, answer, toolsUsed }
+ *   POST /api/ai/chat       질문하기   { message }          → { success, chatId, answer, toolsUsed }
+ *   POST /api/ai/feedback   답변 평가  { chatId, rating }   → { success }   (rating: UP / DOWN)
  *
  * 비용 보호
  *   - 로그인한 사람만 사용 가능
@@ -38,6 +40,13 @@ public class AiChatController {
     @Autowired
     private ClaudeApiClient claudeApiClient;
 
+    // 세션의 로그인 정보에서 회원 ID를 꺼낼 때 사용
+    @Autowired
+    private JsonMapper jsonMapper;
+
+    // ============================================
+    // 질문하기
+    // ============================================
     @PostMapping("/chat")
     public ResponseEntity<Map<String, Object>> chat(@RequestBody AiChatVO vo,
                                                     HttpServletRequest request) {
@@ -75,10 +84,13 @@ public class AiChatController {
         try {
 
             vo.setMessage(message);
+            vo.setUserId(getLoginUserId(session));
+
             AiChatVO result = aiChatService.chat(vo);
 
             Map<String, Object> body = new HashMap<>();
             body.put("success", true);
+            body.put("chatId", result.getChatId());
             body.put("answer", result.getAnswer());
             body.put("toolsUsed", result.getToolsUsed());
 
@@ -96,6 +108,60 @@ public class AiChatController {
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "AI 처리 중 오류가 발생했습니다.");
 
         }
+
+    }
+
+    // ============================================
+    // 답변 피드백 (👍 / 👎)
+    // ============================================
+    @PostMapping("/feedback")
+    public ResponseEntity<Map<String, Object>> feedback(@RequestBody AiChatVO vo,
+                                                        HttpServletRequest request) {
+
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute(UserLoginController.LOGIN_USER) == null) {
+
+            return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
+
+        }
+
+        if (vo.getChatId() == null || !("UP".equals(vo.getRating()) || "DOWN".equals(vo.getRating()))) {
+
+            return fail(HttpStatus.BAD_REQUEST, "잘못된 요청입니다.");
+
+        }
+
+        // 본인이 받은 답변에만 평가할 수 있게 회원 ID를 조건에 사용
+        vo.setUserId(getLoginUserId(session));
+
+        if (!aiChatService.saveRating(vo)) {
+
+            return fail(HttpStatus.NOT_FOUND, "평가할 답변을 찾을 수 없습니다.");
+
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", true);
+
+        return ResponseEntity.ok(body);
+
+    }
+
+    // ============================================
+    // 공통
+    // ============================================
+
+    // 세션에 저장된 로그인 정보에서 회원 ID 꺼내기 (로그인 정보 객체를 Map으로 바꿔서 "id" 값 사용)
+    @SuppressWarnings("unchecked")
+    private Long getLoginUserId(HttpSession session) {
+
+        Object loginUser = session.getAttribute(UserLoginController.LOGIN_USER);
+        if (loginUser == null) return null;
+
+        Map<String, Object> map = jsonMapper.convertValue(loginUser, Map.class);
+        Object id = map.get("id");
+
+        return (id instanceof Number n) ? n.longValue() : null;
 
     }
 

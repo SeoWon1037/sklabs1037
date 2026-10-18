@@ -1,7 +1,9 @@
 // ============================================
 // AI 주식 비서 화면 (주소: /ai)
-// - 백엔드 API: POST /api/ai/chat { message } → { success, answer, toolsUsed }
-// - AI가 어떤 도구(DB 조회, 문서 검색 등)를 썼는지도 함께 보여줌
+// - 백엔드 API
+//   POST /api/ai/chat     { message }         → { success, chatId, answer, toolsUsed }
+//   POST /api/ai/feedback { chatId, rating }  → { success }
+// - AI가 어떤 도구(DB 조회, 문서 검색 등)를 썼는지 + 답변 피드백(👍/👎)
 // ============================================
 import { useEffect, useRef, useState } from 'react'
 import './AiChatPage.css'
@@ -16,7 +18,7 @@ const EXAMPLES = [
 
 function AiChatPage() {
 
-  // 대화 목록: { role: 'user' | 'ai', text, tools? }
+  // 대화 목록: { role: 'user' | 'ai', text, tools?, chatId?, rating?, error? }
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -48,7 +50,10 @@ function AiChatPage() {
       const data = await res.json()
 
       if (data.success) {
-        setMessages((prev) => [...prev, { role: 'ai', text: data.answer, tools: data.toolsUsed }])
+        setMessages((prev) => [
+          ...prev,
+          { role: 'ai', text: data.answer, tools: data.toolsUsed, chatId: data.chatId, rating: null },
+        ])
       } else {
         setMessages((prev) => [...prev, { role: 'ai', text: data.message, error: true }])
       }
@@ -57,6 +62,33 @@ function AiChatPage() {
       setMessages((prev) => [...prev, { role: 'ai', text: '서버에 연결할 수 없습니다.', error: true }])
     } finally {
       setLoading(false)
+    }
+  }
+
+  // ============================================
+  // 답변 피드백 (👍 UP / 👎 DOWN)
+  // ============================================
+  const sendFeedback = async (index, rating) => {
+
+    const target = messages[index]
+    if (!target.chatId || target.rating) return
+
+    // 화면에 먼저 반영 (실패하면 되돌림)
+    const setRating = (value) =>
+      setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, rating: value } : m)))
+
+    setRating(rating)
+
+    try {
+      const res = await fetch('/api/ai/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: target.chatId, rating }),
+      })
+      const data = await res.json()
+      if (!data.success) setRating(null)
+    } catch {
+      setRating(null)
     }
   }
 
@@ -106,6 +138,27 @@ function AiChatPage() {
                   {m.tools.map((t, j) => (
                     <span key={j} className="ai-tool">🔧 {t}</span>
                   ))}
+                </div>
+              )}
+
+              {/* 답변 피드백 */}
+              {m.chatId && (
+                <div className="ai-feedback">
+                  {m.rating ? (
+                    <span className="ai-feedback-done">
+                      피드백 감사합니다 {m.rating === 'UP' ? '👍' : '👎'}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="ai-feedback-label">답변이 도움이 됐나요?</span>
+                      <button type="button" className="ai-feedback-btn" onClick={() => sendFeedback(i, 'UP')} aria-label="도움이 됐어요">
+                        👍
+                      </button>
+                      <button type="button" className="ai-feedback-btn" onClick={() => sendFeedback(i, 'DOWN')} aria-label="도움이 안 됐어요">
+                        👎
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

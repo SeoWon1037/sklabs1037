@@ -10,6 +10,7 @@ import MainPage from './pages/MainPage'
 import UserSignUpPage from './pages/UserSignUpPage'
 import UserLoginPage from './pages/UserLoginPage'
 import UserOAuthResultPage from './pages/UserOAuthResultPage'
+import AiChatPage from './pages/AiChatPage'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/signup" element={<UserSignUpPage />} />            {/* 회원가입 */}
         <Route path="/login" element={<UserLoginPage />} />              {/* 로그인 */}
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
+        <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
       </Routes>
     </>
   )

@@ -148,3 +148,10 @@
     font-size: 13px;
   }
 }
+
+
+/* 넓은 화면(주식 종목)에서는 상단바 안쪽 폭도 본문과 같이 */
+.header-inner-wide {
+  max-width: 1600px;
+  padding: 0 24px;
+}

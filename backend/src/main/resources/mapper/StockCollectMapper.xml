@@ -3,70 +3,78 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <!--
-    시세 수집 (데이터 파이프라인) SQL
+    시세 수집(데이터 파이프라인) SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.dao.StockCollectDao">
 
-    <!-- ============================================ -->
-    <!-- 종목 (T_STOCK)                               -->
-    <!-- ============================================ -->
-
-    <!-- 수집 대상 종목 목록 (사용 중 + 삭제 안 된 것) -->
+    <!-- 수집 대상 종목 -->
     <select id="selectTargetStocks"
             resultType="com.sklabs1037.sklabs1037.vo.StockCollectVO">
         SELECT  ID AS STOCK_ID
-               ,SYMBOL
-               ,NAME
-          FROM T_STOCK
-         WHERE 1=1
-           AND USE_YN  = 'Y'
-           AND DEL_DAY IS NULL
-         ORDER BY ID
+        ,SYMBOL
+        ,NAME
+        FROM T_STOCK
+        WHERE 1=1
+        AND USE_YN = 'Y'
+        AND DEL_DAY IS NULL
+        ORDER BY ID
     </select>
 
-    <!-- ============================================ -->
-    <!-- 시세 (T_STOCK_PRICE)                         -->
-    <!-- ============================================ -->
-
-    <!-- 쌓인 시세 건수 (0이면 초기 적재 필요) -->
+    <!-- 시세 전체 건수 -->
     <select id="countPrices"
             resultType="int">
-        SELECT COUNT(*)
-          FROM T_STOCK_PRICE
-         WHERE 1=1
+        SELECT  COUNT(*)
+        FROM T_STOCK_PRICE
+        WHERE 1=1
     </select>
 
-    <!-- 시세 UPSERT: 같은 종목+같은 날짜가 있으면 수정, 없으면 추가 (여러 번 돌려도 중복 없음) -->
+    <!-- 시세 이력이 minRows개보다 적은 종목 (새로 추가한 종목 등) -->
+    <select id="selectStocksNeedingHistory"
+            parameterType="int"
+            resultType="com.sklabs1037.sklabs1037.vo.StockCollectVO">
+        SELECT  S.ID AS STOCK_ID
+        ,S.SYMBOL
+        ,S.NAME
+        FROM T_STOCK S
+        LEFT JOIN T_STOCK_PRICE P ON P.STOCK_ID = S.ID
+        WHERE 1=1
+        AND S.USE_YN = 'Y'
+        AND S.DEL_DAY IS NULL
+        GROUP BY S.ID
+        ,S.SYMBOL
+        ,S.NAME
+        HAVING COUNT(P.ID) &lt; #{minRows}
+        ORDER BY S.ID
+    </select>
+
+    <!-- 일봉 저장 (같은 종목·같은 날짜가 있으면 덮어씀) -->
     <insert id="upsertStockPrice"
             parameterType="com.sklabs1037.sklabs1037.vo.StockCollectVO">
         INSERT INTO T_STOCK_PRICE
-        (  STOCK_ID
-          ,TRADE_DATE
-          ,OPEN_PRICE
-          ,HIGH_PRICE
-          ,LOW_PRICE
-          ,CLOSE_PRICE
-          ,VOLUME
-          ,INS_DAY
+        ( STOCK_ID
+        ,TRADE_DATE
+        ,OPEN_PRICE
+        ,HIGH_PRICE
+        ,LOW_PRICE
+        ,CLOSE_PRICE
+        ,VOLUME
         ) VALUES (
-           #{stockId}
-          ,#{tradeDate}
-          ,#{openPrice}
-          ,#{highPrice}
-          ,#{lowPrice}
-          ,#{closePrice}
-          ,#{volume}
-          ,NOW()
+        #{stockId}
+        ,#{tradeDate}
+        ,#{openPrice}
+        ,#{highPrice}
+        ,#{lowPrice}
+        ,#{closePrice}
+        ,#{volume}
         )
-        ON CONFLICT (STOCK_ID, TRADE_DATE)
-        DO UPDATE
+        ON CONFLICT (STOCK_ID, TRADE_DATE) DO UPDATE
         SET  OPEN_PRICE  = EXCLUDED.OPEN_PRICE
-            ,HIGH_PRICE  = EXCLUDED.HIGH_PRICE
-            ,LOW_PRICE   = EXCLUDED.LOW_PRICE
-            ,CLOSE_PRICE = EXCLUDED.CLOSE_PRICE
-            ,VOLUME      = EXCLUDED.VOLUME
-            ,UPT_DAY     = NOW()
+        ,HIGH_PRICE  = EXCLUDED.HIGH_PRICE
+        ,LOW_PRICE   = EXCLUDED.LOW_PRICE
+        ,CLOSE_PRICE = EXCLUDED.CLOSE_PRICE
+        ,VOLUME      = EXCLUDED.VOLUME
+        ,UPT_DAY     = NOW()
     </insert>
 
 </mapper>

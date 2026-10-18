@@ -121,7 +121,7 @@ function AiChatPage() {
         <div className="ai-header">
           <h1 className="ai-title">AI 주식 비서</h1>
           <p className="ai-subtitle">
-            실제 시세 데이터와 종목 문서, 최근 뉴스를 직접 찾아보고 답해요 · 지원 종목: 삼성전자, SK하이닉스, NAVER, 카카오, 현대차
+             실제 시세 데이터와 종목 문서, 최근 뉴스를 직접 찾아보고 답해요 · 코스피 대표 12개 종목 지원
           </p>
         </div>
 

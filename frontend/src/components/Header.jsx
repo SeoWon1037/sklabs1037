@@ -2,6 +2,7 @@
 // 상단바 (모든 화면 맨 위에 공통으로 표시)
 // 왼쪽: 로고 + 메뉴 탭(뉴스 / 주식 종목 / AI 비서 / 관리자는 "관리자" 추가)
 // 오른쪽: 테마 전환 + (로그아웃 상태) 로그인·회원가입 / (로그인 상태) 닉네임·로그아웃
+// - 주식 종목 화면(/stock)은 넓은 화면이라 상단바 안쪽 폭도 같이 넓힘
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
@@ -17,6 +18,9 @@ const MENUS = [
 
 // 관리자에게만 보이는 탭
 const ADMIN_MENU = { to: '/admin', label: '관리자' }
+
+// 넓은 화면을 쓰는 주소
+const WIDE_PATHS = ['/stock']
 
 function Header() {
 
@@ -67,10 +71,11 @@ function Header() {
   }
 
   const menus = isAdmin ? [...MENUS, ADMIN_MENU] : MENUS
+  const wide = WIDE_PATHS.some((p) => location.pathname.startsWith(p))
 
   return (
     <header className="header">
-      <div className="header-inner">
+      <div className={`header-inner ${wide ? 'header-inner-wide' : ''}`}>
 
         {/* 왼쪽: 로고 + 메뉴 탭 */}
         <div className="header-left">

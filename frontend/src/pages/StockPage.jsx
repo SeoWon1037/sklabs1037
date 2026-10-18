@@ -1,193 +1,381 @@
 // ============================================
-// 주식 종목 화면 (주소: /stock)
-// - 백엔드 API: GET /api/stock/dashboard → { success, baseDate, stocks }
-// - 종목 카드(현재가, 전일 대비, 미니 차트) + 선택한 종목 상세 차트
-// - "AI에게 묻기" → AI 비서 화면에 질문을 미리 채워서 이동
+// 주식 종목 화면 (주소: /stock) — 토스증권 차트 화면 스타일, 넓은 화면
+// - 왼쪽: 종목 목록 (현재가, 등락률, 미니 차트)
+// - 오른쪽: 종목 헤더 + 탭 (차트·시세 / 종목정보 / 뉴스)
+// - 백엔드 API
+//   GET /api/stock/dashboard?days=20        종목 목록 + 미니 차트
+//   GET /api/stock/detail?symbol=005930     종목 정보 + 일봉
+//   GET /api/news?stockId=1&size=15         종목 뉴스
 // ============================================
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import StockChart from '../components/StockChart'
+import CandleChart from '../components/CandleChart'
 import './StockPage.css'
 
-// 상세 차트 기간 (거래일 기준)
+const TABS = [
+  { value: 'chart', label: '차트 · 시세' },
+  { value: 'info', label: '종목정보' },
+  { value: 'news', label: '뉴스' },
+]
+
 const PERIODS = [
-  { label: '1개월', days: 20 },
-  { label: '3개월', days: 60 },
-  { label: '전체', days: 100 },
+  { value: 'D', label: '일' },
+  { value: 'W', label: '주' },
+  { value: 'M', label: '월' },
 ]
 
 // 한국 주식 관례: 상승 빨강 / 하락 파랑
 const UP_COLOR = '#e5484d'
 const DOWN_COLOR = '#3b82f6'
 
-const formatPrice = (value) => (value == null ? '-' : Number(value).toLocaleString('ko-KR'))
+const formatPrice = (value) => (value == null ? '-' : Math.round(Number(value)).toLocaleString('ko-KR'))
+const changeClass = (value) => (Number(value) > 0 ? 'up' : Number(value) < 0 ? 'down' : '')
+const signed = (value, digits = 0) => {
+  const n = Number(value)
+  const text = digits ? n.toFixed(digits) : Math.round(n).toLocaleString('ko-KR')
+  return n > 0 ? `+${text}` : text
+}
+const arrow = (value) => (Number(value) > 0 ? '▲' : Number(value) < 0 ? '▼' : '')
 
-// 등락 표시 (▲ +9,500 +4.58%)
-const formatChange = (amount, rate) => {
-  if (amount == null || rate == null) return '-'
-  const n = Number(amount)
-  const arrow = n > 0 ? '▲' : n < 0 ? '▼' : '-'
-  const sign = n > 0 ? '+' : ''
-  return `${arrow} ${sign}${formatPrice(n)} (${sign}${Number(rate).toFixed(2)}%)`
+// 날짜 → "2026-10-16" (한국 시간 기준)
+const toYmd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+// 그 주의 월요일 (주봉 묶는 기준)
+const weekKey = (date) => {
+  const d = new Date(`${date}T00:00:00`)
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return toYmd(d)
 }
 
-const changeClass = (value) => (Number(value) > 0 ? 'up' : Number(value) < 0 ? 'down' : '')
+// 일봉 → 주봉 / 월봉 (시가=첫날 시가, 종가=마지막 날 종가, 고가·저가=기간 최고·최저, 거래량=합계)
+const groupCandles = (candles, period) => {
+  if (period === 'D') return candles
+
+  const groups = []
+  let current = null
+
+  for (const c of candles) {
+    const key = period === 'M' ? c.date.slice(0, 7) : weekKey(c.date)
+    if (!current || current.key !== key) {
+      current = { key, date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume }
+      groups.push(current)
+    } else {
+      current.high = Math.max(current.high, c.high)
+      current.low = Math.min(current.low, c.low)
+      current.close = c.close
+      current.volume += c.volume
+    }
+  }
+
+  return groups
+}
+
+const timeAgo = (dateText) => {
+  const minutes = Math.floor((Date.now() - new Date(dateText).getTime()) / 60000)
+  if (minutes < 60) return `${Math.max(minutes, 1)}분 전`
+  if (minutes < 60 * 24) return `${Math.floor(minutes / 60)}시간 전`
+  return `${Math.floor(minutes / (60 * 24))}일 전`
+}
 
 function StockPage() {
 
+  // ===== 종목 목록 =====
   const [stocks, setStocks] = useState([])
-  const [baseDate, setBaseDate] = useState(null)
+  const [listError, setListError] = useState('')
   const [selectedSymbol, setSelectedSymbol] = useState(null)
-  const [period, setPeriod] = useState(60)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
-  // 처음 한 번 시세 불러오기
+  // ===== 선택한 종목 상세 =====
+  const [detail, setDetail] = useState({ key: null, stock: null, candles: [], error: '' })
+  const [tab, setTab] = useState('chart')
+  const [period, setPeriod] = useState('D')
+  const [showMA, setShowMA] = useState(true)
+  const [news, setNews] = useState({ key: null, items: [] })
+
+  // 처음 한 번: 종목 목록
   useEffect(() => {
-    fetch('/api/stock/dashboard')
+    fetch('/api/stock/dashboard?days=20')
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setStocks(data.stocks)
-          setBaseDate(data.baseDate)
           setSelectedSymbol(data.stocks[0]?.symbol ?? null)
         } else {
-          setError(data.message)
+          setListError(data.message)
         }
       })
-      .catch(() => setError('서버에 연결할 수 없습니다.'))
-      .finally(() => setLoading(false))
+      .catch(() => setListError('서버에 연결할 수 없습니다.'))
   }, [])
 
-  // 선택한 종목 + 기간에 맞는 차트 데이터
+  // 종목이 바뀔 때마다: 상세 + 일봉
+  useEffect(() => {
+
+    if (!selectedSymbol) return
+    let ignore = false
+
+    fetch(`/api/stock/detail?symbol=${selectedSymbol}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (ignore) return
+        if (!data.success) {
+          setDetail({ key: selectedSymbol, stock: null, candles: [], error: data.message })
+          return
+        }
+        // 가격은 숫자로 바꿔두기 (계산·차트용)
+        const candles = data.candles.map((c) => ({
+          date: c.date,
+          open: Number(c.open),
+          high: Number(c.high),
+          low: Number(c.low),
+          close: Number(c.close),
+          volume: Number(c.volume),
+        }))
+        setDetail({ key: selectedSymbol, stock: data.stock, candles, error: '' })
+      })
+      .catch(() => {
+        if (!ignore) setDetail({ key: selectedSymbol, stock: null, candles: [], error: '서버에 연결할 수 없습니다.' })
+      })
+
+    return () => { ignore = true }
+
+  }, [selectedSymbol])
+
   const selected = stocks.find((s) => s.symbol === selectedSymbol)
-  const periodPoints = selected ? selected.prices.slice(-period) : []
-  const periodFirst = periodPoints[0]
-  const periodLast = periodPoints[periodPoints.length - 1]
-  const periodRate = periodFirst && periodLast
-    ? ((Number(periodLast.close) - Number(periodFirst.close)) / Number(periodFirst.close)) * 100
-    : null
-  const periodCloses = periodPoints.map((p) => Number(p.close))
+  const stockId = selected?.stockId
+
+  // 뉴스 탭을 열었을 때만: 종목 뉴스
+  useEffect(() => {
+
+    if (tab !== 'news' || !stockId) return
+    let ignore = false
+
+    fetch(`/api/news?stockId=${stockId}&size=15`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!ignore) setNews({ key: stockId, items: data.success ? data.news : [] })
+      })
+      .catch(() => {
+        if (!ignore) setNews({ key: stockId, items: [] })
+      })
+
+    return () => { ignore = true }
+
+  }, [tab, stockId])
+
+  // ===== 화면에서 쓸 계산 =====
+  const ready = detail.key === selectedSymbol && detail.stock
+  const daily = useMemo(() => (ready ? detail.candles : []), [ready, detail.candles])
+  const chartCandles = useMemo(() => groupCandles(daily, period), [daily, period])
+
+  const latest = daily[daily.length - 1]
+  const prev = daily[daily.length - 2]
+  const change = latest && prev ? latest.close - prev.close : null
+  const changeRate = latest && prev ? (change / prev.close) * 100 : null
+  const rangeHigh = daily.length ? Math.max(...daily.map((c) => c.high)) : null
+  const rangeLow = daily.length ? Math.min(...daily.map((c) => c.low)) : null
+  const avgVolume = daily.length ? daily.reduce((sum, c) => sum + c.volume, 0) / daily.length : null
+  const periodReturn = daily.length > 1 ? ((latest.close - daily[0].close) / daily[0].close) * 100 : null
+
+  // 일별 시세 (최근 20일, 최신부터)
+  const dailyRows = daily.slice(-21).map((c, i, arr) => {
+    const before = arr[i - 1]
+    return { ...c, change: before ? c.close - before.close : null, rate: before ? ((c.close - before.close) / before.close) * 100 : null }
+  }).slice(1).reverse()
+
+  if (listError) {
+    return <main className="stock-page"><p className="stock-status stock-error">{listError}</p></main>
+  }
 
   return (
-    <main className="main-page">
+    <main className="stock-page">
+      <div className="stock-layout">
 
-      {/* ===== 소개 ===== */}
-      <section className="main-hero">
-        <div>
-          <p className="main-eyebrow">SKLabs 주식 분석</p>
-          <h1 className="main-title">데이터로 답하는 AI 주식 비서</h1>
-          <p className="main-desc">
-            매일 장 마감 후 자동 수집한 시세와 종목 문서를 AI가 직접 조회해서 답합니다.
-          </p>
-        </div>
-        <Link to="/ai" className="btn btn-primary main-cta">🤖 AI 비서에게 물어보기</Link>
-      </section>
-
-      {loading && <p className="main-status">시세를 불러오는 중...</p>}
-      {error && <p className="main-status main-error">{error}</p>}
-
-      {!loading && !error && (
-        <>
-          {/* ===== 종목 카드 ===== */}
-          <div className="main-section-head">
-            <h2 className="main-section-title">종목 시세</h2>
-            {baseDate && <span className="main-base-date">{baseDate} 종가 기준 · 평일 20:30 자동 수집</span>}
+        {/* ===== 왼쪽: 종목 목록 ===== */}
+        <aside className="stock-list">
+          <div className="stock-list-head">
+            <span>종목</span>
+            <span className="stock-list-count">{stocks.length}</span>
           </div>
-
-          <section className="stock-grid">
+          <ul className="stock-list-items">
             {stocks.map((s) => (
-              <button
-                key={s.symbol}
-                type="button"
-                className={`stock-card ${s.symbol === selectedSymbol ? 'stock-card-active' : ''}`}
-                onClick={() => setSelectedSymbol(s.symbol)}
-              >
-                <div className="stock-card-head">
-                  <span className="stock-name">{s.name}</span>
-                  <span className="stock-code">{s.symbol}</span>
-                </div>
-                <div className="stock-price">{formatPrice(s.closePrice)}</div>
-                <div className={`stock-change ${changeClass(s.changeAmount)}`}>
-                  {formatChange(s.changeAmount, s.changeRate)}
-                </div>
-                <StockChart
-                  points={s.prices.slice(-20)}
-                  height={44}
-                  color={Number(s.changeAmount) >= 0 ? UP_COLOR : DOWN_COLOR}
-                />
-              </button>
+              <li key={s.symbol}>
+                <button
+                  type="button"
+                  className={`stock-item ${s.symbol === selectedSymbol ? 'stock-item-active' : ''}`}
+                  onClick={() => setSelectedSymbol(s.symbol)}
+                >
+                  <span className="stock-item-name">
+                    {s.name}
+                    <small>{s.symbol}</small>
+                  </span>
+                  <span className="stock-item-chart">
+                    <StockChart points={s.prices} height={28} color={Number(s.changeAmount) >= 0 ? UP_COLOR : DOWN_COLOR} />
+                  </span>
+                  <span className="stock-item-price">
+                    {formatPrice(s.closePrice)}
+                    <small className={changeClass(s.changeAmount)}>
+                      {s.changeRate == null ? '-' : `${signed(s.changeRate, 2)}%`}
+                    </small>
+                  </span>
+                </button>
+              </li>
             ))}
-          </section>
+          </ul>
+        </aside>
 
-          {/* ===== 선택한 종목 상세 ===== */}
-          {selected && (
-            <section className="stock-detail">
-              <div className="stock-detail-head">
+        {/* ===== 오른쪽: 종목 상세 ===== */}
+        <section className="stock-detail">
+
+          {!ready && !detail.error && <p className="stock-status">시세를 불러오는 중...</p>}
+          {detail.key === selectedSymbol && detail.error && <p className="stock-status stock-error">{detail.error}</p>}
+
+          {ready && (
+            <>
+              {/* 종목 헤더 */}
+              <div className="detail-head">
                 <div>
-                  <div className="stock-detail-name">
-                    {selected.name} <span className="stock-code">{selected.symbol} · {selected.market}</span>
+                  <div className="detail-name">
+                    {detail.stock.name}
+                    <span className="detail-code">{detail.stock.symbol} · {detail.stock.market}</span>
                   </div>
-                  <div className="stock-detail-price">
-                    {formatPrice(selected.closePrice)}원
-                    <span className={`stock-change ${changeClass(selected.changeAmount)}`}>
-                      {formatChange(selected.changeAmount, selected.changeRate)}
-                    </span>
+                  <div className="detail-price-row">
+                    <span className="detail-price">{formatPrice(latest?.close)}원</span>
+                    {change !== null && (
+                      <span className={`detail-change ${changeClass(change)}`}>
+                        {arrow(change)} {signed(change)} ({signed(changeRate, 2)}%)
+                      </span>
+                    )}
+                    <span className="detail-date">{latest?.date} 종가 기준</span>
                   </div>
                 </div>
 
-                <div className="period-tabs">
-                  {PERIODS.map((p) => (
-                    <button
-                      key={p.days}
-                      type="button"
-                      className={`period-tab ${period === p.days ? 'period-tab-active' : ''}`}
-                      onClick={() => setPeriod(p.days)}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+                <dl className="detail-range">
+                  <div><dt>{daily.length}일 최고</dt><dd className="up">{formatPrice(rangeHigh)}</dd></div>
+                  <div><dt>{daily.length}일 최저</dt><dd className="down">{formatPrice(rangeLow)}</dd></div>
+                </dl>
               </div>
 
-              <StockChart
-                points={periodPoints}
-                height={240}
-                detailed
-                color={periodRate !== null && periodRate >= 0 ? UP_COLOR : DOWN_COLOR}
-              />
-
-              <div className="stock-stats">
-                <div className="stock-stat">
-                  <span>기간 수익률</span>
-                  <strong className={changeClass(periodRate)}>
-                    {periodRate === null ? '-' : `${periodRate > 0 ? '+' : ''}${periodRate.toFixed(2)}%`}
-                  </strong>
-                </div>
-                <div className="stock-stat">
-                  <span>기간 최고 종가</span>
-                  <strong>{periodCloses.length ? formatPrice(Math.max(...periodCloses)) : '-'}</strong>
-                </div>
-                <div className="stock-stat">
-                  <span>기간 최저 종가</span>
-                  <strong>{periodCloses.length ? formatPrice(Math.min(...periodCloses)) : '-'}</strong>
-                </div>
-                <div className="stock-stat">
-                  <span>최근 거래량</span>
-                  <strong>{formatPrice(selected.volume)}</strong>
-                </div>
+              {/* 탭 */}
+              <div className="detail-tabs">
+                {TABS.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    className={`detail-tab ${tab === t.value ? 'detail-tab-active' : ''}`}
+                    onClick={() => setTab(t.value)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
 
-              <Link
-                to={`/ai?q=${encodeURIComponent(`${selected.name} 최근 한 달 흐름이랑 무슨 사업을 하는 회사인지 알려줘`)}`}
-                className="btn btn-ghost stock-ask"
-              >
-                🤖 {selected.name}에 대해 AI에게 묻기
-              </Link>
-            </section>
+              {/* 탭: 차트 · 시세 */}
+              {tab === 'chart' && (
+                <>
+                  <div className="chart-box">
+                    <div className="chart-toolbar">
+                      <div className="chart-periods">
+                        {PERIODS.map((p) => (
+                          <button
+                            key={p.value}
+                            type="button"
+                            className={`chart-period ${period === p.value ? 'chart-period-active' : ''}`}
+                            onClick={() => setPeriod(p.value)}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className={`chart-toggle ${showMA ? 'chart-toggle-on' : ''}`}
+                        onClick={() => setShowMA(!showMA)}
+                      >
+                        이동평균선 5 · 20
+                      </button>
+                    </div>
+
+                    <CandleChart candles={chartCandles} showMA={showMA} height={520} />
+                  </div>
+
+                  <div className="daily-box">
+                    <h2 className="daily-title">일별 시세</h2>
+                    <table className="daily-table">
+                      <thead>
+                        <tr>
+                          <th>날짜</th>
+                          <th>종가</th>
+                          <th>전일비</th>
+                          <th>등락률</th>
+                          <th>시가</th>
+                          <th>고가</th>
+                          <th>저가</th>
+                          <th>거래량</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailyRows.map((r) => (
+                          <tr key={r.date}>
+                            <td>{r.date.slice(5).replace('-', '.')}</td>
+                            <td className={changeClass(r.change)}>{formatPrice(r.close)}</td>
+                            <td className={changeClass(r.change)}>{arrow(r.change)} {formatPrice(Math.abs(r.change))}</td>
+                            <td className={changeClass(r.change)}>{signed(r.rate, 2)}%</td>
+                            <td>{formatPrice(r.open)}</td>
+                            <td>{formatPrice(r.high)}</td>
+                            <td>{formatPrice(r.low)}</td>
+                            <td>{formatPrice(r.volume)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {/* 탭: 종목정보 */}
+              {tab === 'info' && (
+                <div className="info-box">
+                  <div className="info-stats">
+                    <div className="info-stat"><span>시장</span><strong>{detail.stock.market}</strong></div>
+                    <div className="info-stat">
+                      <span>{daily.length}거래일 수익률</span>
+                      <strong className={changeClass(periodReturn)}>{periodReturn === null ? '-' : `${signed(periodReturn, 2)}%`}</strong>
+                    </div>
+                    <div className="info-stat"><span>평균 거래량</span><strong>{formatPrice(avgVolume)}</strong></div>
+                    <div className="info-stat"><span>데이터 기간</span><strong>{daily[0]?.date} ~ {latest?.date}</strong></div>
+                  </div>
+
+                  <h2 className="info-title">{detail.stock.docTitle ?? '사업 개요'}</h2>
+                  <p className="info-content">{detail.stock.docContent ?? '등록된 종목 설명이 없습니다.'}</p>
+
+                  <Link
+                    to={`/ai?q=${encodeURIComponent(`${detail.stock.name} 최근 흐름이랑 무슨 사업을 하는 회사인지 알려줘`)}`}
+                    className="btn btn-primary info-ask"
+                  >
+                    ✨ {detail.stock.name}에 대해 AI에게 묻기
+                  </Link>
+                </div>
+              )}
+
+              {/* 탭: 뉴스 */}
+              {tab === 'news' && (
+                <div className="news-box">
+                  {news.key !== stockId && <p className="stock-status">뉴스를 불러오는 중...</p>}
+                  {news.key === stockId && news.items.length === 0 && <p className="stock-status">수집된 뉴스가 없습니다.</p>}
+                  <ul className="news-list">
+                    {news.key === stockId && news.items.map((n) => (
+                      <li key={n.newsId} className="news-item">
+                        <a href={n.link} target="_blank" rel="noopener noreferrer" className="news-title">{n.title}</a>
+                        <span className="news-meta">{n.press} · {timeAgo(n.pubDate)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
+        </section>
+      </div>
     </main>
   )
 }

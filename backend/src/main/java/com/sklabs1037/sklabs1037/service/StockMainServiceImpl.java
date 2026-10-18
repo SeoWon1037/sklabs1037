@@ -8,8 +8,9 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 /**
- * 메인 화면(종목 대시보드) Service 구현
- * - SQL 2번으로 끝냄: ① 종목별 최신 시세 ② 전 종목 차트 데이터 (종목마다 따로 조회하지 않음)
+ * 주식 종목 화면 Service 구현
+ * - 목록: SQL 2번으로 끝냄 (① 종목별 최신 시세 ② 전 종목 미니 차트 데이터)
+ * - 상세: 종목 정보 + 일봉 (주봉/월봉은 화면에서 일봉을 묶어서 계산)
  */
 @Service
 public class StockMainServiceImpl implements IStockMainService {
@@ -23,7 +24,7 @@ public class StockMainServiceImpl implements IStockMainService {
         // 1. 종목별 최신 시세
         List<StockMainVO> stocks = stockMainDao.selectStockSummary();
 
-        // 2. 전 종목 차트 데이터를 한 번에 조회 → 종목 ID별로 묶기
+        // 2. 전 종목 미니 차트 데이터를 한 번에 조회 → 종목 ID별로 묶기
         StockMainVO param = new StockMainVO();
         param.setDays(days);
 
@@ -40,12 +41,53 @@ public class StockMainServiceImpl implements IStockMainService {
 
         }
 
-        // 3. 종목에 차트 데이터 붙이기
+        // 3. 종목에 미니 차트 데이터 붙이기
         for (StockMainVO s : stocks) {
             s.setPrices(pricesByStock.getOrDefault(s.getStockId(), List.of()));
         }
 
         return stocks;
+
+    }
+
+    @Override
+    public Map<String, Object> getDetail(String symbol) {
+
+        StockMainVO param = new StockMainVO();
+        param.setSymbol(symbol);
+
+        StockMainVO stock = stockMainDao.selectStockDetail(param);
+        if (stock == null) return null;
+
+        // 화면에서 쓰기 편한 짧은 이름으로
+        List<Map<String, Object>> candles = new ArrayList<>();
+
+        for (StockMainVO c : stockMainDao.selectCandles(param)) {
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("date", c.getTradeDate().toString());
+            row.put("open", c.getOpenPrice());
+            row.put("high", c.getHighPrice());
+            row.put("low", c.getLowPrice());
+            row.put("close", c.getClosePrice());
+            row.put("volume", c.getVolume());
+            candles.add(row);
+
+        }
+
+        Map<String, Object> info = new LinkedHashMap<>();
+        info.put("stockId", stock.getStockId());
+        info.put("symbol", stock.getSymbol());
+        info.put("name", stock.getName());
+        info.put("market", stock.getMarket());
+        info.put("docTitle", stock.getDocTitle());
+        info.put("docContent", stock.getDocContent());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("stock", info);
+        result.put("candles", candles);
+
+        return result;
 
     }
 }

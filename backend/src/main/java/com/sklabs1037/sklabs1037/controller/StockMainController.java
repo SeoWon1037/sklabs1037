@@ -16,10 +16,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 메인 화면(종목 대시보드) Controller
+ * 주식 종목 화면 Controller
  *
  * API 목록
- *   GET /api/stock/dashboard?days=100   → { success, baseDate, stocks: [...] }
+ *   GET /api/stock/dashboard?days=100     → { success, baseDate, stocks: [...] }   종목 목록 + 미니 차트
+ *   GET /api/stock/detail?symbol=005930   → { success, stock: {...}, candles: [...] } 종목 상세 + 일봉
  *
  * - 로그인 없이 볼 수 있는 공개 API (DB 조회만 하고 외부 유료 API는 쓰지 않음)
  */
@@ -31,6 +32,7 @@ public class StockMainController {
     @Autowired
     private IStockMainService stockMainService;
 
+    // 종목 목록 + 미니 차트
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> dashboard(@RequestParam(defaultValue = "100") int days) {
 
@@ -51,14 +53,51 @@ public class StockMainController {
         } catch (Exception e) {
 
             log.error("대시보드 조회 오류", e);
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("success", false);
-            body.put("message", "시세 정보를 불러오지 못했습니다.");
-
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "시세 정보를 불러오지 못했습니다.");
 
         }
+
+    }
+
+    // 종목 상세 + 일봉
+    @GetMapping("/detail")
+    public ResponseEntity<Map<String, Object>> detail(@RequestParam(required = false) String symbol) {
+
+        // 6자리 숫자 종목코드만 허용
+        if (symbol == null || !symbol.matches("\\d{6}")) {
+
+            return fail(HttpStatus.BAD_REQUEST, "종목코드를 확인해주세요.");
+
+        }
+
+        try {
+
+            Map<String, Object> detail = stockMainService.getDetail(symbol);
+
+            if (detail == null) return fail(HttpStatus.NOT_FOUND, "지원하지 않는 종목입니다.");
+
+            Map<String, Object> body = new HashMap<>(detail);
+            body.put("success", true);
+
+            return ResponseEntity.ok(body);
+
+        } catch (Exception e) {
+
+            log.error("종목 상세 조회 오류: {}", symbol, e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "종목 정보를 불러오지 못했습니다.");
+
+        }
+
+    }
+
+    // 실패 응답
+    private ResponseEntity<Map<String, Object>> fail(HttpStatus status, String message) {
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", false);
+        body.put("message", message);
+
+        return ResponseEntity.status(status).body(body);
 
     }
 }

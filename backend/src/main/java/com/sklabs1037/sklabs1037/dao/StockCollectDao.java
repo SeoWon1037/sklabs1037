@@ -12,12 +12,15 @@ import java.util.List;
 @Mapper
 public interface StockCollectDao {
 
-    // 수집 대상 종목 목록
+    // 수집 대상 종목
     List<StockCollectVO> selectTargetStocks();
 
-    // 쌓인 시세 건수
+    // 시세 전체 건수
     int countPrices();
 
-    // 시세 UPSERT (있으면 수정, 없으면 추가)
+    // 시세 이력이 부족한 종목
+    List<StockCollectVO> selectStocksNeedingHistory(int minRows);
+
+    // 일봉 저장 (UPSERT)
     void upsertStockPrice(StockCollectVO vo);
 }

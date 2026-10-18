@@ -1,0 +1,45 @@
+# ============================================
+# CD: main 브랜치에 push하면 EC2 서버에 자동 배포
+# 흐름: GitHub Actions → SSH로 EC2 접속 → 최신 코드 받기 → Docker 이미지 빌드 → 컨테이너 교체
+# ============================================
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'            # README 같은 문서만 바뀌면 배포하지 않음
+  workflow_dispatch:       # Actions 화면에서 수동 실행 버튼
+
+# 배포가 동시에 두 번 돌지 않게 (먼저 시작한 배포가 끝날 때까지 대기)
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: EC2에 접속해서 배포
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 30m
+          script: |
+            set -e
+            cd ~/sklabs1037
+
+            # 최신 코드로 맞추기 (.env는 Git이 관리하지 않는 파일이라 그대로 유지됨)
+            git fetch origin main
+            git reset --hard origin/main
+
+            # 바뀐 부분만 다시 빌드해서 컨테이너 교체
+            docker compose up -d --build
+
+            # 이전 버전 이미지 정리 (디스크 용량 확보)
+            docker image prune -f
+
+            docker compose ps

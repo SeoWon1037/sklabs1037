@@ -1,6 +1,6 @@
 package com.sklabs1037.sklabs1037.scheduler;
 
-import com.sklabs1037.sklabs1037.service.IStockCollectService;
+import com.sklabs1037.sklabs1037.stock.service.IStockCollectService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

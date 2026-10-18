@@ -237,6 +237,7 @@ function MainPage() {
                 <p className="home-login-hello"><strong>{user.nickname}</strong>님, 반가워요 👋</p>
                 <p className="home-login-desc">궁금한 종목을 AI 비서에게 물어보세요.</p>
                 <Link to="/ai" className="btn btn-primary home-login-btn">🤖 AI 비서 시작하기</Link>
+                <Link to="/mypage" className="home-box-link">👤 마이페이지 →</Link>
               </>
             ) : (
               <>

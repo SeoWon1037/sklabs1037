@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    마이페이지 화면 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.user.dao.UserMyPageDao">
+
+    <!-- 내 정보 (탈퇴한 회원 제외) -->
+    <select id="selectMyInfo"
+            resultType="com.sklabs1037.sklabs1037.user.vo.UserMyPageVO">
+        SELECT  ID
+        ,EMAIL
+        ,PASSWORD
+        ,NICKNAME
+        ,PROVIDER
+        ,INS_DAY
+        FROM T_USER
+        WHERE 1=1
+        AND ID      = #{id}
+        AND DEL_DAY IS NULL
+    </select>
+
+    <!-- 닉네임 변경 -->
+    <update id="updateNickname"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserMyPageVO">
+        UPDATE T_USER
+        SET NICKNAME   = #{nickname}
+        ,UPT_DAY    = NOW()
+        ,UPT_USERID = #{id}
+        WHERE 1=1
+        AND ID      = #{id}
+        AND DEL_DAY IS NULL
+    </update>
+
+    <!-- 비밀번호 변경 (암호화된 값으로) -->
+    <update id="updatePassword"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserMyPageVO">
+        UPDATE T_USER
+        SET PASSWORD   = #{password}
+        ,UPT_DAY    = NOW()
+        ,UPT_USERID = #{id}
+        WHERE 1=1
+        AND ID      = #{id}
+        AND DEL_DAY IS NULL
+    </update>
+
+    <!--
+        탈퇴 (소프트 삭제)
+        - 행은 남기되(AI 대화 기록 등과 연결), 개인정보는 지움
+        - 이메일은 다른 값으로 바꿔서, 같은 이메일로 다시 가입할 수 있게
+        - PROVIDER_ID 를 비워서, 같은 소셜 계정으로 다시 로그인하면 새 회원으로 가입되게
+    -->
+    <update id="withdrawUser">
+        UPDATE T_USER
+        SET EMAIL       = 'deleted_' || ID || '@deleted.local'
+        ,PASSWORD    = NULL
+        ,NICKNAME    = '탈퇴회원'
+        ,PROVIDER_ID = NULL
+        ,DEL_DAY     = NOW()
+        ,DEL_USERID  = #{id}
+        WHERE 1=1
+        AND ID      = #{id}
+        AND DEL_DAY IS NULL
+    </update>
+
+    <!-- 탈퇴: 관심 종목 삭제 -->
+    <delete id="deleteWatchlist">
+        DELETE FROM T_WATCHLIST
+        WHERE 1=1
+        AND USER_ID = #{id}
+    </delete>
+
+</mapper>

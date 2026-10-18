@@ -1,13 +1,15 @@
 // ============================================
 // 상단바 (모든 화면 맨 위에 공통으로 표시)
 // 왼쪽: 로고 + 메뉴 탭(뉴스 / 주식 종목 / AI 비서 / 오늘의 숫자 / 관리자는 "관리자" 추가)
-// 오른쪽: 테마 전환 + (로그아웃 상태) 로그인·회원가입 / (로그인 상태) 닉네임·로그아웃
+// 오른쪽: 테마 전환 + (로그아웃 상태) 로그인·회원가입 / (로그인 상태) 닉네임(→ 마이페이지)·로그아웃
 // - 주식 종목 화면(/stock)은 넓은 화면이라 상단바 안쪽 폭도 같이 넓힘
+// - 마이페이지에서 닉네임을 바꾸거나 탈퇴하면 "sklabs:user-updated" 이벤트 → 로그인 정보를 다시 불러옴
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../theme/useTheme'
 import './Header.css'
+import './HeaderUser.css'
 
 // 상단 메뉴 탭
 const MENUS = [
@@ -36,7 +38,16 @@ function Header() {
   const [user, setUser] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
-  // 화면이 처음 뜰 때 + 페이지가 바뀔 때마다 "나 로그인돼 있어?" + "관리자야?" 확인
+  // 다른 화면에서 "로그인 정보 바뀜"을 알려오면 숫자를 올려서 아래 확인을 다시 실행
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  useEffect(() => {
+    const onUserUpdated = () => setRefreshKey((k) => k + 1)
+    window.addEventListener('sklabs:user-updated', onUserUpdated)
+    return () => window.removeEventListener('sklabs:user-updated', onUserUpdated)
+  }, [])
+
+  // 화면이 처음 뜰 때 + 페이지가 바뀔 때마다 (+ 로그인 정보가 바뀌었을 때) "나 로그인돼 있어?" + "관리자야?" 확인
   useEffect(() => {
 
     fetch('/api/user/me')
@@ -58,7 +69,7 @@ function Header() {
         setIsAdmin(false)
       })
 
-  }, [location.pathname])
+  }, [location.pathname, refreshKey])
 
   // 로그아웃 버튼
   const handleLogout = async () => {
@@ -110,7 +121,11 @@ function Header() {
           {user ? (
             // ===== 로그인 상태 =====
             <>
-              <span className="header-user">{user.nickname}님</span>
+              <Link to="/mypage" className="header-user-chip" title="마이페이지">
+                <span className="header-user-icon">👤</span>
+                {user.nickname}님
+                <span className="header-user-label">마이페이지</span>
+              </Link>
               <button type="button" className="btn btn-ghost" onClick={handleLogout}>
                 로그아웃
               </button>

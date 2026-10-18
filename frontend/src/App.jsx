@@ -11,9 +11,10 @@ import StockPage from './pages/stock/StockPage'
 import UserSignUpPage from './pages/user/UserSignUpPage'
 import UserLoginPage from './pages/user/UserLoginPage'
 import UserOAuthResultPage from './pages/user/UserOAuthResultPage'
+import UserFindPage from './pages/user/UserFindPage'
+import UserMyPage from './pages/user/UserMyPage'
 import AiChatPage from './pages/ai/AiChatPage'
 import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
-import UserFindPage from './pages/user/UserFindPage'
 import LottoPage from './pages/lotto/LottoPage'
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
         <Route path="/signup" element={<UserSignUpPage />} />            {/* 회원가입 */}
         <Route path="/login" element={<UserLoginPage />} />              {/* 로그인 */}
         <Route path="/find" element={<UserFindPage />} />                {/* 아이디·비밀번호 찾기 */}
+        <Route path="/mypage" element={<UserMyPage />} />                {/* 마이페이지 */}
         <Route path="/lotto" element={<LottoPage />} />                  {/* 오늘의 숫자 (로또 / 연금복권) */}
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
       </Routes>

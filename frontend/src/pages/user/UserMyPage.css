@@ -1,0 +1,136 @@
+/* ============================================
+   마이페이지
+   ============================================ */
+.mypage {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 20px 60px;
+}
+
+.mypage-title {
+  margin: 0 0 20px;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.mypage-status {
+  margin: 60px 0 16px;
+  text-align: center;
+  color: var(--muted, #8b8b93);
+}
+
+.mypage-error {
+  color: #e5484d;
+}
+
+.mypage-center {
+  text-align: center;
+}
+
+/* ----- 박스 ----- */
+.mypage-box {
+  margin-bottom: 16px;
+  padding: 22px 24px;
+  border: 1px solid var(--border, #27272a);
+  border-radius: 14px;
+}
+
+.mypage-box-title {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.mypage-desc {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted, #8b8b93);
+}
+
+/* ----- 내 정보 ----- */
+.mypage-info {
+  margin: 0;
+}
+
+.mypage-info div {
+  display: flex;
+  padding: 9px 0;
+  border-top: 1px solid var(--border, #27272a);
+}
+
+.mypage-info div:first-child {
+  border-top: none;
+}
+
+.mypage-info dt {
+  width: 100px;
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--muted, #8b8b93);
+}
+
+.mypage-info dd {
+  margin: 0;
+  font-size: 15px;
+  word-break: break-all;
+}
+
+/* ----- 입력 ----- */
+.mypage-form {
+  display: flex;
+  gap: 8px;
+}
+
+.mypage-form-col {
+  flex-direction: column;
+}
+
+.mypage-input {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1px solid var(--border, #27272a);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+}
+
+.mypage-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.mypage-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.mypage-msg {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.mypage-msg.ok {
+  color: #22a55b;
+}
+
+.mypage-msg.error {
+  color: #e5484d;
+}
+
+/* ----- 탈퇴 ----- */
+.mypage-danger {
+  border-color: rgba(229, 72, 77, 0.4);
+}
+
+.mypage-danger-btn {
+  background: transparent;
+  border: 1px solid #e5484d;
+  color: #e5484d;
+}
+
+.mypage-danger-btn:disabled {
+  opacity: 0.5;
+}

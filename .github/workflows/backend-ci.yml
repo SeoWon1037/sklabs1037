@@ -7,28 +7,22 @@
 # 이 CI의 이름 (Actions 탭에 이렇게 보임)
 name: Backend CI
 
-# ─────────────────────────────────────────────
-# ① 언제 실행할까? (프론트와 구조 동일, 폴더만 backend)
-# 아래 두 상황(push, PR) 중 하나라도 생기면 실행
-# ─────────────────────────────────────────────
+# 언제 실행할까?
+# 아래 두 상황 중 하나라도 생기면 실행
 on:
 
-  # [상황 1] 누군가 push 했을 때
-  push:
-    # 조건 1: main 브랜치에 push한 경우만
+  # [상황 1] 누군가 "main에 합쳐주세요" PR을 만들었을 때
+  # - 백엔드 파일이 바뀐 경우만
+  pull_request:
     branches: [main]
-    # 조건 2: 아래 파일 중 하나라도 바뀐 경우만
-    #  → 조건 1, 2를 둘 다 만족해야 실행됨 (프론트만 고치면 안 돎)
     paths:
       - 'backend/**'                          # backend 폴더 안 아무 파일이나
       - '.github/workflows/backend-ci.yml'    # 또는 이 CI 파일 자체
 
-  # [상황 2] 누군가 "main에 합쳐주세요" PR을 만들었을 때 (합치기 전 검사)
-  pull_request:
-    branches: [main]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
+  # [상황 2] 배포(deploy.yml)가 이 CI를 불러서 실행할 때
+  # - main에 push하면 deploy.yml이 먼저 시작되고, 그 안에서 이 CI를 실행
+  # - 여기서 실패하면 배포는 진행되지 않음
+  workflow_call:
 
 # ─────────────────────────────────────────────
 # ② 여기부터 "실제로 할 일"
@@ -66,7 +60,7 @@ jobs:
       # 띄울 보조 서버 이름
       postgres:
 
-        # Docker 이미지 = "PostgreSQL 16이 설치된 상태"를 통째로 저장해둔 틀
+        # Docker 이미지 = "PostgreSQL 18이 설치된 상태"를 통째로 저장해둔 틀
         # 이걸로 PostgreSQL을 설치 과정 없이 바로 실행함
         image: postgres:18
 

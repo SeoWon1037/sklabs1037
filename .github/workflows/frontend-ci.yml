@@ -4,8 +4,8 @@
 # ============================================
 
 # ========================================================
-# 1 .프론트 코드를 수정해서 GitHub에 push한다
-# 2. push가 끝나면 GitHub이 Frontend CI를 시작한다
+# 1. 코드를 수정해서 GitHub main에 push한다
+# 2. push가 끝나면 Deploy가 시작되고, 그 안에서 Frontend CI를 먼저 실행한다
 # 3. GitHub이 가상 컴퓨터(리눅스)를 빌려서
 # 4. 저장소 코드를 내려받고
 # 5. Node.js 설치 → 라이브러리 설치 → 문법·규칙 검사(lint) → 빌드
@@ -17,26 +17,21 @@
 name: Frontend CI
 
 # 언제 실행할까?
-# 아래 두 상황(push, PR) 중 하나라도 생기면 실행
+# 아래 두 상황 중 하나라도 생기면 실행
 on:
 
-  # [상황 1] 누군가 push 했을 때
-  push:
-    # 조건 1: main 브랜치에 push한 경우만
-    branches: [main]
-    # 조건 2: 아래 파일 중 하나라도 바뀐 경우만
-    #  → 조건 1, 2를 둘 다 만족해야 실행됨
-    paths: # → 해당 파일들을 바꿨으면 CI를 실행해라 (CI 배포할 때 문제 없는지 테스트를 해주는 역할) 
-      - 'frontend/**'                         # frontend 폴더 안 아무 파일이나
-      - '.github/workflows/frontend-ci.yml'   # 또는 이 CI 파일 자체
-
-  # [상황 2] 누군가 "main에 합쳐주세요" PR을 만들었을 때
-  # (조건은 push와 똑같음)
+  # [상황 1] 누군가 "main에 합쳐주세요" PR을 만들었을 때
+  # - 프론트 파일이 바뀐 경우만
   pull_request:
     branches: [main]
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - 'frontend/**'                         # frontend 폴더 안 아무 파일이나
+      - '.github/workflows/frontend-ci.yml'   # 또는 이 CI 파일 자체
+
+  # [상황 2] 배포(deploy.yml)가 이 CI를 불러서 실행할 때
+  # - main에 push하면 deploy.yml이 먼저 시작되고, 그 안에서 이 CI를 실행
+  # - 여기서 실패하면 배포는 진행되지 않음
+  workflow_call:
 
 # ② 무엇을 할까?
 jobs:
@@ -102,6 +97,7 @@ jobs:
       #  - 없는 파일/라이브러리 import, 대소문자 틀린 파일명 등 → ❌
       #
       # 지금은 만들어보고 버려짐 (성공 여부만 확인)
-      # 나중에 CD를 붙이면 이 dist를 AWS S3에 업로드
+      # 1. 코드를 수정해서 GitHub main에 push한다
+      # 2. push가 끝나면 Deploy가 시작되고, 그 안에서 Frontend CI를 먼저 실행한다
       - name: 빌드
         run: npm run build

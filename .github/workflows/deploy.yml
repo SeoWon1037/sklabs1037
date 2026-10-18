@@ -1,6 +1,7 @@
 # ============================================
-# CD: main 브랜치에 push하면 EC2 서버에 자동 배포
-# 흐름: GitHub Actions → SSH로 EC2 접속 → 최신 코드 받기 → Docker 이미지 빌드 → 컨테이너 교체
+# CD: main 브랜치에 push하면 CI(백엔드/프론트) 통과 후 EC2 서버에 자동 배포
+# 흐름: Backend CI + Frontend CI → 둘 다 성공하면 → SSH로 EC2 접속 → 최신 코드 받기 → Docker 이미지 빌드 → 컨테이너 교체
+# - CI가 하나라도 실패하면 배포하지 않음 (깨진 코드가 운영 서버에 올라가는 것 방지)
 # ============================================
 name: Deploy
 
@@ -17,7 +18,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+
+  # 1. 백엔드 CI (backend-ci.yml을 그대로 불러서 실행)
+  backend-ci:
+    uses: ./.github/workflows/backend-ci.yml
+    secrets: inherit
+
+  # 2. 프론트 CI (frontend-ci.yml을 그대로 불러서 실행)
+  frontend-ci:
+    uses: ./.github/workflows/frontend-ci.yml
+    secrets: inherit
+
+  # 3. 배포 (위 두 CI가 모두 성공했을 때만)
   deploy:
+    needs: [ backend-ci, frontend-ci ]
     runs-on: ubuntu-latest
 
     steps:

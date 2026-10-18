@@ -8,7 +8,7 @@
 .home {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 28px 16px 24px;
+  padding: 28px 16px 64px;
 }
 
 /* ===== 검색창 영역 ===== */
@@ -409,8 +409,33 @@
    같은 줄에 있는 두 박스는 높이가 똑같이 맞춰짐 (넓은 화면에서만) */
 @media (min-width: 861px) {
 
+  /* 위 줄 높이는 650px로 고정 (로그인해서 관심 종목이 생겨도 똑같이)
+     → 오른쪽이 넘치면 오늘의 시세가 박스 안에서 스크롤 */
   .home-grid {
     align-items: stretch;
+    grid-template-rows: minmax(650px, auto) auto;
+  }
+
+  /* 오늘의 시세: 남은 높이만큼만 차지하고, 넘치는 종목은 안에서 스크롤 */
+  .home-quotes-box {
+    flex: 1;
+    contain: size;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+  }
+  .home-quotes-box .home-quotes {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  .home-quotes-box .home-quotes::-webkit-scrollbar {
+    width: 6px;
+  }
+  .home-quotes-box .home-quotes::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text) 18%, transparent);
   }
 
   /* 뉴스 박스는 자기 내용으로 높이를 정하지 않음

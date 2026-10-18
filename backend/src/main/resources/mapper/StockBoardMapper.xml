@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    종목 토론방 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.stock.dao.StockBoardDao">
+
+    <!--
+        목록에 보여줄 글 조건
+        - 삭제 안 된 글
+        - 삭제된 글이라도 살아 있는 댓글이 있으면 "삭제된 글입니다" 자리로 남김
+    -->
+    <sql id="visiblePost">
+        AND P.STOCK_ID = #{stockId}
+        AND (
+        P.DEL_DAY IS NULL
+        OR EXISTS (
+        SELECT  1
+        FROM T_STOCK_COMMENT C
+        WHERE 1=1
+        AND C.POST_ID = P.ID
+        AND C.DEL_DAY IS NULL
+        )
+        )
+    </sql>
+
+    <!--
+        종목 글 목록 (최신순)
+        - 삭제된 글은 내용·의견을 비워서 보냄
+        - 작성자 닉네임은 T_USER 에서 (탈퇴한 회원은 '탈퇴회원')
+        - 작성 시각은 밀리초 숫자로 (화면에서 "3분 전" 계산할 때 시간대 문제 없게)
+    -->
+    <select id="selectPostList"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        SELECT  P.ID                                                       AS POST_ID
+        ,P.USER_ID
+        ,U.NICKNAME
+        ,CASE WHEN P.DEL_DAY IS NULL THEN P.OPINION END             AS OPINION
+        ,CASE WHEN P.DEL_DAY IS NULL THEN P.CONTENT END             AS CONTENT
+        ,(EXTRACT(EPOCH FROM P.INS_DAY) * 1000)::BIGINT              AS INS_AT
+        ,(P.DEL_DAY IS NOT NULL)                                    AS DELETED
+        ,(
+        SELECT  COUNT(*)
+        FROM T_STOCK_COMMENT C
+        WHERE 1=1
+        AND C.POST_ID = P.ID
+        AND C.DEL_DAY IS NULL
+        )                                                          AS COMMENT_COUNT
+        FROM T_STOCK_POST P
+        JOIN T_USER U ON U.ID = P.USER_ID
+        WHERE 1=1
+        <include refid="visiblePost"/>
+        ORDER BY P.ID DESC
+        LIMIT  #{limit}
+        OFFSET  #{offset}
+    </select>
+
+    <!-- 종목 글 개수 (목록과 같은 조건) -->
+    <select id="countPost"
+            resultType="int">
+        SELECT  COUNT(*)
+        FROM T_STOCK_POST P
+        WHERE 1=1
+        <include refid="visiblePost"/>
+    </select>
+
+    <!-- 최근 7일 의견 비율 (삭제된 글 제외) -->
+    <select id="selectOpinionCount"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        SELECT  COUNT(*) FILTER (WHERE P.OPINION = 'UP')    AS UP_COUNT
+        ,COUNT(*) FILTER (WHERE P.OPINION = 'DOWN')  AS DOWN_COUNT
+        FROM T_STOCK_POST P
+        WHERE 1=1
+        AND P.STOCK_ID = #{stockId}
+        AND P.DEL_DAY  IS NULL
+        AND P.INS_DAY  <![CDATA[>=]]> NOW() - INTERVAL '7 days'
+    </select>
+
+    <!-- 글 1개 (삭제 권한 확인용) -->
+    <select id="selectPost"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        SELECT  P.ID        AS POST_ID
+        ,P.STOCK_ID
+        ,P.USER_ID
+        FROM T_STOCK_POST P
+        WHERE 1=1
+        AND P.ID      = #{postId}
+        AND P.DEL_DAY IS NULL
+    </select>
+
+    <!-- 최근 n초 안에 쓴 내 글 개수 (도배 방지) -->
+    <select id="countRecentPost"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO"
+            resultType="int">
+        SELECT  COUNT(*)
+        FROM T_STOCK_POST
+        WHERE 1=1
+        AND USER_ID = #{userId}
+        AND INS_DAY <![CDATA[>=]]> NOW() - MAKE_INTERVAL(secs => #{seconds})
+    </select>
+
+    <!--
+        글 쓰기
+        - T_STOCK 에 있는 종목에만 써지도록 SELECT 로 넣음
+    -->
+    <insert id="insertPost"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        INSERT INTO T_STOCK_POST (
+        STOCK_ID
+        ,USER_ID
+        ,OPINION
+        ,CONTENT
+        )
+        SELECT  S.ID
+        ,#{userId}
+        ,#{opinion}
+        ,#{content}
+        FROM T_STOCK S
+        WHERE 1=1
+        AND S.ID = #{stockId}
+    </insert>
+
+    <!-- 글 삭제 (소프트 삭제) -->
+    <update id="deletePost"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        UPDATE T_STOCK_POST
+        SET DEL_DAY    = NOW()
+        ,DEL_USERID = #{userId}
+        WHERE 1=1
+        AND ID      = #{postId}
+        AND DEL_DAY IS NULL
+    </update>
+
+    <!-- 글의 댓글 목록 (오래된 순, 삭제된 댓글 제외) -->
+    <select id="selectCommentList"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        SELECT  C.ID        AS COMMENT_ID
+        ,C.POST_ID
+        ,C.USER_ID
+        ,U.NICKNAME
+        ,C.CONTENT
+        ,(EXTRACT(EPOCH FROM C.INS_DAY) * 1000)::BIGINT  AS INS_AT
+        FROM T_STOCK_COMMENT C
+        JOIN T_USER U ON U.ID = C.USER_ID
+        WHERE 1=1
+        AND C.POST_ID = #{postId}
+        AND C.DEL_DAY IS NULL
+        ORDER BY C.ID
+        LIMIT  200
+    </select>
+
+    <!-- 댓글 1개 (삭제 권한 확인용) -->
+    <select id="selectComment"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        SELECT  C.ID        AS COMMENT_ID
+        ,C.POST_ID
+        ,C.USER_ID
+        FROM T_STOCK_COMMENT C
+        WHERE 1=1
+        AND C.ID      = #{commentId}
+        AND C.DEL_DAY IS NULL
+    </select>
+
+    <!-- 최근 n초 안에 쓴 내 댓글 개수 (도배 방지) -->
+    <select id="countRecentComment"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO"
+            resultType="int">
+        SELECT  COUNT(*)
+        FROM T_STOCK_COMMENT
+        WHERE 1=1
+        AND USER_ID = #{userId}
+        AND INS_DAY <![CDATA[>=]]> NOW() - MAKE_INTERVAL(secs => #{seconds})
+    </select>
+
+    <!--
+        댓글 쓰기
+        - 삭제 안 된 글에만 써지도록 SELECT 로 넣음
+    -->
+    <insert id="insertComment"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        INSERT INTO T_STOCK_COMMENT (
+        POST_ID
+        ,USER_ID
+        ,CONTENT
+        )
+        SELECT  P.ID
+        ,#{userId}
+        ,#{content}
+        FROM T_STOCK_POST P
+        WHERE 1=1
+        AND P.ID      = #{postId}
+        AND P.DEL_DAY IS NULL
+    </insert>
+
+    <!-- 댓글 삭제 (소프트 삭제) -->
+    <update id="deleteComment"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        UPDATE T_STOCK_COMMENT
+        SET DEL_DAY    = NOW()
+        ,DEL_USERID = #{userId}
+        WHERE 1=1
+        AND ID      = #{commentId}
+        AND DEL_DAY IS NULL
+    </update>
+
+</mapper>

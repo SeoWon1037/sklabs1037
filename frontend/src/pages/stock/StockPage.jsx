@@ -1,13 +1,14 @@
 // ============================================
 // 주식 종목 화면 (주소: /stock) — 토스증권 차트 화면 스타일, 넓은 화면
 // - 왼쪽: 종목 목록 (현재가, 등락률, 미니 차트)
-// - 오른쪽: 종목 헤더 + 탭 (차트·시세 / 종목정보 / 뉴스)
+// - 오른쪽: 종목 헤더 + 탭 (차트·시세 / 종목정보 / 뉴스 / 토론)
 // - 백엔드 API
 //   GET /api/stock/dashboard?days=20        종목 목록 + 미니 차트
 //   GET /api/stock/detail?symbol=005930     종목 정보 + 일봉
 //   GET /api/news?stockId=1&size=15         종목 뉴스
 //   GET /api/news/summary?stockId=1         AI 뉴스 요약 (NewsSummaryBox)
 //   GET/POST/DELETE /api/watchlist          관심 종목 (☆ / ★)
+//   /api/stock/board/**                     종목 토론방 (StockBoard)
 // ============================================
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -15,12 +16,14 @@ import StockChart from '../../components/stock/StockChart'
 import CandleChart from '../../components/stock/CandleChart'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import WatchStar from '../../components/stock/WatchStar'
+import StockBoard from '../../components/stock/StockBoard'
 import './StockPage.css'
 
 const TABS = [
   { value: 'chart', label: '차트 · 시세' },
   { value: 'info', label: '종목정보' },
   { value: 'news', label: '뉴스' },
+  { value: 'board', label: '토론' },
 ]
 
 const PERIODS = [
@@ -429,6 +432,11 @@ function StockPage() {
                     ))}
                   </ul>
                 </div>
+              )}
+
+              {/* 탭: 토론 */}
+              {tab === 'board' && (
+                <StockBoard key={stockId} stockId={stockId} stockName={detail.stock.name} />
               )}
             </>
           )}

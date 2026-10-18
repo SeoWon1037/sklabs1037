@@ -251,8 +251,8 @@ function MainPage() {
           {/* 내 관심 종목 (로그인했을 때만) */}
           {user && <WatchlistBox />}
 
-          {/* 오늘의 시세 */}
-          <section className="home-box">
+          {/* 오늘의 시세 (위 줄 높이가 모자라면 박스 안에서 스크롤) */}
+          <section className="home-box home-quotes-box">
             <div className="home-box-head">
               <h2 className="home-box-title">오늘의 시세</h2>
               {baseDate && <span className="home-box-sub">{baseDate} 종가</span>}

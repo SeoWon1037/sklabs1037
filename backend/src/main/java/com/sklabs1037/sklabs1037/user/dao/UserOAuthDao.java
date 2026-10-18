@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.dao;
+package com.sklabs1037.sklabs1037.user.dao;
 
-import com.sklabs1037.sklabs1037.vo.UserOAuthVO;
+import com.sklabs1037.sklabs1037.user.vo.UserOAuthVO;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

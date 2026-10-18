@@ -1,4 +1,4 @@
-package com.sklabs1037.sklabs1037.scheduler;
+package com.sklabs1037.sklabs1037.news.controller;
 
 import com.sklabs1037.sklabs1037.news.service.INewsCollectService;
 import lombok.extern.slf4j.Slf4j;

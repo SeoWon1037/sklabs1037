@@ -1,8 +1,8 @@
-package com.sklabs1037.sklabs1037.controller;
+package com.sklabs1037.sklabs1037.news.controller;
 
-import com.sklabs1037.sklabs1037.service.INewsListService;
-import com.sklabs1037.sklabs1037.service.INewsSummaryService;
-import com.sklabs1037.sklabs1037.vo.NewsListVO;
+import com.sklabs1037.sklabs1037.news.service.INewsListService;
+import com.sklabs1037.sklabs1037.news.service.INewsSummaryService;
+import com.sklabs1037.sklabs1037.news.vo.NewsListVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

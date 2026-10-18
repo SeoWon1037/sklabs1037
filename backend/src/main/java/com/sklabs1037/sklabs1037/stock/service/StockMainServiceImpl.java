@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.stock.service;
 
-import com.sklabs1037.sklabs1037.dao.StockMainDao;
-import com.sklabs1037.sklabs1037.vo.StockMainVO;
+import com.sklabs1037.sklabs1037.stock.dao.StockMainDao;
+import com.sklabs1037.sklabs1037.stock.vo.StockMainVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

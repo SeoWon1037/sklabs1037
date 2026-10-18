@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.scheduler;
+package com.sklabs1037.sklabs1037.news.scheduler;
 
-import com.sklabs1037.sklabs1037.service.INewsSummaryService;
+import com.sklabs1037.sklabs1037.news.service.INewsSummaryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

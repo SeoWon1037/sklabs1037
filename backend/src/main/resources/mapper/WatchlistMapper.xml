@@ -6,7 +6,7 @@
     관심 종목 SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.WatchlistDao">
+<mapper namespace="com.sklabs1037.sklabs1037.stock.dao.WatchlistDao">
 
     <!--
         내 관심 종목 + 최신 시세
@@ -14,7 +14,7 @@
         - 시세가 아직 없는 종목도 목록에는 나오게 LEFT JOIN
     -->
     <select id="selectWatchlist"
-            resultType="com.sklabs1037.sklabs1037.vo.WatchlistVO">
+            resultType="com.sklabs1037.sklabs1037.stock.vo.WatchlistVO">
         SELECT  W.STOCK_ID
         ,S.SYMBOL
         ,S.NAME
@@ -50,7 +50,7 @@
         - 이미 있으면 무시 (ON CONFLICT DO NOTHING)
     -->
     <insert id="insertWatchlist"
-            parameterType="com.sklabs1037.sklabs1037.vo.WatchlistVO">
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.WatchlistVO">
         INSERT INTO T_WATCHLIST (
         USER_ID
         ,STOCK_ID
@@ -65,7 +65,7 @@
 
     <!-- 관심 종목 삭제 (본인 것만) -->
     <delete id="deleteWatchlist"
-            parameterType="com.sklabs1037.sklabs1037.vo.WatchlistVO">
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.WatchlistVO">
         DELETE FROM T_WATCHLIST
         WHERE 1=1
         AND USER_ID  = #{userId}

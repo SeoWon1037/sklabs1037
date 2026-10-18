@@ -1,8 +1,8 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.news.service;
 
 import com.sklabs1037.sklabs1037.client.NewsRssClient;
-import com.sklabs1037.sklabs1037.dao.NewsCollectDao;
-import com.sklabs1037.sklabs1037.vo.NewsCollectVO;
+import com.sklabs1037.sklabs1037.news.dao.NewsCollectDao;
+import com.sklabs1037.sklabs1037.news.vo.NewsCollectVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.news.service;
 
-import com.sklabs1037.sklabs1037.vo.NewsListVO;
+import com.sklabs1037.sklabs1037.news.vo.NewsListVO;
 
 import java.util.List;
 

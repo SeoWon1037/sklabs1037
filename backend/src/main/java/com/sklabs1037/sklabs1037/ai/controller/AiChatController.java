@@ -1,8 +1,9 @@
-package com.sklabs1037.sklabs1037.controller;
+package com.sklabs1037.sklabs1037.ai.controller;
 
 import com.sklabs1037.sklabs1037.client.ClaudeApiClient;
-import com.sklabs1037.sklabs1037.service.IAiChatService;
-import com.sklabs1037.sklabs1037.vo.AiChatVO;
+import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
+import com.sklabs1037.sklabs1037.ai.service.IAiChatService;
+import com.sklabs1037.sklabs1037.ai.vo.AiChatVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;

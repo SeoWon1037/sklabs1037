@@ -6,7 +6,7 @@
     메인 화면(뉴스 목록) SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.NewsListDao">
+<mapper namespace="com.sklabs1037.sklabs1037.news.dao.NewsListDao">
 
     <!--
         최신 뉴스 목록 (분류/종목 조건은 있을 때만)
@@ -14,8 +14,8 @@
         - 분류를 지정하지 않은 "전체"는 주식 뉴스(시장 + 종목)만, 스포츠는 스포츠 탭에서만
     -->
     <select id="selectNewsList"
-            parameterType="com.sklabs1037.sklabs1037.vo.NewsListVO"
-            resultType="com.sklabs1037.sklabs1037.vo.NewsListVO">
+            parameterType="com.sklabs1037.sklabs1037.news.vo.NewsListVO"
+            resultType="com.sklabs1037.sklabs1037.news.vo.NewsListVO">
         SELECT  X.NEWS_ID
         ,X.CATEGORY
         ,X.STOCK_ID

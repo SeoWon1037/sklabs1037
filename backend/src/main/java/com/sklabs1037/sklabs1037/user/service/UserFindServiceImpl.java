@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.user.service;
 
-import com.sklabs1037.sklabs1037.dao.UserFindDao;
-import com.sklabs1037.sklabs1037.vo.UserFindVO;
+import com.sklabs1037.sklabs1037.user.dao.UserFindDao;
+import com.sklabs1037.sklabs1037.user.vo.UserFindVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

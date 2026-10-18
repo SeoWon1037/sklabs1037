@@ -1,4 +1,4 @@
-package com.sklabs1037.sklabs1037.vo;
+package com.sklabs1037.sklabs1037.stock.vo;
 
 import lombok.Getter;
 import lombok.Setter;

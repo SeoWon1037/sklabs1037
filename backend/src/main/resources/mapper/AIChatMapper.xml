@@ -7,12 +7,12 @@
     - 도구(tool)가 사용하는 조회 SQL
     - 대화 기록 / 피드백 저장 SQL
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.AiChatDao">
+<mapper namespace="com.sklabs1037.sklabs1037.ai.dao.AiChatDao">
 
     <!-- [도구] find_stock: 종목명/코드로 종목 찾기 (검색어 없으면 전체) -->
     <select id="selectStocks"
-            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
-            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO">
         SELECT  ID AS STOCK_ID
         ,SYMBOL
         ,NAME
@@ -29,8 +29,8 @@
 
     <!-- [도구] get_price_history: 최근 N일 일봉 (최신 날짜부터) -->
     <select id="selectPriceHistory"
-            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
-            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO">
         SELECT  P.TRADE_DATE
         ,P.OPEN_PRICE
         ,P.HIGH_PRICE
@@ -47,8 +47,8 @@
 
     <!-- [도구] search_stock_docs: 키워드로 종목 설명 문서 검색 (RAG) -->
     <select id="searchDocs"
-            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
-            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO">
         SELECT  S.SYMBOL
         ,S.NAME
         ,D.TITLE
@@ -70,7 +70,7 @@
 
     <!-- 대화 기록 저장 (생성된 ID를 chatId에 담아줌 → 화면에서 피드백 보낼 때 사용) -->
     <insert id="insertChatLog"
-            parameterType="com.sklabs1037.sklabs1037.vo.AiChatVO"
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiChatVO"
             useGeneratedKeys="true" keyProperty="chatId" keyColumn="id">
         INSERT INTO T_AI_CHAT_LOG
         ( USER_ID
@@ -87,7 +87,7 @@
 
     <!-- 피드백 저장 (본인이 받은 답변에만 평가 가능) -->
     <update id="updateRating"
-            parameterType="com.sklabs1037.sklabs1037.vo.AiChatVO">
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiChatVO">
         UPDATE T_AI_CHAT_LOG
         SET  RATING       = #{rating}
         ,FEEDBACK_DAY = NOW()
@@ -99,8 +99,8 @@
 
     <!-- [도구] get_return_ranking: 전 종목 N거래일 수익률 순위 (계산은 SQL이 정확하게) -->
     <select id="selectReturnRanking"
-            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
-            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO">
         WITH RANKED AS (
         SELECT  P.STOCK_ID
         ,P.TRADE_DATE
@@ -128,8 +128,8 @@
 
     <!-- [도구] search_news: 최근 N일 뉴스를 키워드로 검색 (RAG, 같은 제목은 1건만) -->
     <select id="searchNews"
-            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
-            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO">
         SELECT  X.TITLE
         ,X.PRESS
         ,X.LINK

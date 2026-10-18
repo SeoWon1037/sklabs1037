@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.user.service;
 
-import com.sklabs1037.sklabs1037.vo.UserFindVO;
+import com.sklabs1037.sklabs1037.user.vo.UserFindVO;
 
 import java.util.List;
 

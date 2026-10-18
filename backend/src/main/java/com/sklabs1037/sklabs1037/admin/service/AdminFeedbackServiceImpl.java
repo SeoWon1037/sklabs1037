@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.admin.service;
 
-import com.sklabs1037.sklabs1037.dao.AdminFeedbackDao;
-import com.sklabs1037.sklabs1037.vo.AdminFeedbackVO;
+import com.sklabs1037.sklabs1037.admin.dao.AdminFeedbackDao;
+import com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

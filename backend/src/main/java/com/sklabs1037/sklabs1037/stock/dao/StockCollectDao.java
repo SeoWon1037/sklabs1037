@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.dao;
+package com.sklabs1037.sklabs1037.stock.dao;
 
-import com.sklabs1037.sklabs1037.vo.StockCollectVO;
+import com.sklabs1037.sklabs1037.stock.vo.StockCollectVO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

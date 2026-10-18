@@ -6,11 +6,11 @@
     뉴스 수집 SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.NewsCollectDao">
+<mapper namespace="com.sklabs1037.sklabs1037.news.dao.NewsCollectDao">
 
     <!-- 종목 뉴스 수집 대상 -->
     <select id="selectTargetStocks"
-            resultType="com.sklabs1037.sklabs1037.vo.NewsCollectVO">
+            resultType="com.sklabs1037.sklabs1037.news.vo.NewsCollectVO">
         SELECT  ID AS STOCK_ID
         ,NAME
         FROM T_STOCK
@@ -22,7 +22,7 @@
 
     <!-- 뉴스 저장 (같은 기사 주소가 이미 있으면 저장하지 않음 → 저장된 건수 0 반환) -->
     <insert id="insertNews"
-            parameterType="com.sklabs1037.sklabs1037.vo.NewsCollectVO">
+            parameterType="com.sklabs1037.sklabs1037.news.vo.NewsCollectVO">
         INSERT INTO T_NEWS
         ( STOCK_ID
         ,CATEGORY

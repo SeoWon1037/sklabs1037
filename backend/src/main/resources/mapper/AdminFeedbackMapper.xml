@@ -6,11 +6,11 @@
     관리자 피드백 대시보드 SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.AdminFeedbackDao">
+<mapper namespace="com.sklabs1037.sklabs1037.admin.dao.AdminFeedbackDao">
 
     <!-- 회원 권한 조회 -->
     <select id="selectUserRole"
-            parameterType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO"
+            parameterType="com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO"
             resultType="string">
         SELECT  ROLE
         FROM T_USER
@@ -25,7 +25,7 @@
         - 도구마다 "(" 가 하나씩 있어서 "(" 개수 = 도구 수
     -->
     <select id="selectSummary"
-            resultType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO">
+            resultType="com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO">
         SELECT  COUNT(*)                                  AS TOTAL_COUNT
         ,COUNT(*) FILTER (WHERE RATING = 'UP')     AS UP_COUNT
         ,COUNT(*) FILTER (WHERE RATING = 'DOWN')   AS DOWN_COUNT
@@ -37,7 +37,7 @@
 
     <!-- 도구별 사용 횟수 (도구 이름 = " (" 앞 글자) -->
     <select id="selectToolUsage"
-            resultType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO">
+            resultType="com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO">
         SELECT  TRIM(M.MATCH[1]) AS TOOL_NAME
         ,COUNT(*)         AS USE_COUNT
         FROM T_AI_CHAT_LOG L
@@ -50,7 +50,7 @@
 
     <!-- 최근 7일 날짜별 질문 수 / 👍 / 👎 (질문 없는 날도 0으로) -->
     <select id="selectDailyStats"
-            resultType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO">
+            resultType="com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO">
         SELECT  D.DAY::DATE                                  AS STAT_DATE
         ,COUNT(L.ID)                                  AS CHAT_COUNT
         ,COUNT(L.ID) FILTER (WHERE L.RATING = 'UP')   AS UP_COUNT
@@ -64,8 +64,8 @@
 
     <!-- 대화 목록 (평가 필터는 있을 때만) -->
     <select id="selectChats"
-            parameterType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO"
-            resultType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO">
+            parameterType="com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO"
+            resultType="com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO">
         SELECT  L.ID        AS CHAT_ID
         ,U.NICKNAME
         ,L.QUESTION

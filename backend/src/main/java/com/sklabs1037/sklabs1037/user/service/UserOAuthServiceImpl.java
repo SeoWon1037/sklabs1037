@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.user.service;
 
-import com.sklabs1037.sklabs1037.dao.UserOAuthDao;
-import com.sklabs1037.sklabs1037.vo.UserOAuthVO;
+import com.sklabs1037.sklabs1037.user.dao.UserOAuthDao;
+import com.sklabs1037.sklabs1037.user.vo.UserOAuthVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;

@@ -1,4 +1,4 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.news.service;
 
 /**
  * 뉴스 수집 Service

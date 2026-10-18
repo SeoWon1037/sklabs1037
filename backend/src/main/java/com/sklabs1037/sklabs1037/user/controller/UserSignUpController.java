@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.controller;
+package com.sklabs1037.sklabs1037.user.controller;
 
-import com.sklabs1037.sklabs1037.service.IUserSignUpService;
-import com.sklabs1037.sklabs1037.vo.UserSignUpVO;
+import com.sklabs1037.sklabs1037.user.service.IUserSignUpService;
+import com.sklabs1037.sklabs1037.user.vo.UserSignUpVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

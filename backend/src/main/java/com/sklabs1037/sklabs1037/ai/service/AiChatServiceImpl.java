@@ -1,10 +1,10 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.ai.service;
 
 import com.sklabs1037.sklabs1037.client.ClaudeApiClient;
 import com.sklabs1037.sklabs1037.client.TossApiClient;
-import com.sklabs1037.sklabs1037.dao.AiChatDao;
-import com.sklabs1037.sklabs1037.vo.AiChatVO;
-import com.sklabs1037.sklabs1037.vo.AiStockVO;
+import com.sklabs1037.sklabs1037.ai.dao.AiChatDao;
+import com.sklabs1037.sklabs1037.ai.vo.AiChatVO;
+import com.sklabs1037.sklabs1037.ai.vo.AiStockVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

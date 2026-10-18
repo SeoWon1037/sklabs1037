@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.dao;
+package com.sklabs1037.sklabs1037.news.dao;
 
-import com.sklabs1037.sklabs1037.vo.NewsSummaryVO;
+import com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.time.LocalDateTime;

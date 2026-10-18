@@ -1,4 +1,4 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.stock.service;
 
 /**
  * 시세 수집 Service

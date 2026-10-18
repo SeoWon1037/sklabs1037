@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.controller;
+package com.sklabs1037.sklabs1037.user.controller;
 
-import com.sklabs1037.sklabs1037.service.IUserLoginService;
-import com.sklabs1037.sklabs1037.vo.UserLoginVO;
+import com.sklabs1037.sklabs1037.user.service.IUserLoginService;
+import com.sklabs1037.sklabs1037.user.vo.UserLoginVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;

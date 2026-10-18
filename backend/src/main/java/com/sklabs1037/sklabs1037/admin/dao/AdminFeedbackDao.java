@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.dao;
+package com.sklabs1037.sklabs1037.admin.dao;
 
-import com.sklabs1037.sklabs1037.vo.AdminFeedbackVO;
+import com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

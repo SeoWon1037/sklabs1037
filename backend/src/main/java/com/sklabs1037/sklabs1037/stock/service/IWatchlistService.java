@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.stock.service;
 
-import com.sklabs1037.sklabs1037.vo.WatchlistVO;
+import com.sklabs1037.sklabs1037.stock.vo.WatchlistVO;
 
 import java.util.List;
 

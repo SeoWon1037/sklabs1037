@@ -1,8 +1,8 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.stock.service;
 
 import com.sklabs1037.sklabs1037.client.TossApiClient;
-import com.sklabs1037.sklabs1037.dao.StockCollectDao;
-import com.sklabs1037.sklabs1037.vo.StockCollectVO;
+import com.sklabs1037.sklabs1037.stock.dao.StockCollectDao;
+import com.sklabs1037.sklabs1037.stock.vo.StockCollectVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

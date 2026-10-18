@@ -1,4 +1,4 @@
-package com.sklabs1037.sklabs1037.scheduler;
+package com.sklabs1037.sklabs1037.stock.scheduler;
 
 import com.sklabs1037.sklabs1037.stock.service.IStockCollectService;
 import lombok.extern.slf4j.Slf4j;

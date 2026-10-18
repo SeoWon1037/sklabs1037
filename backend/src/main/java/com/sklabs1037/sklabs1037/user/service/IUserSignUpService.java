@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.user.service;
 
-import com.sklabs1037.sklabs1037.vo.UserSignUpVO;
+import com.sklabs1037.sklabs1037.user.vo.UserSignUpVO;
 
 /**
  * 회원가입 화면 Service

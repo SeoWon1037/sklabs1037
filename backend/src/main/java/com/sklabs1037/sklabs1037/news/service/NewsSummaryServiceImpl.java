@@ -1,8 +1,8 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.news.service;
 
 import com.sklabs1037.sklabs1037.client.ClaudeApiClient;
-import com.sklabs1037.sklabs1037.dao.NewsSummaryDao;
-import com.sklabs1037.sklabs1037.vo.NewsSummaryVO;
+import com.sklabs1037.sklabs1037.news.dao.NewsSummaryDao;
+import com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

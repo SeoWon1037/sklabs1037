@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.controller;
+package com.sklabs1037.sklabs1037.user.controller;
 
-import com.sklabs1037.sklabs1037.service.IUserFindService;
-import com.sklabs1037.sklabs1037.vo.UserFindVO;
+import com.sklabs1037.sklabs1037.user.service.IUserFindService;
+import com.sklabs1037.sklabs1037.user.vo.UserFindVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;

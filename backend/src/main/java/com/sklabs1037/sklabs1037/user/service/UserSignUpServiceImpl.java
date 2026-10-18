@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.user.service;
 
-import com.sklabs1037.sklabs1037.dao.UserSignUpDao;
-import com.sklabs1037.sklabs1037.vo.UserSignUpVO;
+import com.sklabs1037.sklabs1037.user.dao.UserSignUpDao;
+import com.sklabs1037.sklabs1037.user.vo.UserSignUpVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;

@@ -1,7 +1,8 @@
-package com.sklabs1037.sklabs1037.controller;
+package com.sklabs1037.sklabs1037.admin.controller;
 
-import com.sklabs1037.sklabs1037.service.IAdminFeedbackService;
-import com.sklabs1037.sklabs1037.vo.AdminFeedbackVO;
+import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
+import com.sklabs1037.sklabs1037.admin.service.IAdminFeedbackService;
+import com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;

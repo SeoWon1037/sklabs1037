@@ -6,7 +6,7 @@
     소셜 로그인 화면 SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.UserOAuthDao">
+<mapper namespace="com.sklabs1037.sklabs1037.user.dao.UserOAuthDao">
 
     <!-- ============================================ -->
     <!-- 회원 (T_USER)                                -->
@@ -14,8 +14,8 @@
 
     <!-- 소셜 회원 조회 (가입 경로 + 고유 번호로 찾기, 탈퇴 회원 제외) -->
     <select id="selectUserByProvider"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserOAuthVO"
-            resultType="com.sklabs1037.sklabs1037.vo.UserOAuthVO">
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserOAuthVO"
+            resultType="com.sklabs1037.sklabs1037.user.vo.UserOAuthVO">
         SELECT  ID
         ,EMAIL
         ,NICKNAME
@@ -31,7 +31,7 @@
 
     <!-- 같은 이메일로 가입된 회원이 있는지 (가입 경로 상관없이) -->
     <select id="countByEmail"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserOAuthVO"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserOAuthVO"
             resultType="int">
         SELECT COUNT(*)
         FROM T_USER
@@ -42,7 +42,7 @@
 
     <!-- 소셜 회원 자동 가입 (비밀번호 없음) -->
     <insert id="insertOAuthUser"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserOAuthVO"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserOAuthVO"
             useGeneratedKeys="true"
             keyProperty="id"
             keyColumn="id">

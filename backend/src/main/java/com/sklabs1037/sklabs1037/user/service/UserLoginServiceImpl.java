@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.user.service;
 
-import com.sklabs1037.sklabs1037.dao.UserLoginDao;
-import com.sklabs1037.sklabs1037.vo.UserLoginVO;
+import com.sklabs1037.sklabs1037.user.dao.UserLoginDao;
+import com.sklabs1037.sklabs1037.user.vo.UserLoginVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;

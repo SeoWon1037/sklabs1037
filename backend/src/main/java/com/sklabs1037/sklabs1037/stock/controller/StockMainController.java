@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.controller;
+package com.sklabs1037.sklabs1037.stock.controller;
 
-import com.sklabs1037.sklabs1037.service.IStockMainService;
-import com.sklabs1037.sklabs1037.vo.StockMainVO;
+import com.sklabs1037.sklabs1037.stock.service.IStockMainService;
+import com.sklabs1037.sklabs1037.stock.vo.StockMainVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

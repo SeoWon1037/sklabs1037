@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.stock.service;
 
-import com.sklabs1037.sklabs1037.vo.StockMainVO;
+import com.sklabs1037.sklabs1037.stock.vo.StockMainVO;
 
 import java.util.List;
 import java.util.Map;

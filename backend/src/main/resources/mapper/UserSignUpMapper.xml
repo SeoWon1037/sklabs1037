@@ -7,7 +7,7 @@
     namespace: 이 SQL을 쓸 Dao의 전체 경로
     ※ 시간 비교는 전부 DB의 NOW()로 (Java 시간과 DB 시간대가 다를 수 있어서)
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.UserSignUpDao">
+<mapper namespace="com.sklabs1037.sklabs1037.user.dao.UserSignUpDao">
 
     <!-- ============================================ -->
     <!-- 회원 (T_USER)                                -->
@@ -15,7 +15,7 @@
 
     <!-- 이메일 중복 체크 (0이면 가입 가능, 1 이상이면 이미 있음) -->
     <select id="countByEmail"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO"
             resultType="int">
         SELECT COUNT(*)
           FROM T_USER
@@ -26,7 +26,7 @@
 
     <!-- 회원 등록 -->
     <insert id="insertUser"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO"
             useGeneratedKeys="true"
             keyProperty="id"
             keyColumn="id">
@@ -51,7 +51,7 @@
 
     <!-- 최근 1분 안에 보낸 인증번호가 있는지 (재발송 제한용) -->
     <select id="countRecentSend"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO"
             resultType="int">
         SELECT COUNT(*)
           FROM T_EMAIL_VERIFY
@@ -63,7 +63,7 @@
 
     <!-- 인증번호 저장 (만료: 지금 + 5분) -->
     <insert id="insertEmailVerify"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO">
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO">
         INSERT INTO T_EMAIL_VERIFY
         ( EMAIL
          ,CODE
@@ -79,8 +79,8 @@
 
     <!-- 가장 최근에 보낸 인증번호 1건 (만료 여부는 DB에서 계산) -->
     <select id="selectLatestVerify"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
-            resultType="com.sklabs1037.sklabs1037.vo.UserSignUpVO">
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO"
+            resultType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO">
         SELECT  ID AS VERIFY_ID
                ,EMAIL
                ,CODE
@@ -98,7 +98,7 @@
 
     <!-- 인증 성공 처리 -->
     <update id="updateVerifySuccess"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO">
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO">
         UPDATE  T_EMAIL_VERIFY
            SET  VERIFY_YN  = 'Y'
                ,VERIFY_DAY = NOW()
@@ -108,7 +108,7 @@
 
     <!-- 가입 가능한 인증이 있는지 (인증 완료 후 30분 이내) -->
     <select id="countVerified"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO"
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO"
             resultType="int">
         SELECT COUNT(*)
           FROM T_EMAIL_VERIFY
@@ -121,7 +121,7 @@
 
     <!-- 가입 완료 후 인증 기록 사용 처리 (같은 인증으로 재가입 방지) -->
     <update id="deleteEmailVerify"
-            parameterType="com.sklabs1037.sklabs1037.vo.UserSignUpVO">
+            parameterType="com.sklabs1037.sklabs1037.user.vo.UserSignUpVO">
         UPDATE T_EMAIL_VERIFY
            SET DEL_DAY = NOW()
         WHERE 1=1

@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.admin.service;
 
-import com.sklabs1037.sklabs1037.vo.AdminFeedbackVO;
+import com.sklabs1037.sklabs1037.admin.vo.AdminFeedbackVO;
 
 import java.util.List;
 import java.util.Map;

@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.dao;
+package com.sklabs1037.sklabs1037.ai.dao;
 
-import com.sklabs1037.sklabs1037.vo.AiChatVO;
-import com.sklabs1037.sklabs1037.vo.AiStockVO;
+import com.sklabs1037.sklabs1037.ai.vo.AiChatVO;
+import com.sklabs1037.sklabs1037.ai.vo.AiStockVO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

@@ -6,11 +6,11 @@
     주식 종목 화면 SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.StockMainDao">
+<mapper namespace="com.sklabs1037.sklabs1037.stock.dao.StockMainDao">
 
     <!-- 종목별 최신 종가 + 전일 대비 (최신일=1, 전일=2 번호를 매겨서 비교) -->
     <select id="selectStockSummary"
-            resultType="com.sklabs1037.sklabs1037.vo.StockMainVO">
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
         WITH RANKED AS (
         SELECT  P.STOCK_ID
         ,P.TRADE_DATE
@@ -42,8 +42,8 @@
 
     <!-- 미니 차트용: 종목별 최근 N거래일 종가 (오래된 날짜부터) -->
     <select id="selectRecentPrices"
-            parameterType="com.sklabs1037.sklabs1037.vo.StockMainVO"
-            resultType="com.sklabs1037.sklabs1037.vo.StockMainVO">
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
         SELECT  R.STOCK_ID
         ,R.TRADE_DATE
         ,R.CLOSE_PRICE
@@ -64,8 +64,8 @@
 
     <!-- 종목 상세: 종목 정보 + 사업 개요 문서 -->
     <select id="selectStockDetail"
-            parameterType="com.sklabs1037.sklabs1037.vo.StockMainVO"
-            resultType="com.sklabs1037.sklabs1037.vo.StockMainVO">
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
         SELECT  S.ID      AS STOCK_ID
         ,S.SYMBOL
         ,S.NAME
@@ -84,8 +84,8 @@
 
     <!-- 종목 상세: 캔들 차트용 일봉 전체 (오래된 날짜부터) -->
     <select id="selectCandles"
-            parameterType="com.sklabs1037.sklabs1037.vo.StockMainVO"
-            resultType="com.sklabs1037.sklabs1037.vo.StockMainVO">
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
         SELECT  P.TRADE_DATE
         ,P.OPEN_PRICE
         ,P.HIGH_PRICE

@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.news.service;
 
-import com.sklabs1037.sklabs1037.vo.NewsSummaryVO;
+import com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO;
 
 /**
  * AI 뉴스 요약 Service

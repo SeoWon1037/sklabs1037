@@ -1,7 +1,7 @@
-package com.sklabs1037.sklabs1037.service;
+package com.sklabs1037.sklabs1037.news.service;
 
-import com.sklabs1037.sklabs1037.dao.NewsListDao;
-import com.sklabs1037.sklabs1037.vo.NewsListVO;
+import com.sklabs1037.sklabs1037.news.dao.NewsListDao;
+import com.sklabs1037.sklabs1037.news.vo.NewsListVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

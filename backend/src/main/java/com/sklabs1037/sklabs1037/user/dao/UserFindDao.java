@@ -1,6 +1,6 @@
-package com.sklabs1037.sklabs1037.dao;
+package com.sklabs1037.sklabs1037.user.dao;
 
-import com.sklabs1037.sklabs1037.vo.UserFindVO;
+import com.sklabs1037.sklabs1037.user.vo.UserFindVO;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;

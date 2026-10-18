@@ -1,6 +1,6 @@
 package com.sklabs1037.sklabs1037.client;
 
-import com.sklabs1037.sklabs1037.vo.NewsCollectVO;
+import com.sklabs1037.sklabs1037.news.vo.NewsCollectVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;

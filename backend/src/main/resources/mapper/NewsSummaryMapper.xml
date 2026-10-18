@@ -6,11 +6,11 @@
     AI 뉴스 요약 SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
 -->
-<mapper namespace="com.sklabs1037.sklabs1037.dao.NewsSummaryDao">
+<mapper namespace="com.sklabs1037.sklabs1037.news.dao.NewsSummaryDao">
 
     <!-- 요약 대상 종목 목록 -->
     <select id="selectTargetStocks"
-            resultType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO">
+            resultType="com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO">
         SELECT  S.ID    AS STOCK_ID
         ,S.NAME  AS STOCK_NAME
         FROM T_STOCK S
@@ -24,8 +24,8 @@
         - 같은 제목은 1건만 (DISTINCT ON), 최신순
     -->
     <select id="selectRecentTitles"
-            parameterType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO"
-            resultType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO">
+            parameterType="com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO"
+            resultType="com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO">
         SELECT  X.TITLE
         ,X.PRESS
         FROM (
@@ -57,7 +57,7 @@
 
     <!-- 요약 저장 (같은 대상이 있으면 덮어쓰기) -->
     <insert id="upsertSummary"
-            parameterType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO">
+            parameterType="com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO">
         INSERT INTO T_NEWS_SUMMARY (
         TARGET_KEY
         ,CATEGORY
@@ -97,7 +97,7 @@
 
     <!-- 요약 1건 (화면용) -->
     <select id="selectSummary"
-            resultType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO">
+            resultType="com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO">
         SELECT  M.TARGET_KEY
         ,M.CATEGORY
         ,M.STOCK_ID

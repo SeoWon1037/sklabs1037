@@ -1,0 +1,58 @@
+/* ============================================
+   관심 종목 (별 버튼, 메인 화면 박스, 안내 문구)
+   ============================================ */
+
+/* ----- 별 버튼 ----- */
+.watch-star {
+  margin: 0 6px;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--muted, #8b8b93);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.watch-star:hover {
+  color: #f5b301;
+}
+
+.watch-star-on {
+  color: #f5b301;
+}
+
+/* 종목 목록의 작은 별 표시 */
+.watch-mark {
+  margin-right: 4px;
+  font-size: 12px;
+  color: #f5b301;
+}
+
+/* 로그인 안내 */
+.watch-msg {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted, #8b8b93);
+}
+
+.watch-msg a {
+  margin-left: 6px;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+/* ----- 메인 화면 박스 ----- */
+.watch-empty {
+  margin: 4px 0 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted, #8b8b93);
+}
+
+.watch-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}

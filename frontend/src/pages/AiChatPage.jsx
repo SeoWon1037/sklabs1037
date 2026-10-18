@@ -3,8 +3,10 @@
 // - 백엔드 API
 //   POST /api/ai/chat     { message }         → { success, chatId, answer, toolsUsed }
 //   POST /api/ai/feedback { chatId, rating }  → { success }
+//   GET  /api/watchlist                       → 관심 종목 (브리핑 버튼용)
 // - AI가 어떤 도구(DB 조회, 문서 검색 등)를 썼는지 + 답변 피드백(👍/👎)
 // - /ai?q=질문 으로 들어오면 입력창에 질문을 미리 채움 (메인 화면의 "AI에게 묻기")
+// - /ai?briefing=1 로 들어오면 관심 종목 브리핑 질문을 미리 채움 (메인 화면의 "AI 브리핑 받기")
 // ============================================
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -18,6 +20,10 @@ const EXAMPLES = [
   '삼성전자 요즘 왜 이렇게 떨어졌어? 최근 뉴스로 알려줘',
 ]
 
+// 관심 종목 브리핑 질문 (기존 AI 비서 도구로 수익률 + 뉴스를 찾아 정리)
+const briefingQuestion = (names) =>
+  `내 관심 종목 ${names.join(', ')} 브리핑해줘. 종목별로 최근 5거래일 수익률과 관련 뉴스 핵심을 2줄씩 정리해줘.`
+
 // AI 답변의 **굵은 글씨** 표시를 실제 굵은 글씨로 (나머지 글자는 그대로)
 // - split에 괄호( )가 있으면 괄호 안 글자도 결과에 남음 → [일반, 굵게, 일반, 굵게, ...] 순서
 // - 그래서 홀수 번째(i % 2 === 1)만 <strong>으로 감쌈
@@ -26,19 +32,36 @@ const renderText = (text) =>
 
 function AiChatPage() {
 
-  // 주소의 ?q= 값 (메인 화면에서 넘어온 질문)
+  // 주소의 ?q= / ?briefing= 값 (메인 화면에서 넘어온 질문)
   const [searchParams] = useSearchParams()
+  const wantBriefing = searchParams.get('briefing') === '1'
 
   // 대화 목록: { role: 'user' | 'ai', text, tools?, chatId?, rating?, error? }
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState(() => searchParams.get('q') ?? '')
   const [loading, setLoading] = useState(false)
 
+  // 관심 종목 이름 (브리핑 버튼용)
+  const [watchNames, setWatchNames] = useState([])
+
   // 새 메시지가 오면 맨 아래로 스크롤
   const bottomRef = useRef(null)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  // 처음 한 번: 관심 종목 (로그아웃 상태면 빈 목록)
+  useEffect(() => {
+    fetch('/api/watchlist')
+      .then((res) => res.json())
+      .then((data) => {
+        const names = data.success ? data.stocks.map((s) => s.name) : []
+        setWatchNames(names)
+        // 메인 화면 "AI 브리핑 받기"로 들어온 경우 → 브리핑 질문을 입력창에 채워둠 (보내기는 직접)
+        if (wantBriefing && names.length > 0) setInput(briefingQuestion(names))
+      })
+      .catch(() => setWatchNames([]))
+  }, [wantBriefing])
 
   // ============================================
   // 질문 보내기
@@ -128,9 +151,14 @@ function AiChatPage() {
         {/* 대화 영역 */}
         <div className="ai-messages">
 
-          {/* 처음: 예시 질문 */}
+          {/* 처음: 관심 종목 브리핑 + 예시 질문 */}
           {messages.length === 0 && (
             <div className="ai-examples">
+              {watchNames.length > 0 && (
+                <button type="button" className="ai-example" onClick={() => sendMessage(briefingQuestion(watchNames))}>
+                  ⭐ 내 관심 종목 브리핑 ({watchNames.length > 2 ? `${watchNames.slice(0, 2).join(', ')} 외 ${watchNames.length - 2}개` : watchNames.join(', ')})
+                </button>
+              )}
               {EXAMPLES.map((ex) => (
                 <button key={ex} type="button" className="ai-example" onClick={() => sendMessage(ex)}>
                   {ex}

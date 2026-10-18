@@ -6,11 +6,15 @@
 //   GET /api/stock/dashboard?days=20        종목 목록 + 미니 차트
 //   GET /api/stock/detail?symbol=005930     종목 정보 + 일봉
 //   GET /api/news?stockId=1&size=15         종목 뉴스
+//   GET /api/news/summary?stockId=1         AI 뉴스 요약 (NewsSummaryBox)
+//   GET/POST/DELETE /api/watchlist          관심 종목 (☆ / ★)
 // ============================================
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import StockChart from '../components/StockChart'
 import CandleChart from '../components/CandleChart'
+import NewsSummaryBox from '../components/NewsSummaryBox'
+import WatchStar from '../components/WatchStar'
 import './StockPage.css'
 
 const TABS = [
@@ -92,6 +96,10 @@ function StockPage() {
   const [showMA, setShowMA] = useState(true)
   const [news, setNews] = useState({ key: null, items: [] })
 
+  // ===== 관심 종목 =====
+  const [watch, setWatch] = useState({ loggedIn: false, ids: [] })
+  const [watchMsg, setWatchMsg] = useState('')
+
   // 처음 한 번: 종목 목록
   useEffect(() => {
     fetch('/api/stock/dashboard?days=20')
@@ -106,6 +114,48 @@ function StockPage() {
       })
       .catch(() => setListError('서버에 연결할 수 없습니다.'))
   }, [])
+
+  // 처음 한 번: 내 관심 종목 (로그아웃 상태면 빈 목록)
+  useEffect(() => {
+    fetch('/api/watchlist')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setWatch({ loggedIn: data.loggedIn, ids: data.stocks.map((s) => s.stockId) })
+      })
+      .catch(() => {})
+  }, [])
+
+  // ☆ / ★ 누르기: 화면에 먼저 반영하고, 실패하면 되돌림
+  const toggleWatch = async (id) => {
+
+    if (!watch.loggedIn) {
+      setWatchMsg('로그인하면 관심 종목을 저장할 수 있어요.')
+      return
+    }
+
+    const on = watch.ids.includes(id)
+    const before = watch.ids
+    setWatch((prev) => ({ ...prev, ids: on ? prev.ids.filter((x) => x !== id) : [...prev.ids, id] }))
+    setWatchMsg('')
+
+    try {
+      const res = on
+        ? await fetch(`/api/watchlist?stockId=${id}`, { method: 'DELETE' })
+        : await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stockId: id }),
+        })
+      const data = await res.json()
+      if (!data.success) {
+        setWatch((prev) => ({ ...prev, ids: before }))
+        setWatchMsg(data.message)
+      }
+    } catch {
+      setWatch((prev) => ({ ...prev, ids: before }))
+      setWatchMsg('서버에 연결할 수 없습니다.')
+    }
+  }
 
   // 종목이 바뀔 때마다: 상세 + 일봉
   useEffect(() => {
@@ -205,7 +255,7 @@ function StockPage() {
                   onClick={() => setSelectedSymbol(s.symbol)}
                 >
                   <span className="stock-item-name">
-                    {s.name}
+                    <span>{watch.ids.includes(s.stockId) && <span className="watch-mark">★</span>}{s.name}</span>
                     <small>{s.symbol}</small>
                   </span>
                   <span className="stock-item-chart">
@@ -236,6 +286,7 @@ function StockPage() {
                 <div>
                   <div className="detail-name">
                     {detail.stock.name}
+                    <WatchStar active={watch.ids.includes(stockId)} onClick={() => toggleWatch(stockId)} />
                     <span className="detail-code">{detail.stock.symbol} · {detail.stock.market}</span>
                   </div>
                   <div className="detail-price-row">
@@ -247,6 +298,12 @@ function StockPage() {
                     )}
                     <span className="detail-date">{latest?.date} 종가 기준</span>
                   </div>
+                  {watchMsg && (
+                    <p className="watch-msg">
+                      {watchMsg}
+                      {!watch.loggedIn && <Link to="/login">로그인</Link>}
+                    </p>
+                  )}
                 </div>
 
                 <dl className="detail-range">
@@ -360,6 +417,7 @@ function StockPage() {
               {/* 탭: 뉴스 */}
               {tab === 'news' && (
                 <div className="news-box">
+                  <NewsSummaryBox key={stockId} stockId={stockId} />
                   {news.key !== stockId && <p className="stock-status">뉴스를 불러오는 중...</p>}
                   {news.key === stockId && news.items.length === 0 && <p className="stock-status">수집된 뉴스가 없습니다.</p>}
                   <ul className="news-list">

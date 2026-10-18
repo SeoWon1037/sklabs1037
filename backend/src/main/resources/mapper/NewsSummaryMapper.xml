@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    AI 뉴스 요약 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dao.NewsSummaryDao">
+
+    <!-- 요약 대상 종목 목록 -->
+    <select id="selectTargetStocks"
+            resultType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO">
+        SELECT  S.ID    AS STOCK_ID
+        ,S.NAME  AS STOCK_NAME
+        FROM T_STOCK S
+        ORDER BY S.ID
+    </select>
+
+    <!--
+        요약에 쓸 최근 뉴스 제목
+        - stockId 가 있으면 그 종목 뉴스, 없으면 시장(MARKET) 뉴스
+        - keywords 가 있으면 제목에 그중 하나라도 들어간 기사만 (다른 종목/시장 기사가 섞이는 것 방지)
+        - 같은 제목은 1건만 (DISTINCT ON), 최신순
+    -->
+    <select id="selectRecentTitles"
+            parameterType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO"
+            resultType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO">
+        SELECT  X.TITLE
+        ,X.PRESS
+        FROM (
+        SELECT  DISTINCT ON (N.TITLE)
+        N.TITLE
+        ,N.PRESS
+        ,N.PUB_DATE
+        FROM T_NEWS N
+        WHERE 1=1
+        AND N.PUB_DATE >= #{fromAt}
+        <if test="stockId != null">
+            AND N.STOCK_ID = #{stockId}
+        </if>
+        <if test="stockId == null">
+            AND N.CATEGORY = 'MARKET'
+        </if>
+        <if test="keywords != null and keywords.size() > 0">
+            AND
+            <foreach collection="keywords" item="keyword" open="(" separator=" OR " close=")">
+                N.TITLE ILIKE '%' || #{keyword} || '%'
+            </foreach>
+        </if>
+        ORDER BY N.TITLE
+        ,N.PUB_DATE DESC
+        ) X
+        ORDER BY X.PUB_DATE DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 요약 저장 (같은 대상이 있으면 덮어쓰기) -->
+    <insert id="upsertSummary"
+            parameterType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO">
+        INSERT INTO T_NEWS_SUMMARY (
+        TARGET_KEY
+        ,CATEGORY
+        ,STOCK_ID
+        ,SUMMARY
+        ,NEWS_COUNT
+        ,SUMMARY_AT
+        ) VALUES (
+        #{targetKey}
+        ,#{category}
+        ,#{stockId}
+        ,#{summary}
+        ,#{newsCount}
+        ,#{summaryAt}
+        )
+        ON CONFLICT (TARGET_KEY) DO UPDATE
+        SET SUMMARY    = EXCLUDED.SUMMARY
+        ,NEWS_COUNT = EXCLUDED.NEWS_COUNT
+        ,SUMMARY_AT = EXCLUDED.SUMMARY_AT
+    </insert>
+
+    <!-- 요약 삭제 (뉴스가 부족해 새로 못 만든 경우) -->
+    <delete id="deleteSummary">
+        DELETE FROM T_NEWS_SUMMARY
+        WHERE 1=1
+        AND TARGET_KEY = #{targetKey}
+    </delete>
+
+    <!-- 이 시각 이후에 만든 요약 개수 (서버 시작 시 다시 만들지 판단용) -->
+    <select id="countSummarySince"
+            resultType="int">
+        SELECT  COUNT(*)
+        FROM T_NEWS_SUMMARY
+        WHERE 1=1
+        AND SUMMARY_AT >= #{fromAt}
+    </select>
+
+    <!-- 요약 1건 (화면용) -->
+    <select id="selectSummary"
+            resultType="com.sklabs1037.sklabs1037.vo.NewsSummaryVO">
+        SELECT  M.TARGET_KEY
+        ,M.CATEGORY
+        ,M.STOCK_ID
+        ,S.NAME  AS STOCK_NAME
+        ,M.SUMMARY
+        ,M.NEWS_COUNT
+        ,M.SUMMARY_AT
+        FROM T_NEWS_SUMMARY M
+        LEFT JOIN T_STOCK S ON S.ID = M.STOCK_ID
+        WHERE 1=1
+        AND M.TARGET_KEY = #{targetKey}
+    </select>
+
+</mapper>

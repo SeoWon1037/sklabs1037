@@ -11,6 +11,7 @@
     <!--
         최신 뉴스 목록 (분류/종목 조건은 있을 때만)
         - 같은 제목 기사가 여러 언론사/주소로 들어온 경우 가장 최신 1건만 (DISTINCT ON)
+        - 분류를 지정하지 않은 "전체"는 주식 뉴스(시장 + 종목)만, 스포츠는 스포츠 탭에서만
     -->
     <select id="selectNewsList"
             parameterType="com.sklabs1037.sklabs1037.vo.NewsListVO"
@@ -38,6 +39,9 @@
         WHERE 1=1
         <if test="category != null and category != ''">
             AND N.CATEGORY = #{category}
+        </if>
+        <if test="category == null or category == ''">
+            AND N.CATEGORY <![CDATA[<>]]> 'SPORTS'
         </if>
         <if test="stockId != null">
             AND N.STOCK_ID = #{stockId}

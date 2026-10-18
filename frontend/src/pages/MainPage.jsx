@@ -2,9 +2,10 @@
 // 메인 화면 (주소: /) — 네이버 메인 스타일
 // - 위: 검색창(= AI 비서에게 질문) + 바로가기
 // - 왼쪽: 뉴스 (전체 / 시장 / 스포츠 / 종목별 탭)
-// - 오른쪽: 로그인 박스 + 오늘의 시세 + 추천 질문
+// - 오른쪽: 로그인 박스 + 내 관심 종목(로그인 시) + 오늘의 시세 + 추천 질문
 // - 백엔드 API
 //   GET /api/news?category=&stockId=&size=   뉴스 목록
+//   GET /api/news/summary?stockId=           AI 뉴스 요약 (NewsSummaryBox)
 //   GET /api/stock/dashboard?days=5          종목 시세 (탭 이름 + 시세 위젯)
 //   GET /api/user/me                         로그인 상태
 // ============================================
@@ -12,6 +13,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './MainPage.css'
 import WeatherBox from '../components/WeatherBox'
+import NewsSummaryBox from '../components/NewsSummaryBox'
+import WatchlistBox from '../components/WatchlistBox'
 
 // 바로가기 아이콘
 const SHORTCUTS = [
@@ -190,6 +193,11 @@ function MainPage() {
             </div>
           </div>
 
+          {/* AI 요약: 시장 / 종목 탭에서만 */}
+          {tab !== 'ALL' && tab !== 'SPORTS' && (
+            <NewsSummaryBox key={tab} stockId={tab === 'MARKET' ? null : tab} />
+          )}
+
           {newsLoading && news.items.length === 0 && <p className="home-empty">뉴스를 불러오는 중...</p>}
           {!newsLoading && news.error && <p className="home-empty home-error">{news.error}</p>}
           {!newsLoading && !news.error && news.items.length === 0 && <p className="home-empty">아직 수집된 뉴스가 없습니다.</p>}
@@ -237,6 +245,9 @@ function MainPage() {
               </>
             )}
           </section>
+
+          {/* 내 관심 종목 (로그인했을 때만) */}
+          {user && <WatchlistBox />}
 
           {/* 오늘의 시세 */}
           <section className="home-box">

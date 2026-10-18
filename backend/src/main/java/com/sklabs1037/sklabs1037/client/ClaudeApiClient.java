@@ -15,6 +15,7 @@ import java.util.Map;
  * - POST https://api.anthropic.com/v1/messages
  * - 질문(messages) + 쓸 수 있는 도구 목록(tools)을 보내면
  *   Claude가 "답변" 또는 "이 도구를 써줘(tool_use)"를 돌려줌
+ * - 도구가 필요 없는 호출(뉴스 요약 등)은 tools 에 null 을 넘기면 됨
  */
 @Component
 public class ClaudeApiClient {
@@ -52,8 +53,12 @@ public class ClaudeApiClient {
         body.put("model", model);
         body.put("max_tokens", maxTokens);
         body.put("system", system);
-        body.put("tools", tools);
         body.put("messages", messages);
+
+        // 도구가 있을 때만 보냄
+        if (tools != null && !tools.isEmpty()) {
+            body.put("tools", tools);
+        }
 
         return restClient.post()
                 .uri(MESSAGES_URL)

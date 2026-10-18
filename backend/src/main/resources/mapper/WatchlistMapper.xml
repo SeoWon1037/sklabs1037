@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    관심 종목 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dao.WatchlistDao">
+
+    <!--
+        내 관심 종목 + 최신 시세
+        - 종목마다 최근 2거래일 종가를 가져와 전일 대비 계산 (LATERAL)
+        - 시세가 아직 없는 종목도 목록에는 나오게 LEFT JOIN
+    -->
+    <select id="selectWatchlist"
+            resultType="com.sklabs1037.sklabs1037.vo.WatchlistVO">
+        SELECT  W.STOCK_ID
+        ,S.SYMBOL
+        ,S.NAME
+        ,L.TRADE_DATE
+        ,L.CLOSE_PRICE
+        ,L.CLOSE_PRICE - L.PREV_CLOSE                                   AS CHANGE_AMOUNT
+        ,ROUND((L.CLOSE_PRICE - L.PREV_CLOSE) / L.PREV_CLOSE * 100, 2)  AS CHANGE_RATE
+        FROM T_WATCHLIST W
+        JOIN T_STOCK S ON S.ID = W.STOCK_ID
+        LEFT JOIN LATERAL (
+        SELECT  MAX(CASE WHEN X.RN = 1 THEN X.TRADE_DATE  END)  AS TRADE_DATE
+        ,MAX(CASE WHEN X.RN = 1 THEN X.CLOSE_PRICE END)  AS CLOSE_PRICE
+        ,MAX(CASE WHEN X.RN = 2 THEN X.CLOSE_PRICE END)  AS PREV_CLOSE
+        FROM (
+        SELECT  P.TRADE_DATE
+        ,P.CLOSE_PRICE
+        ,ROW_NUMBER() OVER (ORDER BY P.TRADE_DATE DESC) AS RN
+        FROM T_STOCK_PRICE P
+        WHERE 1=1
+        AND P.STOCK_ID = W.STOCK_ID
+        ORDER BY P.TRADE_DATE DESC
+        LIMIT 2
+        ) X
+        ) L ON TRUE
+        WHERE 1=1
+        AND W.USER_ID = #{userId}
+        ORDER BY W.CREATED_AT
+    </select>
+
+    <!--
+        관심 종목 추가
+        - T_STOCK 에 있는 종목만 들어가도록 SELECT 로 넣음
+        - 이미 있으면 무시 (ON CONFLICT DO NOTHING)
+    -->
+    <insert id="insertWatchlist"
+            parameterType="com.sklabs1037.sklabs1037.vo.WatchlistVO">
+        INSERT INTO T_WATCHLIST (
+        USER_ID
+        ,STOCK_ID
+        )
+        SELECT  #{userId}
+        ,S.ID
+        FROM T_STOCK S
+        WHERE 1=1
+        AND S.ID = #{stockId}
+        ON CONFLICT (USER_ID, STOCK_ID) DO NOTHING
+    </insert>
+
+    <!-- 관심 종목 삭제 (본인 것만) -->
+    <delete id="deleteWatchlist"
+            parameterType="com.sklabs1037.sklabs1037.vo.WatchlistVO">
+        DELETE FROM T_WATCHLIST
+        WHERE 1=1
+        AND USER_ID  = #{userId}
+        AND STOCK_ID = #{stockId}
+    </delete>
+
+</mapper>

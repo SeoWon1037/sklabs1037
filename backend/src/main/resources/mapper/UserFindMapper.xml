@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    아이디 찾기 / 비밀번호 재설정 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dao.UserFindDao">
+
+    <!-- 아이디 찾기: 닉네임으로 회원 조회 (같은 닉네임이 여러 명일 수 있음) -->
+    <select id="selectUsersByNickname"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserFindVO"
+            resultType="com.sklabs1037.sklabs1037.vo.UserFindVO">
+        SELECT  EMAIL
+        ,PROVIDER
+        ,INS_DAY
+        FROM T_USER
+        WHERE 1=1
+        AND NICKNAME = #{nickname}
+        AND DEL_DAY IS NULL
+        ORDER BY ID
+    </select>
+
+    <!-- 비밀번호 재설정: 이메일로 회원 조회 -->
+    <select id="selectUserByEmail"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserFindVO"
+            resultType="com.sklabs1037.sklabs1037.vo.UserFindVO">
+        SELECT  ID AS USER_ID
+        ,EMAIL
+        ,PROVIDER
+        FROM T_USER
+        WHERE 1=1
+        AND EMAIL = #{email}
+        AND DEL_DAY IS NULL
+        ORDER BY ID
+        LIMIT 1
+    </select>
+
+    <!-- 1분 안에 보낸 코드가 있는지 (재발송 제한) -->
+    <select id="countRecentSend"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserFindVO"
+            resultType="int">
+        SELECT  COUNT(*)
+        FROM T_EMAIL_VERIFY
+        WHERE 1=1
+        AND EMAIL   = #{email}
+        AND INS_DAY &gt; NOW() - INTERVAL '1 minute'
+    </select>
+
+    <!-- 재설정 인증코드 저장 (5분 뒤 만료) -->
+    <insert id="insertResetCode"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserFindVO">
+        INSERT INTO T_EMAIL_VERIFY
+        ( EMAIL
+        ,CODE
+        ,EXPIRE_DAY
+        ,PURPOSE
+        ) VALUES (
+        #{email}
+        ,#{code}
+        ,NOW() + INTERVAL '5 minutes'
+        ,'RESET'
+        )
+    </insert>
+
+    <!-- 가장 최근 재설정 코드 -->
+    <select id="selectLatestResetCode"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserFindVO"
+            resultType="com.sklabs1037.sklabs1037.vo.UserFindVO">
+        SELECT  ID AS VERIFY_ID
+        ,CODE
+        ,VERIFY_YN
+        ,CASE
+        WHEN EXPIRE_DAY &lt; NOW() THEN 'Y'
+        ELSE 'N'
+        END AS EXPIRED_YN
+        FROM T_EMAIL_VERIFY
+        WHERE 1=1
+        AND EMAIL   = #{email}
+        AND PURPOSE = 'RESET'
+        AND DEL_DAY IS NULL
+        ORDER BY ID DESC
+        LIMIT 1
+    </select>
+
+    <!-- 인증 성공 표시 -->
+    <update id="updateVerifySuccess"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserFindVO">
+        UPDATE T_EMAIL_VERIFY
+        SET  VERIFY_YN  = 'Y'
+        ,VERIFY_DAY = NOW()
+        WHERE 1=1
+        AND ID = #{verifyId}
+    </update>
+
+    <!-- 새 비밀번호 저장 (이메일 가입 회원만) -->
+    <update id="updatePassword"
+            parameterType="com.sklabs1037.sklabs1037.vo.UserFindVO">
+        UPDATE T_USER
+        SET  PASSWORD = #{password}
+        ,UPT_DAY  = NOW()
+        WHERE 1=1
+        AND ID       = #{userId}
+        AND PROVIDER = 'LOCAL'
+        AND DEL_DAY IS NULL
+    </update>
+
+</mapper>

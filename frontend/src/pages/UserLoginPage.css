@@ -70,3 +70,50 @@
   height: 20px;
   fill: #000;
 }
+
+/* 아이디·비밀번호 찾기 링크 */
+.login-find-link {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  text-align: center;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+
+/* ===== 회원가입 / 계정 찾기 ===== */
+.login-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* "아직 회원이 아니신가요?" → 흐린 글자 */
+.login-signup-text {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+
+/* "회원가입" → 진한 흰 글자 + 굵게 */
+.login-signup-link {
+  font-weight: 700;
+  color: var(--text);
+}
+.login-signup-link:hover {
+  text-decoration: underline;
+}
+
+/* "아이디 · 비밀번호 찾기" → 작은 흐린 글자 */
+.login-find-link {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 45%, transparent);
+}
+.login-find-link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}

@@ -198,10 +198,14 @@ function UserLoginPage() {
           카카오로 로그인
         </button>
 
-        {/* 회원가입으로 이동 */}
-        <p className="login-signup-link">
-          아직 회원이 아니신가요? <Link to="/signup">회원가입</Link>
-        </p>
+        {/* 회원가입 / 계정 찾기 */}
+        <div className="login-footer">
+          <p className="login-signup-text">
+            아직 회원이 아니신가요?
+            <Link to="/signup" className="login-signup-link">회원가입</Link>
+          </p>
+          <Link to="/find" className="login-find-link">아이디 · 비밀번호 찾기</Link>
+        </div>
 
       </form>
     </main>

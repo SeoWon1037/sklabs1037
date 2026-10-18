@@ -1,6 +1,6 @@
 // ============================================
 // 상단바 (모든 화면 맨 위에 공통으로 표시)
-// 왼쪽: 로고 + 메뉴 탭(뉴스 / 주식 종목 / AI 비서)
+// 왼쪽: 로고 + 메뉴 탭(뉴스 / 주식 종목 / AI 비서 / 관리자는 "관리자" 추가)
 // 오른쪽: 테마 전환 + (로그아웃 상태) 로그인·회원가입 / (로그인 상태) 닉네임·로그아웃
 // ============================================
 import { useEffect, useState } from 'react'
@@ -15,6 +15,9 @@ const MENUS = [
   { to: '/ai', label: 'AI 비서' },
 ]
 
+// 관리자에게만 보이는 탭
+const ADMIN_MENU = { to: '/admin', label: '관리자' }
+
 function Header() {
 
   // 공통 테마에서 현재 테마와 전환 함수 꺼내기
@@ -24,16 +27,31 @@ function Header() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // 로그인한 회원 정보 (null이면 로그아웃 상태)
+  // 로그인한 회원 정보 (null이면 로그아웃 상태) + 관리자 여부
   const [user, setUser] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
-  // 화면이 처음 뜰 때 + 페이지가 바뀔 때마다 "나 로그인돼 있어?" 확인
+  // 화면이 처음 뜰 때 + 페이지가 바뀔 때마다 "나 로그인돼 있어?" + "관리자야?" 확인
   useEffect(() => {
 
     fetch('/api/user/me')
       .then((res) => res.json())
-      .then((data) => setUser(data.loggedIn ? data.user : null))
-      .catch(() => setUser(null))   // 서버 꺼져 있으면 그냥 로그아웃 상태로
+      .then((data) => {
+        setUser(data.loggedIn ? data.user : null)
+
+        if (!data.loggedIn) {
+          setIsAdmin(false)
+          return
+        }
+
+        return fetch('/api/admin/check')
+          .then((res) => res.json())
+          .then((check) => setIsAdmin(Boolean(check.admin)))
+      })
+      .catch(() => {
+        setUser(null)   // 서버 꺼져 있으면 그냥 로그아웃 상태로
+        setIsAdmin(false)
+      })
 
   }, [location.pathname])
 
@@ -43,9 +61,12 @@ function Header() {
       await fetch('/api/user/logout', { method: 'POST' })
     } finally {
       setUser(null)
+      setIsAdmin(false)
       navigate('/')
     }
   }
+
+  const menus = isAdmin ? [...MENUS, ADMIN_MENU] : MENUS
 
   return (
     <header className="header">
@@ -56,7 +77,7 @@ function Header() {
           <Link to="/" className="header-logo">SKLabs</Link>
 
           <nav className="header-menu">
-            {MENUS.map((m) => (
+            {menus.map((m) => (
               <NavLink
                 key={m.to}
                 to={m.to}

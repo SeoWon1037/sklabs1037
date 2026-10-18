@@ -1,0 +1,251 @@
+/* 화면 전체 (상단바·메인과 같은 폭) */
+.admin-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+.admin-head {
+  margin-bottom: 20px;
+}
+.admin-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text);
+}
+.admin-desc {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+.admin-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+.admin-error {
+  color: #e5484d;
+}
+
+/* ===== 요약 숫자 ===== */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.admin-stat span {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+.admin-stat strong {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* ===== 박스 ===== */
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.admin-box {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.admin-box-title {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* 도구별 가로 막대 */
+.admin-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.admin-bar-label {
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+.admin-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  overflow: hidden;
+}
+.admin-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+}
+.admin-bar-value {
+  text-align: right;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* 날짜별 세로 막대 */
+.admin-columns {
+  display: flex;
+  gap: 8px;
+  height: 200px;
+}
+.admin-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.admin-column-value {
+  font-weight: 700;
+  color: var(--text);
+}
+.admin-column-track {
+  flex: 1;
+  width: 100%;
+  max-width: 36px;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.admin-column-bar {
+  width: 100%;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 40%, transparent);
+}
+.admin-column-label {
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+.admin-column-rating {
+  font-size: 11px;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+  white-space: nowrap;
+}
+
+/* ===== 대화 목록 ===== */
+.admin-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.admin-list-head .admin-box-title {
+  margin: 0;
+}
+.admin-filters {
+  display: flex;
+  gap: 4px;
+}
+.admin-filter {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 65%, transparent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.admin-filter-active {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+.admin-chats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-chat {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.admin-chat:last-child {
+  border-bottom: none;
+}
+.admin-chat-summary {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 2px;
+  cursor: pointer;
+  list-style: none;
+}
+.admin-chat-summary::-webkit-details-marker {
+  display: none;
+}
+.admin-chat-question {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-chat-meta {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+  white-space: nowrap;
+}
+.admin-chat-detail {
+  padding: 0 2px 14px 36px;
+}
+.admin-chat-tools {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+.admin-chat-answer {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+
+/* 좁은 화면 */
+@media (max-width: 860px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-chat-summary {
+    grid-template-columns: 24px 1fr;
+  }
+  .admin-chat-meta {
+    grid-column: 2;
+  }
+}

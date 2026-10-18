@@ -12,6 +12,7 @@ import UserSignUpPage from './pages/UserSignUpPage'
 import UserLoginPage from './pages/UserLoginPage'
 import UserOAuthResultPage from './pages/UserOAuthResultPage'
 import AiChatPage from './pages/AiChatPage'
+import AdminFeedbackPage from './pages/AdminFeedbackPage'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/" element={<MainPage />} />                        {/* 메인 (오늘의 뉴스) */}
         <Route path="/stock" element={<StockPage />} />                  {/* 주식 종목 */}
         <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
+        <Route path="/admin" element={<AdminFeedbackPage />} />          {/* 관리자: AI 피드백 대시보드 */}
         <Route path="/signup" element={<UserSignUpPage />} />            {/* 회원가입 */}
         <Route path="/login" element={<UserLoginPage />} />              {/* 로그인 */}
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}

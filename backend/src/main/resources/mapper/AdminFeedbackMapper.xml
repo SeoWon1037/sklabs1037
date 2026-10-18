@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    관리자 피드백 대시보드 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dao.AdminFeedbackDao">
+
+    <!-- 회원 권한 조회 -->
+    <select id="selectUserRole"
+            parameterType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO"
+            resultType="string">
+        SELECT  ROLE
+        FROM T_USER
+        WHERE 1=1
+        AND ID = #{userId}
+        AND DEL_DAY IS NULL
+    </select>
+
+    <!--
+        요약: 전체 질문 / 👍 / 👎 / 질문당 평균 도구 수
+        - TOOLS_USED는 "종목 찾기 (삼성전자), 시세 이력 조회 (005930, 22일)" 형식
+        - 도구마다 "(" 가 하나씩 있어서 "(" 개수 = 도구 수
+    -->
+    <select id="selectSummary"
+            resultType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO">
+        SELECT  COUNT(*)                                  AS TOTAL_COUNT
+        ,COUNT(*) FILTER (WHERE RATING = 'UP')     AS UP_COUNT
+        ,COUNT(*) FILTER (WHERE RATING = 'DOWN')   AS DOWN_COUNT
+        ,ROUND(AVG(LENGTH(COALESCE(TOOLS_USED, ''))
+        - LENGTH(REPLACE(COALESCE(TOOLS_USED, ''), '(', ''))), 1) AS AVG_TOOLS
+        FROM T_AI_CHAT_LOG
+        WHERE 1=1
+    </select>
+
+    <!-- 도구별 사용 횟수 (도구 이름 = " (" 앞 글자) -->
+    <select id="selectToolUsage"
+            resultType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO">
+        SELECT  TRIM(M.MATCH[1]) AS TOOL_NAME
+        ,COUNT(*)         AS USE_COUNT
+        FROM T_AI_CHAT_LOG L
+        CROSS JOIN LATERAL REGEXP_MATCHES(L.TOOLS_USED, '(?:^|\), )([^()]+?) \(', 'g') AS M(MATCH)
+        WHERE 1=1
+        AND L.TOOLS_USED IS NOT NULL
+        GROUP BY TRIM(M.MATCH[1])
+        ORDER BY USE_COUNT DESC
+    </select>
+
+    <!-- 최근 7일 날짜별 질문 수 / 👍 / 👎 (질문 없는 날도 0으로) -->
+    <select id="selectDailyStats"
+            resultType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO">
+        SELECT  D.DAY::DATE                                  AS STAT_DATE
+        ,COUNT(L.ID)                                  AS CHAT_COUNT
+        ,COUNT(L.ID) FILTER (WHERE L.RATING = 'UP')   AS UP_COUNT
+        ,COUNT(L.ID) FILTER (WHERE L.RATING = 'DOWN') AS DOWN_COUNT
+        FROM GENERATE_SERIES(CURRENT_DATE - 6, CURRENT_DATE, INTERVAL '1 day') AS D(DAY)
+        LEFT JOIN T_AI_CHAT_LOG L ON DATE(L.INS_DAY) = D.DAY::DATE
+        WHERE 1=1
+        GROUP BY D.DAY
+        ORDER BY D.DAY
+    </select>
+
+    <!-- 대화 목록 (평가 필터는 있을 때만) -->
+    <select id="selectChats"
+            parameterType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO"
+            resultType="com.sklabs1037.sklabs1037.vo.AdminFeedbackVO">
+        SELECT  L.ID        AS CHAT_ID
+        ,U.NICKNAME
+        ,L.QUESTION
+        ,L.ANSWER
+        ,L.TOOLS_USED
+        ,L.RATING
+        ,L.INS_DAY
+        FROM T_AI_CHAT_LOG L
+        LEFT JOIN T_USER U ON U.ID = L.USER_ID
+        WHERE 1=1
+        <if test="rating != null and rating != ''">
+            AND L.RATING = #{rating}
+        </if>
+        ORDER BY L.ID DESC
+        LIMIT #{size}
+    </select>
+
+</mapper>

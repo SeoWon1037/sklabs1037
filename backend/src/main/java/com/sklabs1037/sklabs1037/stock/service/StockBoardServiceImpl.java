@@ -41,6 +41,13 @@ public class StockBoardServiceImpl implements IStockBoardService {
     }
 
     @Override
+    public List<StockBoardVO> getRecentPosts(int size) {
+
+        return stockBoardDao.selectRecentPostList(size);
+
+    }
+
+    @Override
     public int countPosts(Long stockId) {
 
         return stockBoardDao.countPost(stockId);

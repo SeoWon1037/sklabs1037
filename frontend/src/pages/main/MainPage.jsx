@@ -2,13 +2,14 @@
 // 메인 화면 (주소: /) — 네이버 메인 스타일
 // - 위: 검색창(= AI 비서에게 질문) + 바로가기
 // - 2×2 배치 (위·아래 줄마다 양쪽 박스 끝이 맞음)
-//   · 왼쪽 위: 뉴스 (박스 안에서 스크롤)    · 오른쪽 위: 로그인 + 내 관심 종목(로그인 시) + 오늘의 시세
-//   · 왼쪽 아래: 날씨                       · 오른쪽 아래: 추천 질문
+//   · 왼쪽 위: 뉴스 + 💬토론 탭 (박스 안에서 스크롤)    · 오른쪽 위: 로그인 + 내 관심 종목(로그인 시) + 오늘의 시세
+//   · 왼쪽 아래: 날씨                       · 오른쪽 아래: 💬 지금 토론 중 (최근 글 3개)
 // - 백엔드 API
 //   GET /api/news?category=&stockId=&size=   뉴스 목록
 //   GET /api/news/summary?stockId=           AI 뉴스 요약 (NewsSummaryBox)
 //   GET /api/stock/dashboard?days=5          종목 시세 (탭 이름 + 시세 위젯)
 //   GET /api/user/me                         로그인 상태
+//   GET /api/stock/board/recent?size=        전 종목 최근 토론 글 (💬 토론 탭 + 지금 토론 중 박스)
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -25,12 +26,9 @@ const SHORTCUTS = [
   { icon: '🏭', label: '기업 정보', to: `/ai?q=${encodeURIComponent('')}` },
 ]
 
-// 오른쪽 추천 질문
-const SUGGESTIONS = [
-  '카카오랑 NAVER 현재가 비교해줘',
-  '현대차 최근 일주일 거래량 추이는?',
-  '최근 60일 수익률이 가장 낮은 건?',
-]
+// 오른쪽 아래 "지금 토론 중"에 보여줄 글 개수 / 자동 새로고침 주기 (1분)
+const HOT_BOARD_SIZE = 3
+const HOT_REFRESH_MS = 60 * 1000
 
 // 뉴스 탭에 보여줄 종목 (종목코드, 이 순서대로 표시)
 const NEWS_TAB_SYMBOLS = ['005930', '000660', '035420']   // 삼성전자, SK하이닉스, NAVER
@@ -49,8 +47,12 @@ const timeAgo = (dateText, now) => {
   return `${Math.floor(minutes / (60 * 24))}일 전`
 }
 
-// 탭 → 뉴스 API 주소
+// 토론 탭에서 보여줄 최근 글 개수
+const BOARD_SIZE = 20
+
+// 탭 → API 주소 (토론 탭만 토론 글, 나머지는 뉴스)
 const newsUrl = (tab, size) => {
+  if (tab === 'BOARD') return `/api/stock/board/recent?size=${BOARD_SIZE}`
   if (tab === 'ALL') return `/api/news?size=${size}`
   if (tab === 'MARKET' || tab === 'SPORTS') return `/api/news?category=${tab}&size=${size}`
   return `/api/news?stockId=${tab}&size=${size}`
@@ -67,7 +69,7 @@ function MainPage() {
   const [query, setQuery] = useState('')
 
   // ===== 뉴스 =====
-  const [tab, setTab] = useState('ALL')          // 'ALL' | 'MARKET' | 'SPORTS' | 종목 ID
+  const [tab, setTab] = useState('ALL')          // 'ALL' | 'MARKET' | 'SPORTS' | 'BOARD' | 종목 ID
   const [size, setSize] = useState(PAGE_SIZE)
   const [news, setNews] = useState({ key: null, items: [], error: '' })
   const newsKey = `${tab}-${size}`
@@ -77,6 +79,10 @@ function MainPage() {
   const [stocks, setStocks] = useState([])
   const [baseDate, setBaseDate] = useState(null)
   const [user, setUser] = useState(null)
+
+  // ===== 지금 토론 중 (오른쪽 아래) =====
+  const [hotPosts, setHotPosts] = useState(null)   // null = 불러오는 중
+  const [hotAt, setHotAt] = useState(() => Date.now())   // 마지막으로 불러온 시각 ("n분 전" 기준)
 
   // 탭이나 개수가 바뀔 때마다 뉴스 다시 불러오기
   useEffect(() => {
@@ -88,7 +94,7 @@ function MainPage() {
       .then((data) => {
         if (ignore) return
         setNews(data.success
-          ? { key: `${tab}-${size}`, items: data.news, error: '' }
+          ? { key: `${tab}-${size}`, items: tab === 'BOARD' ? data.posts : data.news, error: '' }
           : { key: `${tab}-${size}`, items: [], error: data.message })
       })
       .catch(() => {
@@ -119,6 +125,39 @@ function MainPage() {
 
   }, [])
 
+  // 지금 토론 중: 처음 1번 + 1분마다 다시 불러오기
+  // - 다른 탭을 보고 있을 때(화면이 안 보일 때)는 건너뜀 → 쓸데없는 요청 줄이기
+  // - 다른 탭에 있다가 돌아오면 바로 1번 불러옴
+  useEffect(() => {
+
+    let ignore = false
+
+    const load = () => {
+      fetch(`/api/stock/board/recent?size=${HOT_BOARD_SIZE}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (ignore || !data.success) return
+          setHotPosts(data.posts)
+          setHotAt(Date.now())
+        })
+        .catch(() => { if (!ignore) setHotPosts((prev) => prev ?? []) })   // 실패하면 이전 글 그대로
+    }
+
+    const onVisible = () => { if (document.visibilityState === 'visible') load() }
+
+    load()
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') load() }, HOT_REFRESH_MS)
+    document.addEventListener('visibilitychange', onVisible)
+
+    // 화면을 떠나면 타이머·이벤트 정리
+    return () => {
+      ignore = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+
+  }, [])
+
   // 탭 바꾸기 (개수는 처음으로)
   const changeTab = (value) => {
     setTab(value)
@@ -132,7 +171,7 @@ function MainPage() {
     navigate(q ? `/ai?q=${encodeURIComponent(q)}` : '/ai')
   }
 
-  // 뉴스 탭 목록: 전체, 시장, 스포츠, 주요 종목 (NEWS_TAB_SYMBOLS에 있는 종목만)
+  // 뉴스 탭 목록: 전체, 시장, 스포츠, 주요 종목 (NEWS_TAB_SYMBOLS에 있는 종목만), 토론
   const tabs = [
     { value: 'ALL', label: '전체' },
     { value: 'MARKET', label: '시장' },
@@ -141,7 +180,10 @@ function MainPage() {
       .map((symbol) => stocks.find((s) => s.symbol === symbol))
       .filter(Boolean)
       .map((s) => ({ value: String(s.stockId), label: s.name })),
+    { value: 'BOARD', label: '💬 토론' },
   ]
+
+  const isBoard = tab === 'BOARD'
 
   return (
     <main className="home">
@@ -195,14 +237,46 @@ function MainPage() {
           </div>
 
           {/* AI 요약: 시장 / 종목 탭에서만 */}
-          {tab !== 'ALL' && tab !== 'SPORTS' && (
+          {tab !== 'ALL' && tab !== 'SPORTS' && !isBoard && (
             <NewsSummaryBox key={tab} stockId={tab === 'MARKET' ? null : tab} />
           )}
 
-          {newsLoading && news.items.length === 0 && <p className="home-empty">뉴스를 불러오는 중...</p>}
+          {newsLoading && news.items.length === 0 && <p className="home-empty">{isBoard ? '토론 글을' : '뉴스를'} 불러오는 중...</p>}
           {!newsLoading && news.error && <p className="home-empty home-error">{news.error}</p>}
-          {!newsLoading && !news.error && news.items.length === 0 && <p className="home-empty">아직 수집된 뉴스가 없습니다.</p>}
+          {!newsLoading && !news.error && news.items.length === 0 && (
+            <p className="home-empty">
+              {isBoard
+                ? <>아직 토론 글이 없어요. <Link to="/stock?tab=board">첫 글 쓰러 가기 →</Link></>
+                : '아직 수집된 뉴스가 없습니다.'}
+            </p>
+          )}
 
+          {/* ===== 💬 토론 탭: 전 종목 최근 글 (누르면 그 종목 토론 탭으로) ===== */}
+          {isBoard && (
+            <ul className={`home-news-list ${newsLoading ? 'home-news-loading' : ''}`}>
+              {!newsLoading && news.items.map((p) => (
+                <li key={p.postId} className="home-news-item">
+                  <Link to={`/stock?symbol=${p.symbol}&tab=board`} className="home-board-link">
+                    <div className="home-board-top">
+                      <span className="home-news-tag home-board-stock">{p.stockName}</span>
+                      {p.opinion === 'UP' && <span className="home-board-opinion home-board-up">오를 것</span>}
+                      {p.opinion === 'DOWN' && <span className="home-board-opinion home-board-down">내릴 것</span>}
+                    </div>
+                    <span className="home-news-title home-board-text">{p.content}</span>
+                    <div className="home-news-meta">
+                      <span>{p.nickname}</span>
+                      <span>·</span>
+                      <span>{timeAgo(p.insAt, now)}</span>
+                      <span>·</span>
+                      <span>💬 {p.commentCount}</span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {!isBoard && (
           <ul className={`home-news-list ${newsLoading ? 'home-news-loading' : ''}`}>
             {news.items.map((n) => (
               <li key={n.newsId} className="home-news-item">
@@ -218,14 +292,17 @@ function MainPage() {
               </li>
             ))}
           </ul>
+          )}
 
-          {news.items.length >= size && size < 50 && (
+          {!isBoard && news.items.length >= size && size < 50 && (
             <button type="button" className="home-more" onClick={() => setSize(size + PAGE_SIZE)} disabled={newsLoading}>
               {newsLoading ? '불러오는 중...' : '더보기'}
             </button>
           )}
 
-          <p className="home-source">뉴스 출처: Google News · 30분마다 자동 수집</p>
+          <p className="home-source">
+            {isBoard ? '전 종목 최근 토론 글 · 누르면 그 종목 토론방으로 이동' : '뉴스 출처: Google News · 30분마다 자동 수집'}
+          </p>
         </section>
 
         {/* ===== 오른쪽 위: 로그인 + 관심 종목 + 시세 ===== */}
@@ -279,16 +356,42 @@ function MainPage() {
         {/* ===== 왼쪽 아래: 날씨 ===== */}
         <WeatherBox />
 
-        {/* ===== 오른쪽 아래: 추천 질문 ===== */}
+        {/* ===== 오른쪽 아래: 지금 토론 중 (최근 글 3개, 누르면 그 종목 토론 탭으로) ===== */}
         <section className="home-box home-ask">
-          <h2 className="home-box-title">AI에게 물어보세요</h2>
-          <ul className="home-suggestions">
-            {SUGGESTIONS.map((q) => (
-              <li key={q}>
-                <Link to={`/ai?q=${encodeURIComponent(q)}`} className="home-suggestion">💬 {q}</Link>
-              </li>
-            ))}
-          </ul>
+          <div className="home-box-head">
+            <h2 className="home-box-title">💬 지금 토론 중</h2>
+            <span className="home-box-sub">전 종목</span>
+          </div>
+
+          {hotPosts === null && <p className="home-hot-empty">불러오는 중...</p>}
+          {hotPosts?.length === 0 && (
+            <p className="home-hot-empty">
+              아직 토론 글이 없어요.<br />
+              <Link to="/stock?tab=board">첫 의견 남기러 가기 →</Link>
+            </p>
+          )}
+
+          {hotPosts?.length > 0 && (
+            <ul className="home-hot-list">
+              {hotPosts.map((p) => (
+                <li key={p.postId}>
+                  <Link to={`/stock?symbol=${p.symbol}&tab=board`} className="home-hot-item">
+                    <div className="home-board-top">
+                      <span className="home-news-tag home-board-stock">{p.stockName}</span>
+                      {p.opinion === 'UP' && <span className="home-board-opinion home-board-up">오를 것</span>}
+                      {p.opinion === 'DOWN' && <span className="home-board-opinion home-board-down">내릴 것</span>}
+                      <span className="home-hot-time">{timeAgo(p.insAt, hotAt)}</span>
+                    </div>
+                    <span className="home-hot-text">{p.content}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <button type="button" className="home-box-link home-hot-more" onClick={() => changeTab('BOARD')}>
+            토론 글 더보기 →
+          </button>
         </section>
 
       </div>

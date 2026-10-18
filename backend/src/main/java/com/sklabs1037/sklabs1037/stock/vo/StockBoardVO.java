@@ -20,6 +20,8 @@ public class StockBoardVO {
     private Integer seconds;        // 도배 방지: 최근 n초
 
     // ===== 조회 결과 =====
+    private String symbol;          // 종목코드 (메인 화면 최근 글)
+    private String stockName;       // 종목 이름 (메인 화면 최근 글)
     private String nickname;
     private Long insAt;             // 작성 시각 (밀리초)
     private Boolean deleted;        // 삭제된 글 (댓글이 남아 있어서 자리만 보여줌)

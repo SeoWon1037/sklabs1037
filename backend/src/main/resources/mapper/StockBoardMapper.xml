@@ -59,6 +59,36 @@
         OFFSET  #{offset}
     </select>
 
+    <!--
+        전 종목 최근 글 (메인 화면 💬 토론 탭)
+        - 삭제된 글은 빼고 최신순
+        - 종목코드 / 종목 이름을 같이 (누르면 그 종목 토론 탭으로 이동)
+    -->
+    <select id="selectRecentPostList"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        SELECT  P.ID                                                       AS POST_ID
+        ,S.SYMBOL
+        ,S.NAME                                                     AS STOCK_NAME
+        ,U.NICKNAME
+        ,P.OPINION
+        ,P.CONTENT
+        ,(EXTRACT(EPOCH FROM P.INS_DAY) * 1000)::BIGINT              AS INS_AT
+        ,(
+        SELECT  COUNT(*)
+        FROM T_STOCK_COMMENT C
+        WHERE 1=1
+        AND C.POST_ID = P.ID
+        AND C.DEL_DAY IS NULL
+        )                                                          AS COMMENT_COUNT
+        FROM T_STOCK_POST P
+        JOIN T_STOCK S ON S.ID = P.STOCK_ID
+        JOIN T_USER  U ON U.ID = P.USER_ID
+        WHERE 1=1
+        AND P.DEL_DAY IS NULL
+        ORDER BY P.ID DESC
+        LIMIT  #{limit}
+    </select>
+
     <!-- 종목 글 개수 (목록과 같은 조건) -->
     <select id="countPost"
             resultType="int">

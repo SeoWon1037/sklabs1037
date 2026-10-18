@@ -298,6 +298,111 @@
   color: color-mix(in srgb, var(--text) 40%, transparent);
 }
 
+/* ===== 💬 토론 탭 (뉴스 박스 안) ===== */
+.home-board-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.home-board-link:hover .home-board-text {
+  text-decoration: underline;
+}
+.home-board-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.home-board-stock {
+  margin-left: 0;
+  font-size: 12px;
+}
+.home-board-opinion {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.home-board-up {
+  background: rgba(229, 72, 77, 0.14);
+  color: #e5484d;
+}
+.home-board-down {
+  background: rgba(59, 130, 246, 0.14);
+  color: #3b82f6;
+}
+/* 긴 글은 2줄까지만 */
+.home-board-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.home-empty a {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ===== 오른쪽 아래: 지금 토론 중 ===== */
+.home-hot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.home-hot-item {
+  display: block;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+.home-hot-item:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.home-hot-item .home-board-top {
+  margin-bottom: 3px;
+}
+.home-hot-time {
+  margin-left: auto;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--text) 45%, transparent);
+}
+/* 한 줄로만 (넘치면 …) */
+.home-hot-text {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 88%, transparent);
+}
+.home-hot-empty {
+  margin: 14px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+.home-hot-empty a {
+  color: var(--text);
+  font-weight: 600;
+}
+/* "토론 글 더보기 →" 는 링크 모양 버튼 (뉴스 박스의 💬 토론 탭으로 전환) */
+.home-hot-more {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 /* ===== 로그인 박스 ===== */
 .home-login {
   display: flex;

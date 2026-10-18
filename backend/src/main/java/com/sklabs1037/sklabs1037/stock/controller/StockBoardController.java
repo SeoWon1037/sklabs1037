@@ -21,6 +21,7 @@ import java.util.Map;
  * 종목 토론방 Controller
  *
  * API 목록
+ *   GET    /api/stock/board/recent?size=20             전 종목 최근 글 (메인 화면)  → { success, posts }
  *   GET    /api/stock/board?stockId=1&page=1          글 목록 (20개씩) + 의견 비율 → { success, posts, total, page, size, upCount, downCount, loggedIn }
  *   POST   /api/stock/board  { stockId, opinion, content }  글 쓰기              → { success }
  *   DELETE /api/stock/board/{postId}                   글 삭제                     → { success }
@@ -92,6 +93,44 @@ public class StockBoardController {
 
             log.error("토론 글 목록 조회 오류", e);
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "토론 글을 불러오지 못했습니다.");
+
+        }
+
+    }
+
+    // 전 종목 최근 글 (메인 화면 💬 토론 탭, 누구나)
+    @GetMapping("/recent")
+    public ResponseEntity<Map<String, Object>> recent(@RequestParam(defaultValue = "20") int size) {
+
+        int safeSize = Math.max(1, Math.min(size, 50));   // 1~50개로 제한
+
+        try {
+
+            List<Map<String, Object>> posts = new ArrayList<>();
+
+            for (StockBoardVO p : stockBoardService.getRecentPosts(safeSize)) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("postId", p.getPostId());
+                row.put("symbol", p.getSymbol());
+                row.put("stockName", p.getStockName());
+                row.put("nickname", p.getNickname());
+                row.put("opinion", p.getOpinion());
+                row.put("content", p.getContent());
+                row.put("insAt", p.getInsAt());
+                row.put("commentCount", p.getCommentCount());
+                posts.add(row);
+            }
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", true);
+            body.put("posts", posts);
+
+            return ResponseEntity.ok(body);
+
+        } catch (Exception e) {
+
+            log.error("최근 토론 글 조회 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "최근 토론 글을 불러오지 못했습니다.");
 
         }
 

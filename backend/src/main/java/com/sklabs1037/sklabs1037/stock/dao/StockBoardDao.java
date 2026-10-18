@@ -17,6 +17,9 @@ public interface StockBoardDao {
     // 종목 글 목록 (최신순)
     List<StockBoardVO> selectPostList(StockBoardVO vo);
 
+    // 전 종목 최근 글 (메인 화면, 삭제된 글 제외)
+    List<StockBoardVO> selectRecentPostList(int limit);
+
     // 종목 글 개수
     int countPost(Long stockId);
 

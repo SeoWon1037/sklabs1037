@@ -14,6 +14,9 @@ public interface IStockBoardService {
     // 종목 글 목록 (page: 1부터)
     List<StockBoardVO> getPosts(Long stockId, int page, int size);
 
+    // 전 종목 최근 글 (메인 화면)
+    List<StockBoardVO> getRecentPosts(int size);
+
     // 종목 글 개수
     int countPosts(Long stockId);
 

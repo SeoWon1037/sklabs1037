@@ -2,6 +2,7 @@
 // 주식 종목 화면 (주소: /stock) — 토스증권 차트 화면 스타일, 넓은 화면
 // - 왼쪽: 종목 목록 (현재가, 등락률, 미니 차트)
 // - 오른쪽: 종목 헤더 + 탭 (차트·시세 / 종목정보 / 뉴스 / 토론)
+// - 주소로 바로 열기: /stock?symbol=005930&tab=board (메인 화면 💬 토론 탭에서 넘어올 때)
 // - 백엔드 API
 //   GET /api/stock/dashboard?days=20        종목 목록 + 미니 차트
 //   GET /api/stock/detail?symbol=005930     종목 정보 + 일봉
@@ -11,7 +12,7 @@
 //   /api/stock/board/**                     종목 토론방 (StockBoard)
 // ============================================
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import StockChart from '../../components/stock/StockChart'
 import CandleChart from '../../components/stock/CandleChart'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
@@ -87,6 +88,11 @@ const timeAgo = (dateText) => {
 
 function StockPage() {
 
+  // 주소에 담겨 온 종목 / 탭 (없으면 첫 종목 / 차트)
+  const [searchParams] = useSearchParams()
+  const paramSymbol = searchParams.get('symbol')
+  const paramTab = searchParams.get('tab')
+
   // ===== 종목 목록 =====
   const [stocks, setStocks] = useState([])
   const [listError, setListError] = useState('')
@@ -94,7 +100,7 @@ function StockPage() {
 
   // ===== 선택한 종목 상세 =====
   const [detail, setDetail] = useState({ key: null, stock: null, candles: [], error: '' })
-  const [tab, setTab] = useState('chart')
+  const [tab, setTab] = useState(TABS.some((t) => t.value === paramTab) ? paramTab : 'chart')
   const [period, setPeriod] = useState('D')
   const [showMA, setShowMA] = useState(true)
   const [news, setNews] = useState({ key: null, items: [] })
@@ -110,13 +116,15 @@ function StockPage() {
       .then((data) => {
         if (data.success) {
           setStocks(data.stocks)
-          setSelectedSymbol(data.stocks[0]?.symbol ?? null)
+          // 주소의 종목이 목록에 있으면 그 종목, 아니면 첫 종목
+          const fromParam = data.stocks.find((s) => s.symbol === paramSymbol)
+          setSelectedSymbol(fromParam?.symbol ?? data.stocks[0]?.symbol ?? null)
         } else {
           setListError(data.message)
         }
       })
       .catch(() => setListError('서버에 연결할 수 없습니다.'))
-  }, [])
+  }, [paramSymbol])
 
   // 처음 한 번: 내 관심 종목 (로그아웃 상태면 빈 목록)
   useEffect(() => {

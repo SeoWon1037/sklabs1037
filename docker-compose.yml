@@ -1,0 +1,22 @@
+# ============================================
+# 서버 전체 실행 설정
+# - docker compose up -d 한 번으로 백엔드 + 프론트를 같이 실행
+# ============================================
+services:
+
+  # 백엔드 (Spring Boot)
+  backend:
+    build: ./backend
+    image: ghcr.io/seowon1037/sklabs1037-backend:latest   # 자동 배포(CD) 때 사용할 이미지 이름
+    env_file: .env                                         # 키/비밀번호는 서버의 .env 파일에서
+    restart: unless-stopped                                # 서버가 죽거나 EC2가 재부팅돼도 자동 재시작
+
+  # 프론트 (nginx + React)
+  frontend:
+    build: ./frontend
+    image: ghcr.io/seowon1037/sklabs1037-frontend:latest
+    ports:
+      - "80:80"                                            # 외부에는 프론트(80)만 공개, 백엔드는 내부에서만 접근
+    depends_on:
+      - backend
+    restart: unless-stopped

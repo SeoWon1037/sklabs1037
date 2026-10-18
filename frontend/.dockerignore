@@ -1,0 +1,4 @@
+# 이미지 만들 때 복사하지 않을 것
+node_modules
+dist
+.idea

@@ -28,6 +28,8 @@ import java.util.*;
  * 개선 이력
  *   - 수익률 비교 질문에서 종목별 시세를 전부 받아 AI가 직접 계산하던 문제
  *     → get_return_ranking 도구 추가 (계산은 SQL, AI는 설명만) : 도구 호출 6회 → 1회
+ *   - "왜 올랐/내렸어?" 같은 질문에 숫자만 답하던 문제
+ *     → search_news 도구 추가 (30분마다 수집하는 T_NEWS를 RAG 검색 대상으로)
  */
 @Slf4j
 @Service
@@ -44,10 +46,12 @@ public class AiChatServiceImpl implements IAiChatService {
             - 종목코드를 모르면 먼저 find_stock으로 찾아.
             - 여러 종목의 수익률 비교나 순위 질문은 get_return_ranking 한 번으로 답해. 수익률을 직접 계산하지 마.
             - 회사가 무슨 사업을 하는지 같은 질문은 search_stock_docs로 문서를 찾아 그 내용을 근거로 답해.
+            - 최근 이슈, 주가가 오르거나 내린 이유, 뉴스 질문은 search_news로 최근 기사를 찾아 근거로 답해.
+            - 근거는 가장 중요한 3~4개만 골라 짧게 요약해. 비슷한 기사는 하나로 묶어.
             - 지원 종목은 DB에 있는 종목뿐이야. 없는 종목이면 지원하지 않는다고 말해.
             - 시세 데이터의 기준 날짜를 함께 알려줘.
             - 투자 권유(사라/팔라)는 하지 말고, 데이터 기반 설명만 해. 답변 끝에 "투자 판단은 본인 책임입니다."를 붙여.
-            - 한국어로 간결하게. 마크다운 표나 제목(#)은 쓰지 말고, 짧은 문단과 "-" 목록만 사용해.
+            - 한국어로 간결하게. 마크다운 표, 제목(#)은 쓰지 말고 짧은 문단과 "-" 목록만 사용해. 강조가 꼭 필요할 때만 **굵게**를 써.
             """;
 
     // Claude에게 알려줄 도구 목록 (이름, 설명, 입력 형식)
@@ -72,6 +76,11 @@ public class AiChatServiceImpl implements IAiChatService {
             tool("search_stock_docs",
                     "종목 설명 문서를 키워드로 검색한다. 회사의 사업 내용, 특징을 답할 때 근거로 사용.",
                     Map.of("query", Map.of("type", "string", "description", "핵심 단어만 공백으로 구분 (조사 빼고). 예: 'SK하이닉스 HBM'")),
+                    List.of("query")),
+            tool("search_news",
+                    "30분마다 수집되는 최근 뉴스(제목, 언론사, 발행 시각)를 키워드로 검색해 최신순으로 최대 10건 준다. 최근 이슈, 주가 변동 이유를 답할 때 근거로 사용.",
+                    Map.of("query", Map.of("type", "string", "description", "핵심 단어만 공백으로 구분. 예: '삼성전자', '코스피 외국인'"),
+                            "days", Map.of("type", "integer", "description", "최근 며칠 기사인지 (1~7, 기본 3)")),
                     List.of("query"))
     );
 
@@ -113,7 +122,15 @@ public class AiChatServiceImpl implements IAiChatService {
             // 2. 도구 요청이 아니면 → 최종 답변
             if (!"tool_use".equals(response.get("stop_reason"))) {
 
-                return finish(vo, extractText(content), toolsUsed);
+                String answer = extractText(content);
+
+                // 답변 길이 제한에 걸려 중간에 끊긴 경우 → 끊긴 걸 그대로 보여주지 않고 안내 문구 추가
+                if ("max_tokens".equals(response.get("stop_reason"))) {
+                    log.warn("AI 답변 길이 초과로 잘림: {}", vo.getMessage());
+                    answer += "\n\n(답변이 길어 일부가 생략되었습니다. 궁금한 부분을 나눠서 질문해주세요.)";
+                }
+
+                return finish(vo, answer, toolsUsed);
 
             }
 
@@ -223,8 +240,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
             case "get_price_history": {
 
-                int days = (input.get("days") instanceof Number n) ? n.intValue() : 20;
-                days = Math.max(1, Math.min(days, 100));   // 1~100일로 제한
+                int days = intValue(input.get("days"), 20, 1, 100);
 
                 AiStockVO param = new AiStockVO();
                 param.setSymbol(str(input.get("symbol")));
@@ -248,8 +264,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
             case "get_return_ranking": {
 
-                int days = (input.get("days") instanceof Number n) ? n.intValue() : 20;
-                days = Math.max(1, Math.min(days, 99));   // 1~99거래일로 제한 (DB에 100일치)
+                int days = intValue(input.get("days"), 20, 1, 99);   // DB에 100일치
 
                 AiStockVO param = new AiStockVO();
                 param.setDays(days);
@@ -273,12 +288,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
             case "search_stock_docs": {
 
-                // 검색어를 단어로 쪼개기 (2글자 이상, 최대 5개)
-                List<String> keywords = Arrays.stream(str(input.get("query")).split("\\s+"))
-                        .filter(k -> k.length() >= 2)
-                        .limit(5)
-                        .toList();
-
+                List<String> keywords = splitKeywords(input.get("query"));
                 if (keywords.isEmpty()) return List.of();
 
                 AiStockVO param = new AiStockVO();
@@ -287,6 +297,29 @@ public class AiChatServiceImpl implements IAiChatService {
                 List<Map<String, Object>> list = new ArrayList<>();
                 for (AiStockVO d : aiChatDao.searchDocs(param)) {
                     list.add(Map.of("symbol", d.getSymbol(), "name", d.getName(), "title", d.getTitle(), "content", d.getContent()));
+                }
+
+                return list;
+
+            }
+
+            case "search_news": {
+
+                List<String> keywords = splitKeywords(input.get("query"));
+                if (keywords.isEmpty()) return List.of();
+
+                AiStockVO param = new AiStockVO();
+                param.setKeywords(keywords);
+                param.setDays(intValue(input.get("days"), 3, 1, 7));
+
+                List<Map<String, Object>> list = new ArrayList<>();
+                for (AiStockVO n : aiChatDao.searchNews(param)) {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("title", n.getTitle());
+                    row.put("press", n.getPress());
+                    row.put("publishedAt", n.getPubDate().toString());
+                    row.put("stock", n.getName());
+                    list.add(row);
                 }
 
                 return list;
@@ -325,8 +358,28 @@ public class AiChatServiceImpl implements IAiChatService {
             case "get_price_history"  -> "시세 이력 조회 (" + str(input.get("symbol")) + ", " + input.get("days") + "일)";
             case "get_return_ranking" -> "수익률 순위 (" + input.get("days") + "거래일)";
             case "search_stock_docs"  -> "문서 검색 (" + str(input.get("query")) + ")";
+            case "search_news"        -> "뉴스 검색 (" + str(input.get("query")) + ")";
             default                   -> toolName;
         };
+
+    }
+
+    // 검색어를 단어로 쪼개기 (2글자 이상, 최대 5개)
+    private List<String> splitKeywords(Object query) {
+
+        return Arrays.stream(str(query).trim().split("\\s+"))
+                .filter(k -> k.length() >= 2)
+                .limit(5)
+                .toList();
+
+    }
+
+    // 숫자 입력 꺼내기 (없으면 기본값, min~max로 제한)
+    private int intValue(Object value, int defaultValue, int min, int max) {
+
+        int n = (value instanceof Number num) ? num.intValue() : defaultValue;
+
+        return Math.max(min, Math.min(n, max));
 
     }
 

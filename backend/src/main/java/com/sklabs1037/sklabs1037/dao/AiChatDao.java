@@ -25,6 +25,9 @@ public interface AiChatDao {
     // [도구] 전 종목 N거래일 수익률 순위
     List<AiStockVO> selectReturnRanking(AiStockVO vo);
 
+    // [도구] 최근 뉴스 검색 (RAG)
+    List<AiStockVO> searchNews(AiStockVO vo);
+
     // 대화 기록 저장
     void insertChatLog(AiChatVO vo);
 

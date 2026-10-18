@@ -125,4 +125,38 @@
         ORDER BY RETURN_RATE DESC
     </select>
 
+
+    <!-- [도구] search_news: 최근 N일 뉴스를 키워드로 검색 (RAG, 같은 제목은 1건만) -->
+    <select id="searchNews"
+            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+        SELECT  X.TITLE
+        ,X.PRESS
+        ,X.LINK
+        ,X.PUB_DATE
+        ,X.NAME
+        FROM (
+        SELECT  DISTINCT ON (N.TITLE)
+        N.TITLE
+        ,N.PRESS
+        ,N.LINK
+        ,N.PUB_DATE
+        ,S.NAME
+        FROM T_NEWS N
+        LEFT JOIN T_STOCK S ON S.ID = N.STOCK_ID
+        WHERE 1=1
+        AND N.PUB_DATE &gt;= NOW() - (#{days} || ' days')::INTERVAL
+        AND (
+        <foreach collection="keywords" item="kw" separator=" OR ">
+            N.TITLE ILIKE '%' || #{kw} || '%'
+            OR S.NAME  ILIKE '%' || #{kw} || '%'
+        </foreach>
+        )
+        ORDER BY N.TITLE
+        ,N.PUB_DATE DESC
+        ) X
+        ORDER BY X.PUB_DATE DESC
+        LIMIT 10
+    </select>
+
 </mapper>

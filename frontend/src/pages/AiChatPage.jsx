@@ -15,8 +15,14 @@ const EXAMPLES = [
   '삼성전자 최근 한 달 주가 흐름 알려줘',
   'SK하이닉스는 무슨 사업을 하는 회사야?',
   '지원하는 종목 중 최근 20일 수익률이 가장 높은 건?',
-  '카카오랑 NAVER 현재가 비교해줘',
+  '삼성전자 요즘 왜 이렇게 떨어졌어? 최근 뉴스로 알려줘',
 ]
+
+// AI 답변의 **굵은 글씨** 표시를 실제 굵은 글씨로 (나머지 글자는 그대로)
+// - split에 괄호( )가 있으면 괄호 안 글자도 결과에 남음 → [일반, 굵게, 일반, 굵게, ...] 순서
+// - 그래서 홀수 번째(i % 2 === 1)만 <strong>으로 감쌈
+const renderText = (text) =>
+  text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : part))
 
 function AiChatPage() {
 
@@ -115,7 +121,7 @@ function AiChatPage() {
         <div className="ai-header">
           <h1 className="ai-title">AI 주식 비서</h1>
           <p className="ai-subtitle">
-            실제 시세 데이터와 종목 문서를 직접 찾아보고 답해요 · 지원 종목: 삼성전자, SK하이닉스, NAVER, 카카오, 현대차
+            실제 시세 데이터와 종목 문서, 최근 뉴스를 직접 찾아보고 답해요 · 지원 종목: 삼성전자, SK하이닉스, NAVER, 카카오, 현대차
           </p>
         </div>
 
@@ -135,7 +141,11 @@ function AiChatPage() {
 
           {messages.map((m, i) => (
             <div key={i} className={`ai-msg ai-msg-${m.role}`}>
-              <div className={`ai-bubble ${m.error ? 'ai-bubble-error' : ''}`}>{m.text}</div>
+
+              {/* 말풍선: AI 답변은 **굵은 글씨** 처리, 내 질문은 그대로 */}
+              <div className={`ai-bubble ${m.error ? 'ai-bubble-error' : ''}`}>
+                {m.role === 'ai' ? renderText(m.text) : m.text}
+              </div>
 
               {/* AI가 사용한 도구 */}
               {m.tools && m.tools.length > 0 && (

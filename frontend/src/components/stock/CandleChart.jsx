@@ -14,7 +14,7 @@ import {
   LineSeries,
   CrosshairMode,
 } from 'lightweight-charts'
-import { useTheme } from '../theme/useTheme'
+import { useTheme } from '../../theme/useTheme'
 
 // 한국 주식 관례: 상승 빨강 / 하락 파랑
 const UP = '#e5484d'

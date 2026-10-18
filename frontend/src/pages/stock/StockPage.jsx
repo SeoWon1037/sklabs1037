@@ -11,10 +11,10 @@
 // ============================================
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import StockChart from '../components/StockChart'
-import CandleChart from '../components/CandleChart'
-import NewsSummaryBox from '../components/NewsSummaryBox'
-import WatchStar from '../components/WatchStar'
+import StockChart from '../../components/stock/StockChart'
+import CandleChart from '../../components/stock/CandleChart'
+import NewsSummaryBox from '../../components/news/NewsSummaryBox'
+import WatchStar from '../../components/stock/WatchStar'
 import './StockPage.css'
 
 const TABS = [

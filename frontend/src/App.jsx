@@ -5,16 +5,16 @@
 // ============================================
 import { Routes, Route } from 'react-router-dom'
 import './App.css'
-import Header from './components/Header'
-import MainPage from './pages/MainPage'
-import StockPage from './pages/StockPage'
-import UserSignUpPage from './pages/UserSignUpPage'
-import UserLoginPage from './pages/UserLoginPage'
-import UserOAuthResultPage from './pages/UserOAuthResultPage'
-import AiChatPage from './pages/AiChatPage'
-import AdminFeedbackPage from './pages/AdminFeedbackPage'
-import UserFindPage from './pages/UserFindPage'
-import LottoPage from './pages/LottoPage'
+import Header from './components/layout/Header'
+import MainPage from './pages/main/MainPage'
+import StockPage from './pages/stock/StockPage'
+import UserSignUpPage from './pages/user/UserSignUpPage'
+import UserLoginPage from './pages/user/UserLoginPage'
+import UserOAuthResultPage from './pages/user/UserOAuthResultPage'
+import AiChatPage from './pages/ai/AiChatPage'
+import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
+import UserFindPage from './pages/user/UserFindPage'
+import LottoPage from './pages/lotto/LottoPage'
 
 function App() {
   return (
@@ -31,7 +31,7 @@ function App() {
         <Route path="/signup" element={<UserSignUpPage />} />            {/* 회원가입 */}
         <Route path="/login" element={<UserLoginPage />} />              {/* 로그인 */}
         <Route path="/find" element={<UserFindPage />} />                {/* 아이디·비밀번호 찾기 */}
-        <Route path="/lotto" element={<LottoPage />} />
+        <Route path="/lotto" element={<LottoPage />} />                  {/* 오늘의 숫자 (로또 / 연금복권) */}
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
       </Routes>
     </>

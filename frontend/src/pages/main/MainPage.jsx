@@ -12,9 +12,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './MainPage.css'
-import WeatherBox from '../components/WeatherBox'
-import NewsSummaryBox from '../components/NewsSummaryBox'
-import WatchlistBox from '../components/WatchlistBox'
+import WeatherBox from '../../components/weather/WeatherBox'
+import NewsSummaryBox from '../../components/news/NewsSummaryBox'
+import WatchlistBox from '../../components/stock/WatchlistBox'
 
 // 바로가기 아이콘
 const SHORTCUTS = [

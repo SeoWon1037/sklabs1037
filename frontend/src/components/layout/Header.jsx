@@ -6,7 +6,7 @@
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useTheme } from '../theme/useTheme'
+import { useTheme } from '../../theme/useTheme'
 import './Header.css'
 
 // 상단 메뉴 탭

@@ -4,8 +4,10 @@
 //   POST /api/ai/chat     { message }         → { success, chatId, answer, toolsUsed }
 //   POST /api/ai/feedback { chatId, rating }  → { success }
 // - AI가 어떤 도구(DB 조회, 문서 검색 등)를 썼는지 + 답변 피드백(👍/👎)
+// - /ai?q=질문 으로 들어오면 입력창에 질문을 미리 채움 (메인 화면의 "AI에게 묻기")
 // ============================================
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import './AiChatPage.css'
 
 // 예시 질문 (처음 화면에 버튼으로 표시)
@@ -18,9 +20,12 @@ const EXAMPLES = [
 
 function AiChatPage() {
 
+  // 주소의 ?q= 값 (메인 화면에서 넘어온 질문)
+  const [searchParams] = useSearchParams()
+
   // 대화 목록: { role: 'user' | 'ai', text, tools?, chatId?, rating?, error? }
   const [messages, setMessages] = useState([])
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(() => searchParams.get('q') ?? '')
   const [loading, setLoading] = useState(false)
 
   // 새 메시지가 오면 맨 아래로 스크롤

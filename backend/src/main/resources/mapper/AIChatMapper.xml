@@ -96,4 +96,33 @@
         AND USER_ID = #{userId}
     </update>
 
+
+    <!-- [도구] get_return_ranking: 전 종목 N거래일 수익률 순위 (계산은 SQL이 정확하게) -->
+    <select id="selectReturnRanking"
+            parameterType="com.sklabs1037.sklabs1037.vo.AiStockVO"
+            resultType="com.sklabs1037.sklabs1037.vo.AiStockVO">
+        WITH RANKED AS (
+        SELECT  P.STOCK_ID
+        ,P.TRADE_DATE
+        ,P.CLOSE_PRICE
+        ,ROW_NUMBER() OVER (PARTITION BY P.STOCK_ID ORDER BY P.TRADE_DATE DESC) AS RN
+        FROM T_STOCK_PRICE P
+        )
+        SELECT  S.SYMBOL
+        ,S.NAME
+        ,B.TRADE_DATE  AS START_DATE
+        ,B.CLOSE_PRICE AS START_PRICE
+        ,E.TRADE_DATE  AS END_DATE
+        ,E.CLOSE_PRICE AS END_PRICE
+        ,ROUND((E.CLOSE_PRICE - B.CLOSE_PRICE) / B.CLOSE_PRICE * 100, 2) AS RETURN_RATE
+        FROM RANKED E
+        JOIN RANKED B  ON B.STOCK_ID = E.STOCK_ID
+        AND B.RN       = #{days} + 1
+        JOIN T_STOCK S ON S.ID       = E.STOCK_ID
+        WHERE 1=1
+        AND E.RN = 1
+        AND S.DEL_DAY IS NULL
+        ORDER BY RETURN_RATE DESC
+    </select>
+
 </mapper>

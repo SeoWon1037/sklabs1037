@@ -17,7 +17,7 @@ public class AiStockVO {
 
     // ===== 조회 조건 =====
     private String query;            // 종목 검색어 (이름 또는 코드)
-    private Integer days;            // 시세 조회 일수
+    private Integer days;            // 시세 조회 일수 / 수익률 기간
     private List<String> keywords;   // 문서 검색 키워드 (RAG)
 
     // ===== T_STOCK =====
@@ -33,6 +33,13 @@ public class AiStockVO {
     private BigDecimal lowPrice;
     private BigDecimal closePrice;
     private Long volume;
+
+    // ===== 수익률 순위 (SQL 계산 결과) =====
+    private LocalDate startDate;     // 기준 시작일
+    private BigDecimal startPrice;   // 시작일 종가
+    private LocalDate endDate;       // 최신 거래일
+    private BigDecimal endPrice;     // 최신 종가
+    private BigDecimal returnRate;   // 수익률 (%)
 
     // ===== T_STOCK_DOC =====
     private String title;

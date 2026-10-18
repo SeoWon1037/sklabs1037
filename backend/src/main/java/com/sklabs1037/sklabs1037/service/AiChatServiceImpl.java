@@ -24,6 +24,10 @@ import java.util.*;
  * 피드백
  *   - 모든 질문/답변/사용 도구를 T_AI_CHAT_LOG에 기록
  *   - 사용자가 👍/👎를 누르면 RATING 저장 → 👎 답변을 모아 프롬프트/도구 개선에 활용
+ *
+ * 개선 이력
+ *   - 수익률 비교 질문에서 종목별 시세를 전부 받아 AI가 직접 계산하던 문제
+ *     → get_return_ranking 도구 추가 (계산은 SQL, AI는 설명만) : 도구 호출 6회 → 1회
  */
 @Slf4j
 @Service
@@ -38,6 +42,7 @@ public class AiChatServiceImpl implements IAiChatService {
             규칙:
             - 주가, 날짜, 거래량 같은 숫자는 반드시 도구로 조회한 값만 사용해. 절대 지어내지 마.
             - 종목코드를 모르면 먼저 find_stock으로 찾아.
+            - 여러 종목의 수익률 비교나 순위 질문은 get_return_ranking 한 번으로 답해. 수익률을 직접 계산하지 마.
             - 회사가 무슨 사업을 하는지 같은 질문은 search_stock_docs로 문서를 찾아 그 내용을 근거로 답해.
             - 지원 종목은 DB에 있는 종목뿐이야. 없는 종목이면 지원하지 않는다고 말해.
             - 시세 데이터의 기준 날짜를 함께 알려줘.
@@ -56,10 +61,14 @@ public class AiChatServiceImpl implements IAiChatService {
                     Map.of("symbol", Map.of("type", "string", "description", "6자리 종목코드")),
                     List.of("symbol")),
             tool("get_price_history",
-                    "DB에 쌓인 일봉(시가/고가/저가/종가/거래량)을 최신 날짜부터 조회한다. 추세, 등락률 분석에 사용.",
+                    "DB에 쌓인 일봉(시가/고가/저가/종가/거래량)을 최신 날짜부터 조회한다. 한 종목의 추세 분석에 사용.",
                     Map.of("symbol", Map.of("type", "string", "description", "6자리 종목코드"),
                             "days", Map.of("type", "integer", "description", "조회할 거래일 수 (1~100)")),
                     List.of("symbol", "days")),
+            tool("get_return_ranking",
+                    "지원하는 전 종목의 최근 N거래일 수익률(%)을 계산해 높은 순으로 준다. 시작일/종료일 종가 포함. 여러 종목 비교, 순위 질문에 사용.",
+                    Map.of("days", Map.of("type", "integer", "description", "수익률 기간 (거래일 수, 1~99)")),
+                    List.of("days")),
             tool("search_stock_docs",
                     "종목 설명 문서를 키워드로 검색한다. 회사의 사업 내용, 특징을 답할 때 근거로 사용.",
                     Map.of("query", Map.of("type", "string", "description", "핵심 단어만 공백으로 구분 (조사 빼고). 예: 'SK하이닉스 HBM'")),
@@ -237,6 +246,31 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "get_return_ranking": {
+
+                int days = (input.get("days") instanceof Number n) ? n.intValue() : 20;
+                days = Math.max(1, Math.min(days, 99));   // 1~99거래일로 제한 (DB에 100일치)
+
+                AiStockVO param = new AiStockVO();
+                param.setDays(days);
+
+                List<Map<String, Object>> list = new ArrayList<>();
+                for (AiStockVO r : aiChatDao.selectReturnRanking(param)) {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("symbol", r.getSymbol());
+                    row.put("name", r.getName());
+                    row.put("startDate", r.getStartDate().toString());
+                    row.put("startPrice", r.getStartPrice());
+                    row.put("endDate", r.getEndDate().toString());
+                    row.put("endPrice", r.getEndPrice());
+                    row.put("returnRate", r.getReturnRate());
+                    list.add(row);
+                }
+
+                return list;
+
+            }
+
             case "search_stock_docs": {
 
                 // 검색어를 단어로 쪼개기 (2글자 이상, 최대 5개)
@@ -286,11 +320,12 @@ public class AiChatServiceImpl implements IAiChatService {
     private String describeTool(String toolName, Map<String, Object> input) {
 
         return switch (toolName) {
-            case "find_stock"        -> "종목 찾기 (" + str(input.get("query")) + ")";
-            case "get_current_price" -> "현재가 조회 (" + str(input.get("symbol")) + ")";
-            case "get_price_history" -> "시세 이력 조회 (" + str(input.get("symbol")) + ", " + input.get("days") + "일)";
-            case "search_stock_docs" -> "문서 검색 (" + str(input.get("query")) + ")";
-            default                  -> toolName;
+            case "find_stock"         -> "종목 찾기 (" + str(input.get("query")) + ")";
+            case "get_current_price"  -> "현재가 조회 (" + str(input.get("symbol")) + ")";
+            case "get_price_history"  -> "시세 이력 조회 (" + str(input.get("symbol")) + ", " + input.get("days") + "일)";
+            case "get_return_ranking" -> "수익률 순위 (" + input.get("days") + "거래일)";
+            case "search_stock_docs"  -> "문서 검색 (" + str(input.get("query")) + ")";
+            default                   -> toolName;
         };
 
     }

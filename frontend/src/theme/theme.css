@@ -2,31 +2,32 @@
    공통 색상 정의
    - 화면 곳곳에서 색을 직접 쓰지 않고 var(--이름)으로 가져다 씀
    - data-theme="dark"가 붙으면 같은 이름의 색이 다크용으로 바뀜
+   - 색 규칙: 배경/글자/테두리는 파란 기운 없는 무채색, 포인트 색(--primary)만 파랑
    ============================================ */
 
 /* 라이트 모드 (기본) */
 :root {
   --bg: #ffffff;            /* 페이지 배경 */
-  --bg-header: #ffffffcc;   /* 상단바 배경 (살짝 투명) */
-  --text: #111827;          /* 기본 글자 */
-  --text-muted: #6b7280;    /* 흐린 글자 */
-  --border: #e5e7eb;        /* 테두리 */
-  --hover: #f3f4f6;         /* 마우스 올렸을 때 배경 */
-  --primary: #2563eb;       /* 강조색 (회원가입 버튼 등) */
+  --bg-header: #ffffffd9;   /* 상단바 배경 (살짝 투명) */
+  --text: #18181b;          /* 기본 글자 (거의 검정) */
+  --text-muted: #71717a;    /* 흐린 글자 */
+  --border: #e4e4e7;        /* 테두리 */
+  --hover: #f4f4f5;         /* 마우스 올렸을 때 배경 */
+  --primary: #2563eb;       /* 포인트 색 (AI 버튼, 로그인/회원가입 버튼) */
   --primary-hover: #1d4ed8;
   --primary-text: #ffffff;
   color-scheme: light;      /* 스크롤바 등 브라우저 기본 요소도 라이트로 */
 }
 
-/* 다크 모드 */
+/* 다크 모드 (차콜 그레이) */
 :root[data-theme='dark'] {
-  --bg: #0f172a;
-  --bg-header: #0f172acc;
-  --text: #e5e7eb;
-  --text-muted: #94a3b8;
-  --border: #1e293b;
-  --hover: #1e293b;
-  --primary: #3b82f6;
+  --bg: #111113;            /* 페이지 배경: 검정에 가까운 회색 */
+  --bg-header: #111113d9;
+  --text: #ededef;          /* 기본 글자: 살짝 부드러운 흰색 */
+  --text-muted: #a1a1aa;
+  --border: #27272a;        /* 테두리: 배경보다 한 단계 밝은 회색 */
+  --hover: #1f1f22;
+  --primary: #3b82f6;       /* 포인트 색은 그대로 파랑 */
   --primary-hover: #60a5fa;
   --primary-text: #ffffff;
   color-scheme: dark;

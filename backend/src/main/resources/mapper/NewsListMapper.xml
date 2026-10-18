@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    메인 화면(뉴스 목록) SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dao.NewsListDao">
+
+    <!--
+        최신 뉴스 목록 (분류/종목 조건은 있을 때만)
+        - 같은 제목 기사가 여러 언론사/주소로 들어온 경우 가장 최신 1건만 (DISTINCT ON)
+    -->
+    <select id="selectNewsList"
+            parameterType="com.sklabs1037.sklabs1037.vo.NewsListVO"
+            resultType="com.sklabs1037.sklabs1037.vo.NewsListVO">
+        SELECT  X.NEWS_ID
+        ,X.CATEGORY
+        ,X.STOCK_ID
+        ,X.STOCK_NAME
+        ,X.TITLE
+        ,X.LINK
+        ,X.PRESS
+        ,X.PUB_DATE
+        FROM (
+        SELECT  DISTINCT ON (N.TITLE)
+        N.ID       AS NEWS_ID
+        ,N.CATEGORY
+        ,N.STOCK_ID
+        ,S.NAME     AS STOCK_NAME
+        ,N.TITLE
+        ,N.LINK
+        ,N.PRESS
+        ,N.PUB_DATE
+        FROM T_NEWS N
+        LEFT JOIN T_STOCK S ON S.ID = N.STOCK_ID
+        WHERE 1=1
+        <if test="category != null and category != ''">
+            AND N.CATEGORY = #{category}
+        </if>
+        <if test="stockId != null">
+            AND N.STOCK_ID = #{stockId}
+        </if>
+        ORDER BY N.TITLE
+        ,N.PUB_DATE DESC
+        ) X
+        ORDER BY X.PUB_DATE DESC
+        LIMIT #{size}
+    </select>
+
+</mapper>

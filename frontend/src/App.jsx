@@ -7,6 +7,7 @@ import { Routes, Route } from 'react-router-dom'
 import './App.css'
 import Header from './components/Header'
 import MainPage from './pages/MainPage'
+import StockPage from './pages/StockPage'
 import UserSignUpPage from './pages/UserSignUpPage'
 import UserLoginPage from './pages/UserLoginPage'
 import UserOAuthResultPage from './pages/UserOAuthResultPage'
@@ -20,11 +21,12 @@ function App() {
 
       {/* 주소에 따라 아래 화면만 바뀜 */}
       <Routes>
-        <Route path="/" element={<MainPage />} />                        {/* 메인 */}
+        <Route path="/" element={<MainPage />} />                        {/* 메인 (오늘의 뉴스) */}
+        <Route path="/stock" element={<StockPage />} />                  {/* 주식 종목 */}
+        <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
         <Route path="/signup" element={<UserSignUpPage />} />            {/* 회원가입 */}
         <Route path="/login" element={<UserLoginPage />} />              {/* 로그인 */}
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
-        <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
       </Routes>
     </>
   )

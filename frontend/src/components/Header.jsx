@@ -1,11 +1,19 @@
 // ============================================
 // 상단바 (모든 화면 맨 위에 공통으로 표시)
-// 왼쪽: 로고 / 오른쪽: 테마 전환 + (로그아웃 상태) 로그인·회원가입 / (로그인 상태) AI 비서·닉네임·로그아웃
+// 왼쪽: 로고 + 메뉴 탭(뉴스 / 주식 종목 / AI 비서)
+// 오른쪽: 테마 전환 + (로그아웃 상태) 로그인·회원가입 / (로그인 상태) 닉네임·로그아웃
 // ============================================
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../theme/useTheme'
 import './Header.css'
+
+// 상단 메뉴 탭
+const MENUS = [
+  { to: '/', label: '뉴스', end: true },     // end: 정확히 "/"일 때만 선택 표시 (안 그러면 모든 주소에서 선택됨)
+  { to: '/stock', label: '주식 종목' },
+  { to: '/ai', label: 'AI 비서' },
+]
 
 function Header() {
 
@@ -42,11 +50,27 @@ function Header() {
   return (
     <header className="header">
       <div className="header-inner">
-        {/* 로고: 누르면 메인으로 */}
-        <Link to="/" className="header-logo">SKLabs</Link>
+
+        {/* 왼쪽: 로고 + 메뉴 탭 */}
+        <div className="header-left">
+          <Link to="/" className="header-logo">SKLabs</Link>
+
+          <nav className="header-menu">
+            {MENUS.map((m) => (
+              <NavLink
+                key={m.to}
+                to={m.to}
+                end={m.end}
+                className={({ isActive }) => `header-menu-link ${isActive ? 'header-menu-active' : ''}`}
+              >
+                {m.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
 
         {/* 오른쪽 버튼 영역 */}
-        <nav className="header-actions">
+        <div className="header-actions">
           <button
             type="button"
             className="theme-toggle"
@@ -59,7 +83,6 @@ function Header() {
           {user ? (
             // ===== 로그인 상태 =====
             <>
-              <Link to="/ai" className="btn btn-primary">🤖 AI 비서</Link>
               <span className="header-user">{user.nickname}님</span>
               <button type="button" className="btn btn-ghost" onClick={handleLogout}>
                 로그아웃
@@ -72,7 +95,7 @@ function Header() {
               <Link to="/signup" className="btn btn-primary">회원가입</Link>
             </>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   )

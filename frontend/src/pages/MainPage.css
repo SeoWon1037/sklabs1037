@@ -1,287 +1,554 @@
+/* ============================================
+   메인 화면 (네이버 스타일)
+   - 색 규칙: 기본은 흰색/회색, 포인트 색(--primary)은 AI 버튼·로그인 버튼에만
+   - 시세 ▲빨강 ▼파랑은 의미가 있는 색이라 예외
+   ============================================ */
+
 /* 화면 전체 */
-.main-page {
-  max-width: 1080px;
+.home {
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 16px 64px;
+  padding: 28px 16px 64px;
 }
 
-/* ===== 소개 ===== */
-.main-hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  flex-wrap: wrap;
-  padding: 28px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--primary) 18%, transparent),
-    color-mix(in srgb, var(--text) 3%, transparent));
-}
-.main-eyebrow {
-  margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--primary);
-}
-.main-title {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text);
-}
-.main-desc {
-  margin: 8px 0 0;
-  font-size: 15px;
-  color: color-mix(in srgb, var(--text) 65%, transparent);
-}
-.main-cta {
-  height: 44px;
-  padding: 0 18px;
-}
-
-.main-status {
-  margin-top: 32px;
-  text-align: center;
-  color: color-mix(in srgb, var(--text) 60%, transparent);
-}
-.main-error {
-  color: #e5484d;
-}
-
-/* ===== 섹션 제목 ===== */
-.main-section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 32px 0 12px;
-}
-.main-section-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--text);
-}
-.main-base-date {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--text) 55%, transparent);
-}
-
-/* ===== 종목 카드 ===== */
-.stock-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 12px;
-}
-.stock-card {
+/* ===== 검색창 영역 ===== */
+.home-search-area {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 14px 10px;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 0 28px;
+}
+.home-search-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 760px;
+}
+.home-logo {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* 검색창: 평소엔 회색 테두리, 입력 중일 때만 살짝 빛남 */
+.home-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 8px 0 20px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.home-search:focus-within {
+  border-color: color-mix(in srgb, var(--text) 40%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+.home-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 17px;
+  font-family: inherit;
+}
+.home-search-input::placeholder {
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+}
+
+/* 포인트 색 ① AI 버튼 */
+.home-search-btn {
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.home-search-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* 바로가기 아이콘 */
+.home-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.home-shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 88px;
+  padding: 8px 0;
+  border-radius: 12px;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+  text-decoration: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+.home-shortcut:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.home-shortcut-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
   border: 1px solid var(--border);
   border-radius: 14px;
+  font-size: 22px;
   background: color-mix(in srgb, var(--text) 4%, transparent);
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.15s, transform 0.15s;
 }
-.stock-card:hover {
-  transform: translateY(-2px);
+.home-shortcut-label {
+  font-size: 13px;
+  font-weight: 600;
 }
-.stock-card-active {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px var(--primary);
+
+/* ===== 2단 배치 ===== */
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 16px;
+  align-items: start;
 }
-.stock-card-head {
+.home-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 공통 박스 */
+.home-box {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.home-box-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
-.stock-name {
-  font-size: 15px;
-  font-weight: 700;
+.home-box-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
 }
-.stock-code {
+.home-box-sub {
   font-size: 12px;
-  font-weight: 400;
   color: color-mix(in srgb, var(--text) 50%, transparent);
 }
-.stock-price {
-  font-size: 20px;
-  font-weight: 800;
-}
-.stock-change {
+.home-box-link {
+  display: block;
+  margin-top: 12px;
   font-size: 13px;
   font-weight: 600;
-  color: color-mix(in srgb, var(--text) 60%, transparent);
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  text-decoration: none;
+  text-align: right;
+  transition: color 0.15s;
+}
+.home-box-link:hover {
+  color: var(--text);
 }
 
-/* 상승 빨강 / 하락 파랑 */
-.up {
-  color: #e5484d;
-}
-.down {
-  color: #3b82f6;
-}
-
-/* ===== 상세 ===== */
-.stock-detail {
-  margin-top: 16px;
-  padding: 24px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--text) 4%, transparent);
-}
-.stock-detail-head {
+/* ===== 뉴스 ===== */
+.home-news-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
 }
-.stock-detail-name {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--text);
+.home-news-head .home-box-title {
+  padding-bottom: 12px;
 }
-.stock-detail-price {
+.home-tabs {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-top: 4px;
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--text);
+  flex-wrap: wrap;
+  gap: 2px;
 }
 
-/* 기간 버튼 */
-.period-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--text) 7%, transparent);
-}
-.period-tab {
-  padding: 6px 12px;
+/* 탭: 선택되면 흰 글자 + 밑줄 (색 없이) */
+.home-tab {
+  position: relative;
+  padding: 8px 10px 14px;
   border: none;
-  border-radius: 8px;
   background: transparent;
-  color: color-mix(in srgb, var(--text) 70%, transparent);
-  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.home-tab:hover {
+  color: var(--text);
+}
+.home-tab-active {
+  color: var(--text);
+}
+.home-tab-active::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text);
+}
+
+.home-news-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.15s;
+}
+.home-news-loading {
+  opacity: 0.5;
+}
+.home-news-item {
+  padding: 14px 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.home-news-item:last-child {
+  border-bottom: none;
+}
+.home-news-title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text);
+  text-decoration: none;
+}
+.home-news-title:hover {
+  text-decoration: underline;
+}
+.home-news-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+
+/* 종목 태그: 회색 배경 */
+.home-news-tag {
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+  font-weight: 600;
+}
+
+.home-more {
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
-.period-tab-active {
-  background: var(--primary);
-  color: var(--primary-text);
-}
-
-/* 통계 */
-.stock-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 20px;
-}
-.stock-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  border-radius: 10px;
+.home-more:hover {
+  color: var(--text);
   background: color-mix(in srgb, var(--text) 5%, transparent);
 }
-.stock-stat span {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--text) 55%, transparent);
+.home-more:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
-.stock-stat strong {
+
+.home-empty {
+  padding: 32px 0;
+  text-align: center;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+.home-error {
+  color: #e5484d;
+}
+.home-source {
+  margin: 12px 0 0;
+  font-size: 11px;
+  text-align: right;
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+}
+
+/* ===== 로그인 박스 ===== */
+.home-login {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.home-login-hello {
+  margin: 0;
   font-size: 16px;
   color: var(--text);
 }
-.stock-stat strong.up {
-  color: #e5484d;
-}
-.stock-stat strong.down {
-  color: #3b82f6;
-}
-
-.stock-ask {
-  margin-top: 20px;
+.home-login-desc {
+  margin: 0;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
 }
 
-/* ===== 차트 ===== */
-.chart {
-  position: relative;
+/* 포인트 색 ② 로그인 버튼 (.btn-primary) */
+.home-login-btn {
   width: 100%;
+  height: 46px;
+  font-size: 15px;
 }
-.chart svg {
-  display: block;
-  overflow: visible;
-}
-.chart-empty {
+.home-login-links {
   display: flex;
-  align-items: center;
   justify-content: center;
-  font-size: 12px;
-  color: color-mix(in srgb, var(--text) 45%, transparent);
+  font-size: 13px;
 }
-.chart-detailed {
-  cursor: crosshair;
-}
-.chart-label {
-  position: absolute;
-  left: 0;
-  font-size: 11px;
+.home-login-links a {
   color: color-mix(in srgb, var(--text) 55%, transparent);
-  pointer-events: none;
+  text-decoration: none;
 }
-.chart-label-max {
-  top: 0;
+.home-login-links a:hover {
+  color: var(--text);
 }
-.chart-label-min {
-  bottom: 0;
+
+/* ===== 오늘의 시세 ===== */
+.home-quotes {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
 }
-.chart-cursor {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: color-mix(in srgb, var(--text) 30%, transparent);
-  pointer-events: none;
+.home-quote {
+  display: grid;
+  grid-template-columns: 1fr auto 72px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
-.chart-dot {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--bg, #fff);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
+.home-quote:last-child {
+  border-bottom: none;
 }
-.chart-tooltip {
-  position: absolute;
-  top: -8px;
+.home-quote-name {
+  font-weight: 600;
+  color: var(--text);
+}
+.home-quote-price {
+  font-weight: 700;
+  color: var(--text);
+}
+.home-quote-rate {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ===== 추천 질문 ===== */
+.home-suggestions {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--text) 10%, #111827);
-  color: #fff;
-  font-size: 12px;
-  white-space: nowrap;
-  transform: translate(-50%, -100%);
-  pointer-events: none;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
 }
-.chart-tooltip strong {
+.home-suggestion {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: color-mix(in srgb, var(--text) 85%, transparent);
   font-size: 14px;
+  text-decoration: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+.home-suggestion:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+/* ===== 태블릿/휴대폰: 1단으로 ===== */
+@media (max-width: 860px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+  .home-search-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .home-logo {
+    font-size: 24px;
+  }
+}
+
+
+/* ===== 뉴스 박스 높이를 오른쪽 열에 맞추기 (넓은 화면에서만) ===== */
+@media (min-width: 861px) {
+
+  /* 두 열을 같은 높이로 늘림 */
+  .home-grid {
+    align-items: stretch;
+  }
+
+  /* 뉴스 박스는 자기 내용으로 높이를 정하지 않음 → 오른쪽 열 높이에 맞춰짐 */
+  .home-news {
+    contain: size;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 넘치는 뉴스는 박스 안에서 스크롤 */
+  .home-news-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+
+  /* 얇고 차분한 스크롤바 */
+  .home-news-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  .home-news-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text) 18%, transparent);
+  }
+  .home-news-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+
+/* ===== 날씨 ===== */
+.weather {
+  margin-top: 16px;
+}
+.weather-body {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+/* 현재 날씨 */
+.weather-now-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.weather-now-icon {
+  font-size: 52px;
+  line-height: 1;
+}
+.weather-now-temp {
+  font-size: 40px;
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--text);
+}
+.weather-now-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+}
+.weather-minmax {
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.weather-min {
+  color: #3b82f6;
+}
+.weather-max {
+  color: #e5484d;
+}
+.weather-slash {
+  margin: 0 6px;
+  color: color-mix(in srgb, var(--text) 35%, transparent);
+}
+.weather-dust {
+  margin-top: 6px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+.weather-dot {
+  margin: 0 6px;
+}
+.dust-good   { color: #3b82f6; }
+.dust-normal { color: #22c55e; }
+.dust-bad    { color: #f59e0b; }
+.dust-worst  { color: #e5484d; }
+
+/* 시간별 예보: 칸마다 같은 폭으로 → 기온·선·아이콘·시각이 세로로 줄 맞춤 */
+.weather-hours {
+  padding-left: 24px;
+  border-left: 1px solid var(--border);
+}
+.weather-row {
+  display: flex;
+}
+.weather-cell {
+  flex: 1;
+  text-align: center;
+}
+.weather-temp {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.weather-line {
+  display: block;
+}
+.weather-line path {
+  stroke: color-mix(in srgb, var(--text) 45%, transparent);
+}
+.weather-icon {
+  font-size: 22px;
+  line-height: 1.4;
+}
+.weather-hour {
+  margin-top: 4px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+.weather-hour-now {
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* 좁은 화면: 위아래로 */
+@media (max-width: 860px) {
+  .weather-body {
+    grid-template-columns: 1fr;
+  }
+  .weather-hours {
+    padding-left: 0;
+    padding-top: 16px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
 }

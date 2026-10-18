@@ -1,0 +1,86 @@
+/* ============================================
+   하단 정보 (푸터)
+   - 메인 화면 색 규칙과 같게: 흰색/회색만, 포인트 색 없음
+   ============================================ */
+.footer {
+  margin-top: 40px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 2%, transparent);
+}
+
+.footer-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px 16px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+
+/* ----- 위: 로고 + 링크 ----- */
+.footer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.footer-logo {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: color-mix(in srgb, var(--text) 85%, transparent);
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-link {
+  color: color-mix(in srgb, var(--text) 70%, transparent);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.footer-link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.footer-bar {
+  color: color-mix(in srgb, var(--text) 25%, transparent);
+}
+
+/* ----- 출처 / 유의 문구 / 만든이 ----- */
+.footer-sources,
+.footer-notice,
+.footer-copy {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.footer-sources strong {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+}
+
+.footer-dot {
+  margin: 0 8px;
+}
+
+.footer-notice {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 45%, transparent);
+}
+
+.footer-copy {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+}

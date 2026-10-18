@@ -1,11 +1,12 @@
 // ============================================
 // App.jsx
-// - 앱의 뼈대: 상단바 + "주소에 맞는 화면" 연결
+// - 앱의 뼈대: 상단바 + "주소에 맞는 화면" 연결 + 하단 정보
 // - 백엔드의 @RequestMapping처럼 "어떤 주소 → 어떤 화면"을 정하는 곳
 // ============================================
 import { Routes, Route } from 'react-router-dom'
 import './App.css'
 import Header from './components/layout/Header'
+import Footer from './components/layout/Footer'
 import MainPage from './pages/main/MainPage'
 import StockPage from './pages/stock/StockPage'
 import UserSignUpPage from './pages/user/UserSignUpPage'
@@ -36,6 +37,9 @@ function App() {
         <Route path="/lotto" element={<LottoPage />} />                  {/* 오늘의 숫자 (로또 / 연금복권) */}
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
       </Routes>
+
+      {/* 하단 정보: 모든 화면 공통 (AI 비서·소셜 로그인 팝업 제외) */}
+      <Footer />
     </>
   )
 }

@@ -1,8 +1,9 @@
 // ============================================
 // 메인 화면 (주소: /) — 네이버 메인 스타일
 // - 위: 검색창(= AI 비서에게 질문) + 바로가기
-// - 왼쪽: 뉴스 (전체 / 시장 / 스포츠 / 종목별 탭)
-// - 오른쪽: 로그인 박스 + 내 관심 종목(로그인 시) + 오늘의 시세 + 추천 질문
+// - 2×2 배치 (위·아래 줄마다 양쪽 박스 끝이 맞음)
+//   · 왼쪽 위: 뉴스 (박스 안에서 스크롤)    · 오른쪽 위: 로그인 + 내 관심 종목(로그인 시) + 오늘의 시세
+//   · 왼쪽 아래: 날씨                       · 오른쪽 아래: 추천 질문
 // - 백엔드 API
 //   GET /api/news?category=&stockId=&size=   뉴스 목록
 //   GET /api/news/summary?stockId=           AI 뉴스 요약 (NewsSummaryBox)
@@ -175,7 +176,7 @@ function MainPage() {
 
       <div className="home-grid">
 
-        {/* ===== 왼쪽: 뉴스 ===== */}
+        {/* ===== 왼쪽 위: 뉴스 ===== */}
         <section className="home-box home-news">
           <div className="home-news-head">
             <h2 className="home-box-title">뉴스</h2>
@@ -227,7 +228,7 @@ function MainPage() {
           <p className="home-source">뉴스 출처: Google News · 30분마다 자동 수집</p>
         </section>
 
-        {/* ===== 오른쪽 ===== */}
+        {/* ===== 오른쪽 위: 로그인 + 관심 종목 + 시세 ===== */}
         <aside className="home-side">
 
           {/* 로그인 박스 */}
@@ -273,23 +274,24 @@ function MainPage() {
             </ul>
             <Link to="/stock" className="home-box-link">주식 종목 더보기 →</Link>
           </section>
-
-          {/* 추천 질문 */}
-          <section className="home-box">
-            <h2 className="home-box-title">AI에게 물어보세요</h2>
-            <ul className="home-suggestions">
-              {SUGGESTIONS.map((q) => (
-                <li key={q}>
-                  <Link to={`/ai?q=${encodeURIComponent(q)}`} className="home-suggestion">💬 {q}</Link>
-                </li>
-              ))}
-            </ul>
-          </section>
         </aside>
-      </div>
 
-      {/* ===== 날씨 (가로 전체) ===== */}
-      <WeatherBox />
+        {/* ===== 왼쪽 아래: 날씨 ===== */}
+        <WeatherBox />
+
+        {/* ===== 오른쪽 아래: 추천 질문 ===== */}
+        <section className="home-box home-ask">
+          <h2 className="home-box-title">AI에게 물어보세요</h2>
+          <ul className="home-suggestions">
+            {SUGGESTIONS.map((q) => (
+              <li key={q}>
+                <Link to={`/ai?q=${encodeURIComponent(q)}`} className="home-suggestion">💬 {q}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+      </div>
 
     </main>
   )

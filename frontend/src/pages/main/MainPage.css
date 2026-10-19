@@ -122,7 +122,7 @@
 
 /* ===== 2단 배치 (네이버 메인처럼: 왼쪽 넓게 | 오른쪽 380px)
    - 줄마다 왼쪽·오른쪽 칸 높이가 같음 (align-items: stretch)
-   - 1줄: 배너 | 로그인 / 2줄: 뉴스 | 시세+토론 / 3줄: 날씨 (전체 폭) ===== */
+   - 1줄: 배너 | 로그인 / 2줄: 뉴스 | 시세 + 토론 + 날씨 ===== */
 .home-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
@@ -142,9 +142,16 @@
 .home-side > .home-ask {
   flex: 1;
 }
-/* 날씨는 맨 아래 전체 폭 */
-.home-grid > .weather {
-  grid-column: 1 / -1;
+/* 오른쪽 칸 날씨: 폭이 좁아서 현재 날씨 위, 시간별 예보 아래 */
+.home-side .weather-body {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.home-side .weather-hours {
+  padding-top: 12px;
+  padding-left: 0;
+  border-top: 1px solid var(--border);
+  border-left: none;
 }
 
 /* 공통 박스 */

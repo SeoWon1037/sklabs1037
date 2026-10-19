@@ -2,6 +2,7 @@
 // AI 뉴스 요약 박스 (메인 화면 뉴스 탭, 주식 종목 화면 뉴스 탭에서 공통 사용)
 // - stockId 가 있으면 종목 요약, 없으면 시장 요약
 // - 요약이 아직 없으면 아무것도 안 보여줌
+// - collapsible: 처음엔 "✨ AI 요약 보기" 한 줄만 → 누르면 펼침 (메인 화면: 뉴스 목록이 가려지지 않게)
 // - 백엔드 API: GET /api/news/summary?stockId=
 // ============================================
 import { useEffect, useState } from 'react'
@@ -23,9 +24,10 @@ const toLines = (text) => (text ?? '')
   .map((line) => line.replace(/^\s*[-•*·]\s*/, '').trim())
   .filter(Boolean)
 
-function NewsSummaryBox({ stockId }) {
+function NewsSummaryBox({ stockId, collapsible = false }) {
 
   const [summary, setSummary] = useState(null)
+  const [open, setOpen] = useState(!collapsible)
 
   useEffect(() => {
 
@@ -48,12 +50,25 @@ function NewsSummaryBox({ stockId }) {
   const lines = toLines(summary?.summary)
   if (lines.length === 0) return null
 
+  // 접힌 상태: 한 줄 버튼만
+  if (!open) {
+    return (
+      <button type="button" className="news-summary news-summary-toggle" onClick={() => setOpen(true)}>
+        <span className="news-summary-badge">✨ AI 요약 보기</span>
+        <span className="news-summary-meta">뉴스 {summary.newsCount}건 · {formatTime(summary.summaryAt)} 기준 ▾</span>
+      </button>
+    )
+  }
+
   return (
     <section className="news-summary">
       <div className="news-summary-head">
         <span className="news-summary-badge">✨ AI 요약</span>
         <span className="news-summary-meta">
           {formatTime(summary.summaryAt)} 기준 · 뉴스 {summary.newsCount}건
+          {collapsible && (
+            <button type="button" className="news-summary-close" onClick={() => setOpen(false)}>접기 ▴</button>
+          )}
         </span>
       </div>
       <ul className="news-summary-list">

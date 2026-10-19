@@ -2,8 +2,8 @@
 // 메인 화면 (주소: /) — 네이버 메인 구조, 줄마다 왼쪽·오른쪽 칸의 위아래 끝이 딱 맞게
 // - 위: 로고 + 검색창(= AI 비서에게 질문), 아래에 바로가기 아이콘
 // - 1줄: 💰 모의투자 배너(TOP 3)          | 로그인 카드
-// - 2줄: 뉴스(+💬토론 탭, 안에서 스크롤)    | [오늘의 시세 = 시가총액 TOP 3 | ⭐ 관심 종목] + 💬 지금 토론 중
-// - 3줄: 날씨 (전체 폭)
+// - 2줄: 뉴스(+💬토론 탭, AI 요약은 눌러야 펼침, 안에서 스크롤) | 오늘의 시세(시가총액 TOP 3 | ⭐ 관심 종목) + 💬 지금 토론 중 + 날씨
+//   → 뉴스 칸은 오른쪽 세 칸 높이만큼 길어짐
 // - 휴대폰: 한 줄씩 (배너 → 로그인 → 뉴스 → 시세 → 토론 → 날씨)
 // - 백엔드 API
 //   GET /api/news?category=&stockId=&size=   뉴스 목록
@@ -300,7 +300,7 @@ function MainPage() {
 
           {/* AI 요약: 시장 / 종목 탭에서만 */}
           {tab !== 'ALL' && tab !== 'SPORTS' && !isBoard && (
-            <NewsSummaryBox key={tab} stockId={tab === 'MARKET' ? null : tab} />
+            <NewsSummaryBox key={tab} stockId={tab === 'MARKET' ? null : tab} collapsible />
           )}
 
           {newsLoading && news.items.length === 0 && <p className="home-empty">{isBoard ? '토론 글을' : '뉴스를'} 불러오는 중...</p>}
@@ -368,7 +368,7 @@ function MainPage() {
         </section>
 
 
-        {/* ===== 2줄 오른쪽: 오늘의 시세 + 지금 토론 중 ===== */}
+        {/* ===== 2줄 오른쪽: 오늘의 시세 + 지금 토론 중 + 날씨 ===== */}
         <div className="home-side">
 
           {/* [오늘의 시세 = 시가총액 TOP 3 | ⭐ 관심 종목] */}
@@ -463,10 +463,10 @@ function MainPage() {
               토론 글 더보기 →
             </button>
           </section>
-        </div>
 
-        {/* ===== 3줄: 날씨 (전체 폭) ===== */}
-        <WeatherBox />
+          {/* 날씨 */}
+          <WeatherBox />
+        </div>
       </div>
 
     </main>

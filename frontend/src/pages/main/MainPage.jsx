@@ -1,26 +1,25 @@
 // ============================================
-// 메인 화면 (주소: /) — 네이버 메인 스타일
-// - PC: 스크롤 없이 한 화면에 (브라우저 높이에 맞춰 2×2가 꽉 차고, 긴 목록은 박스 안에서 스크롤)
-//   · 위: 로고 + 검색창(= AI 비서에게 질문) + 바로가기 한 줄
-//   · 왼쪽 위: 뉴스 + 💬토론 탭       · 오른쪽 위: 로그인(한 줄) + 🏆 모의투자 TOP 3 + [오늘의 시세 | ⭐ 관심 종목] 탭
-//   · 왼쪽 아래: 날씨                 · 오른쪽 아래: 💬 지금 토론 중 (최근 글 3개)
-//   · 화면 높이가 아주 낮으면(노트북 768px 등) 박스가 찌그러지지 않게 최소 높이 → 그때만 살짝 스크롤
-// - 휴대폰: 한 줄씩 (뉴스 → 로그인 → TOP 3 → 시세 → 날씨 → 토론)
+// 메인 화면 (주소: /) — 네이버 메인 구조
+// - 위: 로고 + 검색창(= AI 비서에게 질문), 아래에 바로가기 아이콘
+// - 왼쪽 (넓게): 💰 모의투자 배너(TOP 3) → 뉴스(+💬토론 탭, 높이 고정·안에서 스크롤) → 종목 카드 [오늘의 시세 | ⭐ 관심 종목]
+// - 오른쪽 (380px): 로그인 카드(+ 바로가기 줄) → 날씨 → 💬 지금 토론 중
+// - 휴대폰: 한 줄씩 (왼쪽 칸 → 오른쪽 칸 순서)
 // - 백엔드 API
 //   GET /api/news?category=&stockId=&size=   뉴스 목록
 //   GET /api/news/summary?stockId=           AI 뉴스 요약 (NewsSummaryBox)
-//   GET /api/stock/dashboard?days=5          종목 시세 (탭 이름 + 시세 위젯)
+//   GET /api/stock/dashboard?days=20         종목 시세 (뉴스 탭 이름 + 종목 카드 미니 차트)
 //   GET /api/user/me                         로그인 상태
 //   GET /api/stock/board/recent?size=        전 종목 최근 토론 글 (💬 토론 탭 + 지금 토론 중 박스)
-//   GET /api/mock/ranking?size=3             모의투자 수익률 TOP 3 (MockRankingBox)
+//   GET /api/mock/ranking?size=3             모의투자 수익률 TOP 3 (MockBanner)
+//   GET /api/watchlist                       관심 종목 (⭐ 관심 종목 탭)
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './MainPage.css'
 import WeatherBox from '../../components/weather/WeatherBox'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
-import WatchlistBox from '../../components/stock/WatchlistBox'
-import MockRankingBox from '../../components/mock/MockRankingBox'
+import StockChart from '../../components/stock/StockChart'
+import MockBanner from '../../components/mock/MockBanner'
 
 // 바로가기 아이콘
 const SHORTCUTS = [
@@ -42,6 +41,10 @@ const NEWS_TAB_SYMBOLS = ['005930', '000660', '035420']   // 삼성전자, SK하
 const PAGE_SIZE = 15
 
 const formatPrice = (value) => (value == null ? '-' : Number(value).toLocaleString('ko-KR'))
+
+// 한국 주식 관례: 상승 빨강 / 하락 파랑 (미니 차트 색)
+const UP_COLOR = '#e5484d'
+const DOWN_COLOR = '#3b82f6'
 
 // "3분 전", "2시간 전", "1일 전"
 const timeAgo = (dateText, now) => {
@@ -84,7 +87,8 @@ function MainPage() {
   const [stocks, setStocks] = useState([])
   const [baseDate, setBaseDate] = useState(null)
   const [user, setUser] = useState(null)
-  const [quoteTab, setQuoteTab] = useState(null)   // 'MARKET' | 'WATCH' (null = 로그인했으면 관심 종목, 아니면 시세)
+  const [stockTab, setStockTab] = useState('ALL')   // 종목 카드 탭: 'ALL' | 'WATCH'
+  const [watchIds, setWatchIds] = useState([])      // 관심 종목 ID
 
   // ===== 지금 토론 중 (오른쪽 아래) =====
   const [hotPosts, setHotPosts] = useState(null)   // null = 불러오는 중
@@ -114,7 +118,7 @@ function MainPage() {
   // 처음 한 번: 시세 + 로그인 상태
   useEffect(() => {
 
-    fetch('/api/stock/dashboard?days=5')
+    fetch('/api/stock/dashboard?days=20')
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -126,7 +130,13 @@ function MainPage() {
 
     fetch('/api/user/me')
       .then((res) => res.json())
-      .then((data) => setUser(data.loggedIn ? data.user : null))
+      .then((data) => {
+        setUser(data.loggedIn ? data.user : null)
+        if (!data.loggedIn) return
+        return fetch('/api/watchlist')
+          .then((res) => res.json())
+          .then((w) => w.success && setWatchIds(w.stocks.map((x) => x.stockId)))
+      })
       .catch(() => setUser(null))
 
   }, [])
@@ -190,7 +200,7 @@ function MainPage() {
   ]
 
   const isBoard = tab === 'BOARD'
-  const shownQuoteTab = user ? (quoteTab ?? 'WATCH') : 'MARKET'
+  const cardStocks = stockTab === 'WATCH' ? stocks.filter((s) => watchIds.includes(s.stockId)) : stocks
 
   return (
     <main className="home">
@@ -225,209 +235,229 @@ function MainPage() {
 
       <div className="home-grid">
 
-        {/* ===== 왼쪽 위: 뉴스 ===== */}
-        <section className="home-box home-news">
-          <div className="home-news-head">
-            <h2 className="home-box-title">뉴스</h2>
-            <div className="home-tabs">
-              {tabs.map((t) => (
-                <button
-                  key={t.value}
-                  type="button"
-                  className={`home-tab ${tab === t.value ? 'home-tab-active' : ''}`}
-                  onClick={() => changeTab(t.value)}
-                >
-                  {t.label}
-                </button>
-              ))}
+        {/* ===================== 왼쪽 (넓게) ===================== */}
+        <div className="home-main">
+
+          {/* 모의투자 배너 (TOP 3) */}
+          <MockBanner />
+
+          {/* 뉴스 */}
+          <section className="home-box home-news">
+            <div className="home-news-head">
+              <h2 className="home-box-title">뉴스</h2>
+              <div className="home-tabs">
+                {tabs.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    className={`home-tab ${tab === t.value ? 'home-tab-active' : ''}`}
+                    onClick={() => changeTab(t.value)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* AI 요약: 시장 / 종목 탭에서만 */}
-          {tab !== 'ALL' && tab !== 'SPORTS' && !isBoard && (
-            <NewsSummaryBox key={tab} stockId={tab === 'MARKET' ? null : tab} />
-          )}
+            {/* AI 요약: 시장 / 종목 탭에서만 */}
+            {tab !== 'ALL' && tab !== 'SPORTS' && !isBoard && (
+              <NewsSummaryBox key={tab} stockId={tab === 'MARKET' ? null : tab} />
+            )}
 
-          {newsLoading && news.items.length === 0 && <p className="home-empty">{isBoard ? '토론 글을' : '뉴스를'} 불러오는 중...</p>}
-          {!newsLoading && news.error && <p className="home-empty home-error">{news.error}</p>}
-          {!newsLoading && !news.error && news.items.length === 0 && (
-            <p className="home-empty">
-              {isBoard
-                ? <>아직 토론 글이 없어요. <Link to="/stock?tab=board">첫 글 쓰러 가기 →</Link></>
-                : '아직 수집된 뉴스가 없습니다.'}
-            </p>
-          )}
+            {newsLoading && news.items.length === 0 && <p className="home-empty">{isBoard ? '토론 글을' : '뉴스를'} 불러오는 중...</p>}
+            {!newsLoading && news.error && <p className="home-empty home-error">{news.error}</p>}
+            {!newsLoading && !news.error && news.items.length === 0 && (
+              <p className="home-empty">
+                {isBoard
+                  ? <>아직 토론 글이 없어요. <Link to="/stock?tab=board">첫 글 쓰러 가기 →</Link></>
+                  : '아직 수집된 뉴스가 없습니다.'}
+              </p>
+            )}
 
-          {/* ===== 💬 토론 탭: 전 종목 최근 글 (누르면 그 종목 토론 탭으로) ===== */}
-          {isBoard && (
+            {/* ===== 💬 토론 탭: 전 종목 최근 글 (누르면 그 종목 토론 탭으로) ===== */}
+            {isBoard && (
+              <ul className={`home-news-list ${newsLoading ? 'home-news-loading' : ''}`}>
+                {!newsLoading && news.items.map((p) => (
+                  <li key={p.postId} className="home-news-item">
+                    <Link to={`/stock?symbol=${p.symbol}&tab=board`} className="home-board-link">
+                      <div className="home-board-top">
+                        <span className="home-news-tag home-board-stock">{p.stockName}</span>
+                        {p.opinion === 'UP' && <span className="home-board-opinion home-board-up">오를 것</span>}
+                        {p.opinion === 'DOWN' && <span className="home-board-opinion home-board-down">내릴 것</span>}
+                      </div>
+                      <span className="home-news-title home-board-text">{p.content}</span>
+                      <div className="home-news-meta">
+                        <span>{p.nickname}</span>
+                        <span>·</span>
+                        <span>{timeAgo(p.insAt, now)}</span>
+                        <span>·</span>
+                        <span>💬 {p.commentCount}</span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {!isBoard && (
             <ul className={`home-news-list ${newsLoading ? 'home-news-loading' : ''}`}>
-              {!newsLoading && news.items.map((p) => (
-                <li key={p.postId} className="home-news-item">
-                  <Link to={`/stock?symbol=${p.symbol}&tab=board`} className="home-board-link">
-                    <div className="home-board-top">
-                      <span className="home-news-tag home-board-stock">{p.stockName}</span>
-                      {p.opinion === 'UP' && <span className="home-board-opinion home-board-up">오를 것</span>}
-                      {p.opinion === 'DOWN' && <span className="home-board-opinion home-board-down">내릴 것</span>}
-                    </div>
-                    <span className="home-news-title home-board-text">{p.content}</span>
-                    <div className="home-news-meta">
-                      <span>{p.nickname}</span>
-                      <span>·</span>
-                      <span>{timeAgo(p.insAt, now)}</span>
-                      <span>·</span>
-                      <span>💬 {p.commentCount}</span>
-                    </div>
-                  </Link>
+              {news.items.map((n) => (
+                <li key={n.newsId} className="home-news-item">
+                  <a href={n.link} target="_blank" rel="noopener noreferrer" className="home-news-title">
+                    {n.title}
+                  </a>
+                  <div className="home-news-meta">
+                    <span>{n.press}</span>
+                    <span>·</span>
+                    <span>{timeAgo(n.pubDate, now)}</span>
+                    {n.stockName && <span className="home-news-tag">{n.stockName}</span>}
+                  </div>
                 </li>
               ))}
             </ul>
-          )}
-
-          {!isBoard && (
-          <ul className={`home-news-list ${newsLoading ? 'home-news-loading' : ''}`}>
-            {news.items.map((n) => (
-              <li key={n.newsId} className="home-news-item">
-                <a href={n.link} target="_blank" rel="noopener noreferrer" className="home-news-title">
-                  {n.title}
-                </a>
-                <div className="home-news-meta">
-                  <span>{n.press}</span>
-                  <span>·</span>
-                  <span>{timeAgo(n.pubDate, now)}</span>
-                  {n.stockName && <span className="home-news-tag">{n.stockName}</span>}
-                </div>
-              </li>
-            ))}
-          </ul>
-          )}
-
-          {!isBoard && news.items.length >= size && size < 50 && (
-            <button type="button" className="home-more" onClick={() => setSize(size + PAGE_SIZE)} disabled={newsLoading}>
-              {newsLoading ? '불러오는 중...' : '더보기'}
-            </button>
-          )}
-
-          <p className="home-source">
-            {isBoard ? '전 종목 최근 토론 글 · 누르면 그 종목 토론방으로 이동' : '뉴스 출처: Google News · 30분마다 자동 수집'}
-          </p>
-        </section>
-
-        {/* ===== 오른쪽 위: 로그인 + 모의투자 TOP 3 + 시세/관심 종목 ===== */}
-        <aside className="home-side">
-
-          {/* 로그인 박스 (한 줄) */}
-          <section className="home-box home-login">
-            {user ? (
-              <>
-                <div className="home-login-text">
-                  <p className="home-login-hello"><strong>{user.nickname}</strong>님, 반가워요 👋</p>
-                  <Link to="/mypage" className="home-login-sub">👤 마이페이지 →</Link>
-                </div>
-                <Link to="/ai" className="btn btn-primary home-login-btn">🤖 AI 비서</Link>
-              </>
-            ) : (
-              <>
-                <div className="home-login-text">
-                  <p className="home-login-desc">로그인하고 AI 비서 · 모의투자를 이용해보세요.</p>
-                </div>
-                <Link to="/login" className="btn btn-primary home-login-btn">로그인</Link>
-              </>
             )}
+
+            {!isBoard && news.items.length >= size && size < 50 && (
+              <button type="button" className="home-more" onClick={() => setSize(size + PAGE_SIZE)} disabled={newsLoading}>
+                {newsLoading ? '불러오는 중...' : '더보기'}
+              </button>
+            )}
+
+            <p className="home-source">
+              {isBoard ? '전 종목 최근 토론 글 · 누르면 그 종목 토론방으로 이동' : '뉴스 출처: Google News · 30분마다 자동 수집'}
+            </p>
           </section>
 
-          {/* 모의투자 1·2·3등 */}
-          <MockRankingBox />
-
-          {/* [오늘의 시세 | ⭐ 관심 종목] (남은 높이를 채우고, 넘치면 박스 안에서 스크롤) */}
-          <section className="home-box home-quotes-box">
-            <div className="home-box-head">
-              <div className="home-quote-tabs">
+          {/* 종목 카드 [오늘의 시세 | ⭐ 관심 종목] */}
+          <section className="home-box home-stocks">
+            <div className="home-stock-head">
+              <div className="home-stock-tabs">
                 <button
                   type="button"
-                  className={`home-quote-tab ${shownQuoteTab === 'MARKET' ? 'home-quote-tab-active' : ''}`}
-                  onClick={() => setQuoteTab('MARKET')}
+                  className={`home-stock-tab ${stockTab === 'ALL' ? 'home-stock-tab-active' : ''}`}
+                  onClick={() => setStockTab('ALL')}
                 >
                   오늘의 시세
                 </button>
                 {user && (
                   <button
                     type="button"
-                    className={`home-quote-tab ${shownQuoteTab === 'WATCH' ? 'home-quote-tab-active' : ''}`}
-                    onClick={() => setQuoteTab('WATCH')}
+                    className={`home-stock-tab ${stockTab === 'WATCH' ? 'home-stock-tab-active' : ''}`}
+                    onClick={() => setStockTab('WATCH')}
                   >
                     ⭐ 관심 종목
                   </button>
                 )}
+                {baseDate && <span className="home-box-sub">{baseDate} 종가</span>}
               </div>
-              {shownQuoteTab === 'MARKET' && baseDate && <span className="home-box-sub">{baseDate} 종가</span>}
+              <Link to="/stock" className="home-box-link home-stock-more">주식 종목 더보기 →</Link>
             </div>
 
-            {shownQuoteTab === 'WATCH' ? (
-              <WatchlistBox bare />
-            ) : (
+            <ul className="home-stock-grid">
+              {cardStocks.length === 0 && (
+                <li className="home-stock-empty">
+                  {stockTab === 'WATCH'
+                    ? <>아직 관심 종목이 없어요. <Link to="/stock">주식 종목에서 ☆ 눌러 추가하기 →</Link></>
+                    : '시세를 불러오는 중...'}
+                </li>
+              )}
+              {cardStocks.map((s) => {
+                const change = Number(s.changeAmount)
+                const cls = change > 0 ? 'up' : change < 0 ? 'down' : ''
+                return (
+                  <li key={s.symbol}>
+                    <Link to={`/stock?symbol=${s.symbol}`} className="home-stock-card">
+                      <StockChart points={s.prices} height={36} color={change >= 0 ? UP_COLOR : DOWN_COLOR} />
+                      <span className="home-stock-name">
+                        {s.name}
+                        <small>{s.symbol}</small>
+                      </span>
+                      <span className="home-stock-price">{formatPrice(s.closePrice)}</span>
+                      <span className={`home-stock-rate ${cls}`}>
+                        {change > 0 ? '▲' : change < 0 ? '▼' : ''} {s.changeRate == null ? '-' : `${Number(s.changeRate).toFixed(2)}%`}
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        </div>
+
+        {/* ===================== 오른쪽 (380px) ===================== */}
+        <aside className="home-side">
+
+          {/* 로그인 카드 (네이버 프로필 박스처럼) */}
+          <section className="home-box home-login">
+            {user ? (
               <>
-                <ul className="home-quotes">
-                  {stocks.map((s) => {
-                    const change = Number(s.changeAmount)
-                    const cls = change > 0 ? 'up' : change < 0 ? 'down' : ''
-                    return (
-                      <li key={s.symbol} className="home-quote">
-                        <span className="home-quote-name">{s.name}</span>
-                        <span className="home-quote-price">{formatPrice(s.closePrice)}</span>
-                        <span className={`home-quote-rate ${cls}`}>
-                          {change > 0 ? '▲' : change < 0 ? '▼' : ''} {s.changeRate == null ? '-' : `${Number(s.changeRate).toFixed(2)}%`}
-                        </span>
-                      </li>
-                    )
-                  })}
-                </ul>
-                <Link to="/stock" className="home-box-link">주식 종목 더보기 →</Link>
+                <div className="home-login-top">
+                  <span className="home-login-avatar">{user.nickname?.slice(0, 1)}</span>
+                  <div className="home-login-info">
+                    <p className="home-login-hello"><strong>{user.nickname}</strong>님, 반가워요 👋</p>
+                    {user.email && <span className="home-login-email">{user.email}</span>}
+                  </div>
+                </div>
+                <nav className="home-login-menu">
+                  <Link to="/ai">AI 비서</Link>
+                  <Link to="/mock">모의투자</Link>
+                  <Link to="/stock">관심종목</Link>
+                  <Link to="/mypage">마이페이지</Link>
+                </nav>
               </>
+            ) : (
+              <div className="home-login-guest">
+                <p className="home-login-desc">로그인하고 AI 비서 · 모의투자 · 관심 종목을 이용해보세요.</p>
+                <Link to="/login" className="btn btn-primary home-login-btn">SKLabs 로그인</Link>
+                <div className="home-login-links">
+                  <Link to="/find">아이디·비밀번호 찾기</Link>
+                  <Link to="/signup">회원가입</Link>
+                </div>
+              </div>
             )}
           </section>
+
+          {/* 날씨 */}
+          <WeatherBox />
+
+          {/* 지금 토론 중 */}
+          <section className="home-box home-ask">
+            <div className="home-box-head">
+              <h2 className="home-box-title">💬 지금 토론 중</h2>
+              <span className="home-box-sub">전 종목</span>
+            </div>
+
+            {hotPosts === null && <p className="home-hot-empty">불러오는 중...</p>}
+            {hotPosts?.length === 0 && (
+              <p className="home-hot-empty">
+                아직 토론 글이 없어요.<br />
+                <Link to="/stock?tab=board">첫 의견 남기러 가기 →</Link>
+              </p>
+            )}
+
+            {hotPosts?.length > 0 && (
+              <ul className="home-hot-list">
+                {hotPosts.map((p) => (
+                  <li key={p.postId}>
+                    <Link to={`/stock?symbol=${p.symbol}&tab=board`} className="home-hot-item">
+                      <div className="home-board-top">
+                        <span className="home-news-tag home-board-stock">{p.stockName}</span>
+                        {p.opinion === 'UP' && <span className="home-board-opinion home-board-up">오를 것</span>}
+                        {p.opinion === 'DOWN' && <span className="home-board-opinion home-board-down">내릴 것</span>}
+                        <span className="home-hot-time">{timeAgo(p.insAt, hotAt)}</span>
+                      </div>
+                      <span className="home-hot-text">{p.content}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <button type="button" className="home-box-link home-hot-more" onClick={() => changeTab('BOARD')}>
+              토론 글 더보기 →
+            </button>
+          </section>
         </aside>
-
-        {/* ===== 왼쪽 아래: 날씨 ===== */}
-        <WeatherBox />
-
-        {/* ===== 오른쪽 아래: 지금 토론 중 (최근 글 3개, 누르면 그 종목 토론 탭으로) ===== */}
-        <section className="home-box home-ask">
-          <div className="home-box-head">
-            <h2 className="home-box-title">💬 지금 토론 중</h2>
-            <span className="home-box-sub">전 종목</span>
-          </div>
-
-          {hotPosts === null && <p className="home-hot-empty">불러오는 중...</p>}
-          {hotPosts?.length === 0 && (
-            <p className="home-hot-empty">
-              아직 토론 글이 없어요.<br />
-              <Link to="/stock?tab=board">첫 의견 남기러 가기 →</Link>
-            </p>
-          )}
-
-          {hotPosts?.length > 0 && (
-            <ul className="home-hot-list">
-              {hotPosts.map((p) => (
-                <li key={p.postId}>
-                  <Link to={`/stock?symbol=${p.symbol}&tab=board`} className="home-hot-item">
-                    <div className="home-board-top">
-                      <span className="home-news-tag home-board-stock">{p.stockName}</span>
-                      {p.opinion === 'UP' && <span className="home-board-opinion home-board-up">오를 것</span>}
-                      {p.opinion === 'DOWN' && <span className="home-board-opinion home-board-down">내릴 것</span>}
-                      <span className="home-hot-time">{timeAgo(p.insAt, hotAt)}</span>
-                    </div>
-                    <span className="home-hot-text">{p.content}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <button type="button" className="home-box-link home-hot-more" onClick={() => changeTab('BOARD')}>
-            토론 글 더보기 →
-          </button>
-        </section>
-
       </div>
 
     </main>

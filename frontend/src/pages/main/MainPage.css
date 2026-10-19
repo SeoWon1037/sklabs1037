@@ -6,9 +6,9 @@
 
 /* 화면 전체 */
 .home {
-  max-width: 1120px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 28px 16px 64px;
+  padding: 28px 24px 64px;
 }
 
 /* ===== 검색창 영역 ===== */
@@ -120,17 +120,19 @@
   font-weight: 600;
 }
 
-/* ===== 2단 배치 ===== */
+/* ===== 2단 배치 (네이버 메인처럼: 왼쪽 넓게 | 오른쪽 380px) ===== */
 .home-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 24px;
   align-items: start;
 }
+.home-main,
 .home-side {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 /* 공통 박스 */
@@ -403,16 +405,31 @@
   font-family: inherit;
 }
 
-/* ===== 로그인 박스 (한 줄: 인사 + 버튼) ===== */
+/* ===== 로그인 카드 (네이버 프로필 박스처럼) ===== */
 .home-login {
+  padding: 0;
+  overflow: hidden;
+}
+.home-login-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 14px;
-  padding-bottom: 14px;
+  gap: 14px;
+  padding: 20px;
 }
-.home-login-text {
+.home-login-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--primary);
+}
+.home-login-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -421,59 +438,41 @@
 .home-login-hello {
   margin: 0;
   overflow: hidden;
-  font-size: 15px;
+  font-size: 17px;
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--text);
 }
-.home-login-sub {
-  font-size: 12px;
-  font-weight: 600;
+.home-login-email {
+  overflow: hidden;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: color-mix(in srgb, var(--text) 55%, transparent);
 }
-.home-login-sub:hover {
-  color: var(--text);
-}
 .home-login-desc {
-  margin: 0;
+  margin: 0 0 12px;
   font-size: 14px;
-  color: color-mix(in srgb, var(--text) 60%, transparent);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--text) 65%, transparent);
 }
 
+/* 로그인 안 했을 때 */
+.home-login-guest {
+  padding: 20px;
+}
 /* 포인트 색 ② 로그인 버튼 (.btn-primary) */
 .home-login-btn {
-  flex-shrink: 0;
-  height: 40px;
-  padding: 0 16px;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-/* ===== [오늘의 시세 | 관심 종목] 탭 ===== */
-.home-quote-tabs {
-  display: flex;
-  gap: 14px;
-}
-.home-quote-tab {
-  padding: 0 0 4px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
+  width: 100%;
+  height: 50px;
   font-size: 16px;
   font-weight: 800;
-  color: color-mix(in srgb, var(--text) 40%, transparent);
-  white-space: nowrap;
-}
-.home-quote-tab:hover {
-  color: var(--text);
-}
-.home-quote-tab-active {
-  border-bottom-color: var(--text);
-  color: var(--text);
 }
 .home-login-links {
   display: flex;
   justify-content: center;
+  gap: 14px;
+  margin-top: 12px;
   font-size: 13px;
 }
 .home-login-links a {
@@ -482,6 +481,118 @@
 }
 .home-login-links a:hover {
   color: var(--text);
+}
+
+/* 아래 바로가기 줄 (네이버의 메일·카페·블로그·페이 줄) */
+.home-login-menu {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border);
+}
+.home-login-menu a {
+  padding: 14px 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+.home-login-menu a + a {
+  border-left: 1px solid var(--border);
+}
+.home-login-menu a:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+/* ===== 종목 카드 (네이버 MY추천 상품 카드처럼) ===== */
+.home-stock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.home-stock-tabs {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.home-stock-tab {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 17px;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+  white-space: nowrap;
+}
+.home-stock-tab:hover,
+.home-stock-tab-active {
+  color: var(--text);
+}
+.home-stock-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.home-stock-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.home-stock-card:hover {
+  border-color: color-mix(in srgb, var(--text) 25%, transparent);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+.home-stock-card .chart {
+  margin-bottom: 8px;
+}
+.home-stock-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.home-stock-name small {
+  font-size: 11px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--text) 45%, transparent);
+}
+.home-stock-price {
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.home-stock-rate {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.home-stock-more {
+  margin: 0;
+}
+.home-stock-empty a {
+  color: var(--primary);
+  font-weight: 600;
+}
+.home-stock-empty {
+  grid-column: 1 / -1;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
 }
 
 /* ===== 오늘의 시세 ===== */
@@ -540,6 +651,13 @@
   background: color-mix(in srgb, var(--text) 10%, transparent);
 }
 
+/* ===== 중간 폭: 종목 카드 3개씩 ===== */
+@media (max-width: 1100px) {
+  .home-stock-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 /* ===== 태블릿/휴대폰: 1단으로 ===== */
 @media (max-width: 860px) {
   .home-grid {
@@ -555,135 +673,20 @@
 }
 
 
-/* ===== PC: 스크롤 없이 한 화면 =====
-   - 위: 로고 + 검색창 + 바로가기 한 줄
-   - 2×2 최소 높이 = 브라우저 높이 - (상단바 64 + 위아래 여백 32 + 검색 줄 80)
-     → 위 줄이 남는 높이를 다 쓰고, 긴 목록(뉴스·시세)은 박스 안에서 스크롤
-   - 위 줄은 최소 450px (화면이 아주 낮으면 박스가 겹치지 않고 아래로 밀림 → 그때만 페이지 스크롤)
-   - 높이가 1000px 이하인 화면에서는 "지금 토론 중"을 2개만 (아래 줄을 낮게)
-   - 같은 줄에 있는 두 박스는 높이가 똑같이 맞춰짐 */
+/* ===== PC: 뉴스 박스는 높이 고정 (네이버 뉴스스탠드처럼), 넘치는 뉴스는 박스 안에서 스크롤 ===== */
 @media (min-width: 861px) {
 
-  .home {
-    padding-top: 16px;
-    padding-bottom: 16px;
-  }
-
-  /* 검색 영역: 세로로 쌓던 것을 한 줄로 */
-  .home-search-area {
-    flex-direction: row;
-    align-items: center;
-    gap: 20px;
-    padding: 0 0 16px;
-  }
-  .home-search-row {
-    flex: 1;
-    max-width: none;
-    gap: 16px;
-  }
-  .home-logo {
-    font-size: 24px;
-  }
-  .home-search {
-    height: 48px;
-  }
-  .home-shortcuts {
-    flex-wrap: nowrap;
-    gap: 2px;
-  }
-  .home-shortcut {
-    width: 64px;
-    gap: 4px;
-    padding: 4px 0;
-  }
-  .home-shortcut-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 11px;
-    font-size: 18px;
-  }
-  .home-shortcut-label {
-    font-size: 11px;
-    white-space: nowrap;
-  }
-
-  .home-grid {
-    align-items: stretch;
-    min-height: calc(100dvh - 176px);
-    grid-template-rows: minmax(450px, 1fr) auto;
-  }
-  .home-side {
-    min-height: 0;
-  }
-
-  /* 지금 토론 중: 아래 줄이 너무 높아지지 않게 조금 촘촘하게 */
-  .home-hot-list {
-    gap: 4px;
-    margin-top: 10px;
-  }
-  .home-hot-item {
-    padding: 7px 12px;
-  }
-}
-
-/* 낮은 PC 화면: 지금 토론 중 2개만 */
-@media (min-width: 861px) and (max-height: 1000px) {
-  .home-hot-list li:nth-child(n + 3) {
-    display: none;
-  }
-}
-
-@media (min-width: 861px) {
-
-  /* 오늘의 시세: 남은 높이만큼만 차지하고, 넘치는 종목은 안에서 스크롤 */
-  .home-quotes-box {
-    flex: 1;
-    contain: size;
-    min-height: 140px;
-    display: flex;
-    flex-direction: column;
-  }
-  .home-quotes-box .home-quotes {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 6px;
-  }
-  .home-quotes-box .home-quotes::-webkit-scrollbar {
-    width: 6px;
-  }
-  .home-quotes-box .home-quotes::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--text) 18%, transparent);
-  }
-
-  /* 뉴스 박스는 자기 내용으로 높이를 정하지 않음
-     → 오른쪽 위(로그인 + 시세) 높이에 맞춰짐, 너무 작아지지 않게 최소 높이 */
   .home-news {
-    contain: size;
-    min-height: 420px;
     display: flex;
     flex-direction: column;
+    height: 480px;
   }
-
-  /* 날씨: 오른쪽 아래(추천 질문) 높이에 맞춰 늘어날 때 내용은 가운데로 */
-  .weather {
-    display: flex;
-    flex-direction: column;
-  }
-  .weather .weather-body {
-    flex: 1;
-  }
-
-  /* 넘치는 뉴스는 박스 안에서 스크롤 */
   .home-news-list {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     padding-right: 6px;
   }
-
-  /* 뉴스 한 줄 간격을 조금 줄임 */
   .home-news-item {
     padding: 11px 2px;
   }
@@ -701,6 +704,17 @@
   }
 }
 
+/* ===== 오른쪽 칸 날씨: 폭이 좁아서 현재 날씨 위, 시간별 예보 아래 ===== */
+.home-side .weather-body {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.home-side .weather-hours {
+  padding-top: 14px;
+  padding-left: 0;
+  border-top: 1px solid var(--border);
+  border-left: none;
+}
 
 /* ===== 날씨 (왼쪽 열, 뉴스 아래 — 가로 한 줄로 작게) ===== */
 .weather {
@@ -867,6 +881,18 @@
   .home-shortcut-label {
     font-size: 12px;
     white-space: nowrap;
+  }
+
+  /* 종목 카드 2개씩 */
+  .home-stock-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .home-stock-card {
+    padding: 10px 12px;
+  }
+  .home-stock-price {
+    font-size: 16px;
   }
 
   /* 한 줄 배치에서 박스가 내용 때문에 화면 밖으로 밀려나지 않게 */

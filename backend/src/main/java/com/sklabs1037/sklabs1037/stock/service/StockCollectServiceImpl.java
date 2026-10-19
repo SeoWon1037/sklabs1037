@@ -10,7 +10,11 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +32,8 @@ import java.util.Set;
  * - 일부러 @Transactional을 쓰지 않음 (한 종목 실패로 전체가 롤백되지 않게)
  * - 종목 사이에 stock.collect.delay-ms만큼 쉬어서 토스 호출 제한에 덜 걸리게 (걸리면 TossApiClient가 쉬고 재시도)
  *   → 3,000종목이면 10분 남짓
+ * - DB 저장은 묶어서 (종목 하나의 일봉 전체 = SQL 1번, 종목 목록 500개 = SQL 1번)
+ *   → DB가 멀리 있어도(로컬 PC → RDS) 왕복 횟수가 적어서 빠름
  */
 @Slf4j
 @Service
@@ -39,6 +45,9 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
     // 진행 상황 로그 간격 (종목 수)
     private static final int PROGRESS_EVERY = 300;
+
+    // 종목 목록 한 번에 저장할 개수
+    private static final int MASTER_BATCH = 500;
 
     @Autowired
     private TossApiClient tossApiClient;
@@ -62,7 +71,8 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
         if (!tossApiClient.isConfigured()) return 0;
 
-        int saved = 0;
+        // 종목코드별로 모으기 (같은 SQL 안에 같은 종목코드가 두 번 있으면 안 됨)
+        Map<String, StockCollectVO> bySymbol = new LinkedHashMap<>();
 
         for (String market : MARKETS) {
 
@@ -81,10 +91,18 @@ public class StockCollectServiceImpl implements IStockCollectService {
                 vo.setMarket(market);
                 vo.setSecurityType(type);
 
-                saved += stockCollectDao.upsertStockMaster(vo);
+                bySymbol.put(symbol, vo);
 
             }
 
+        }
+
+        // 500개씩 한 번에 저장
+        List<StockCollectVO> all = new ArrayList<>(bySymbol.values());
+        int saved = 0;
+
+        for (int from = 0; from < all.size(); from += MASTER_BATCH) {
+            saved += stockCollectDao.upsertStockMasterBatch(all.subList(from, Math.min(from + MASTER_BATCH, all.size())));
         }
 
         log.info("종목 목록 동기화: {}종목", saved);
@@ -213,16 +231,20 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
             }
 
-            // 2. 저장
+            // 2. 200개 한 번에 저장
+            List<StockCollectVO> rows = new ArrayList<>();
+
             for (StockCollectVO stock : chunk) {
 
                 Long n = shares.get(stock.getSymbol());
                 if (n == null || n <= 0) continue;
 
                 stock.setSharesOutstanding(n);
-                updated += stockCollectDao.updateSharesOutstanding(stock);
+                rows.add(stock);
 
             }
+
+            if (!rows.isEmpty()) updated += stockCollectDao.updateSharesBatch(rows);
 
             pause();
 
@@ -231,6 +253,65 @@ public class StockCollectServiceImpl implements IStockCollectService {
         log.info("상장 주식 수 갱신: {}종목", updated);
 
         return updated;
+
+    }
+
+    // ============================================
+    // 5. 종가가 없는 종목에 현재가 임시로 (200개씩)
+    // ============================================
+    @Override
+    public int fillMissingPrices() {
+
+        if (!tossApiClient.isConfigured()) return 0;
+
+        List<StockCollectVO> stocks = stockCollectDao.selectStocksWithoutPrice();
+        int filled = 0;
+
+        for (int from = 0; from < stocks.size(); from += TossApiClient.MAX_SYMBOLS) {
+
+            List<StockCollectVO> chunk = stocks.subList(from, Math.min(from + TossApiClient.MAX_SYMBOLS, stocks.size()));
+            Map<String, StockCollectVO> bySymbol = new HashMap<>();
+            chunk.forEach(s -> bySymbol.put(s.getSymbol(), s));
+
+            List<StockCollectVO> rows = new ArrayList<>();
+
+            try {
+
+                String symbols = String.join(",", bySymbol.keySet());
+
+                for (Map<String, Object> row : tossApiClient.getPrices(symbols)) {
+
+                    StockCollectVO stock = bySymbol.get(String.valueOf(row.get("symbol")));
+                    Object price = row.get("lastPrice");
+                    if (stock == null || price == null) continue;
+
+                    BigDecimal value = new BigDecimal(String.valueOf(price));
+                    if (value.signum() <= 0) continue;
+
+                    StockCollectVO vo = new StockCollectVO();
+                    vo.setStockId(stock.getStockId());
+                    vo.setClosePrice(value);
+                    vo.setTradeDate(toDate(row.get("timestamp")));
+                    rows.add(vo);
+
+                }
+
+            } catch (Exception e) {
+
+                log.warn("현재가 임시 채우기 실패 ({}~{}번째): {}", from, from + chunk.size(), e.getMessage());
+                continue;
+
+            }
+
+            if (!rows.isEmpty()) filled += stockCollectDao.fillMissingLastPrice(rows);
+
+            pause();
+
+        }
+
+        log.info("현재가 임시 채우기: {}종목", filled);
+
+        return filled;
 
     }
 
@@ -283,7 +364,8 @@ public class StockCollectServiceImpl implements IStockCollectService {
         List<Map<String, Object>> candles = tossApiClient.getDailyCandles(stock.getSymbol(), count);
         if (candles == null) return 0;
 
-        int saved = 0;
+        // 날짜별로 모아서 SQL 1번에 저장
+        Map<LocalDate, StockCollectVO> byDate = new LinkedHashMap<>();
 
         for (Map<String, Object> c : candles) {
 
@@ -296,12 +378,15 @@ public class StockCollectServiceImpl implements IStockCollectService {
             vo.setClosePrice(toDecimal(c.get("closePrice")));
             vo.setVolume(c.get("volume") == null ? 0L : toDecimal(c.get("volume")).longValue());
 
-            stockCollectDao.upsertStockPrice(vo);
-            saved++;
+            byDate.put(vo.getTradeDate(), vo);
 
         }
 
-        return saved;
+        if (byDate.isEmpty()) return 0;
+
+        stockCollectDao.upsertStockPriceBatch(new ArrayList<>(byDate.values()));
+
+        return byDate.size();
 
     }
 
@@ -314,6 +399,17 @@ public class StockCollectServiceImpl implements IStockCollectService {
             Thread.sleep(delayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        }
+
+    }
+
+    // 토스 시각 → 날짜 (없거나 이상하면 오늘)
+    private LocalDate toDate(Object timestamp) {
+
+        try {
+            return OffsetDateTime.parse(String.valueOf(timestamp)).toLocalDate();
+        } catch (Exception e) {
+            return LocalDate.now(ZoneId.of("Asia/Seoul"));
         }
 
     }

@@ -22,4 +22,7 @@ public interface IStockCollectService {
 
     // 전 종목 상장 주식 수 갱신 (200종목씩 묶어서 토스 호출) → 갱신한 종목 수
     int updateSharesOutstanding();
+
+    // 종가가 아직 없는 종목에 토스 현재가를 임시로 (200개씩 묶어서 → 목록에 바로 나오게)
+    int fillMissingPrices();
 }

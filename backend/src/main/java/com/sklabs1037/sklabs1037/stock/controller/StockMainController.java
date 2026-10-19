@@ -20,7 +20,7 @@ import java.util.Map;
  *
  * API 목록
  *   GET /api/stock/dashboard?days=20&limit=30  → { success, baseDate, stocks: [...] }   시가총액 상위 + 주요 종목 + 미니 차트
- *   GET /api/stock/list?market=ALL&page=1      → { success, stocks, total, page, hasMore } 목록 탭 (ALL·KOSPI·KOSDAQ·ETF, 30개씩)
+ *   GET /api/stock/list?market=ALL&page=1      → { success, stocks, total, page, hasMore } 목록 탭 (ALL·KOSPI·KOSDAQ·ETF, 50개씩)
  *   GET /api/stock/search?q=카카오             → { success, stocks: [...] }            종목 검색 (최대 20개)
  *   GET /api/stock/detail?symbol=005930   → { success, stock: {...}, candles: [...] } 종목 상세 + 일봉
  *
@@ -64,7 +64,7 @@ public class StockMainController {
     }
 
     // 목록 탭 + 더보기
-    private static final int PAGE_SIZE = 30;
+    private static final int PAGE_SIZE = 50;
     private static final java.util.Set<String> MARKETS = java.util.Set.of("ALL", "KOSPI", "KOSDAQ", "ETF");
 
     @GetMapping("/list")

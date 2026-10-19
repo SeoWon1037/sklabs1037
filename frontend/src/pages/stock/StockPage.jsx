@@ -5,7 +5,8 @@
 // - 오른쪽: 종목 헤더 + 탭 (차트·시세 / 종목정보 / 뉴스 / 토론)
 // - 주소로 바로 열기: /stock?symbol=005930&tab=board (메인 화면 💬 토론 탭에서 넘어올 때)
 // - 백엔드 API
-//   GET /api/stock/list?market=ALL&page=1      목록 탭 (전체·코스피·코스닥·ETF, 시가총액 순 30개씩 + 미니 차트)
+//   GET /api/stock/list?market=ALL&page=1      목록 탭 (전체·코스피·코스닥·ETF, 시가총액 순 50개씩 + 미니 차트)
+//   목록 끝까지 내리면 다음 50개를 자동으로 (무한 스크롤)
 //   GET /api/stock/search?q=카카오             종목 검색 (최대 20개)
 //   GET /api/stock/detail?symbol=005930     종목 정보 + 일봉
 //   GET /api/news?stockId=1&size=15         종목 뉴스
@@ -154,7 +155,7 @@ function StockPage() {
     return () => { ignore = true }
   }, [market, paramSymbol])
 
-  // 목록 더보기 (30개씩)
+  // 목록 더보기 (50개씩)
   const loadMore = () => {
     if (loadingMore || !listInfo.hasMore) return
     const next = listInfo.page + 1
@@ -170,6 +171,22 @@ function StockPage() {
       .catch(() => {})
       .finally(() => setLoadingMore(false))
   }
+
+  // 무한 스크롤: 목록 끝의 표시가 화면에 보이면 다음 50개
+  // - 불러온 뒤에도 끝이 계속 보이면(목록이 짧으면) 한 번 더
+  const sentinelRef = useRef(null)
+  const loadMoreRef = useRef(loadMore)
+  useEffect(() => { loadMoreRef.current = loadMore })
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !listInfo.hasMore || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMoreRef.current() },
+      { rootMargin: '300px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [listInfo.hasMore, listInfo.page, listInfo.key, query])
 
   const changeMarket = (value) => {
     if (value === market) return
@@ -390,9 +407,9 @@ function StockPage() {
               </li>
             ))}
             {!searching && listInfo.key === market && listInfo.hasMore && (
-              <li className="stock-more-item">
+              <li className="stock-more-item" ref={sentinelRef}>
                 <button type="button" className="stock-more" onClick={loadMore} disabled={loadingMore}>
-                  {loadingMore ? '불러오는 중...' : '30개 더 보기'}
+                  {loadingMore ? '불러오는 중...' : '더 보기'}
                 </button>
               </li>
             )}

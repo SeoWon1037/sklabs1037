@@ -21,6 +21,20 @@
         ORDER BY ID
     </select>
 
+    <!-- 아직 종가가 없는 종목 (새로 등록된 종목) -->
+    <select id="selectStocksWithoutPrice"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockCollectVO">
+        SELECT  ID AS STOCK_ID
+        ,SYMBOL
+        ,NAME
+        FROM T_STOCK
+        WHERE 1=1
+        AND USE_YN = 'Y'
+        AND DEL_DAY IS NULL
+        AND LAST_CLOSE IS NULL
+        ORDER BY ID
+    </select>
+
     <!-- 시세 전체 건수 -->
     <select id="countPrices"
             resultType="int">
@@ -83,6 +97,102 @@
         ,VOLUME      = EXCLUDED.VOLUME
         ,UPT_DAY     = NOW()
     </insert>
+
+    <!--
+        일봉 여러 개 한 번에 저장 (종목 하나의 일봉 전체를 SQL 1번으로)
+        - DB가 멀리 있어도(로컬 → RDS) 종목당 왕복 1번이라 빠름
+    -->
+    <insert id="upsertStockPriceBatch"
+            parameterType="java.util.List">
+        INSERT INTO T_STOCK_PRICE
+        ( STOCK_ID
+        ,TRADE_DATE
+        ,OPEN_PRICE
+        ,HIGH_PRICE
+        ,LOW_PRICE
+        ,CLOSE_PRICE
+        ,VOLUME
+        ) VALUES
+        <foreach collection="list" item="p" separator=",">
+        ( #{p.stockId}
+        ,#{p.tradeDate}
+        ,#{p.openPrice}
+        ,#{p.highPrice}
+        ,#{p.lowPrice}
+        ,#{p.closePrice}
+        ,#{p.volume}
+        )
+        </foreach>
+        ON CONFLICT (STOCK_ID, TRADE_DATE) DO UPDATE
+        SET  OPEN_PRICE  = EXCLUDED.OPEN_PRICE
+        ,HIGH_PRICE  = EXCLUDED.HIGH_PRICE
+        ,LOW_PRICE   = EXCLUDED.LOW_PRICE
+        ,CLOSE_PRICE = EXCLUDED.CLOSE_PRICE
+        ,VOLUME      = EXCLUDED.VOLUME
+        ,UPT_DAY     = NOW()
+    </insert>
+
+    <!--
+        종목 목록 여러 개 한 번에 저장 (500개씩)
+        - 종목코드(SYMBOL)가 같으면 이름·시장·종류만 갱신 (주요 종목 표시 FEATURED_YN은 그대로)
+    -->
+    <insert id="upsertStockMasterBatch"
+            parameterType="java.util.List">
+        INSERT INTO T_STOCK (
+               SYMBOL
+              ,NAME
+              ,MARKET
+              ,SECURITY_TYPE
+              ,USE_YN
+        ) VALUES
+        <foreach collection="list" item="s" separator=",">
+        (      #{s.symbol}
+              ,#{s.name}
+              ,#{s.market}
+              ,#{s.securityType}
+              ,'Y'
+        )
+        </foreach>
+        ON CONFLICT (SYMBOL) DO UPDATE
+           SET NAME          = EXCLUDED.NAME
+              ,MARKET        = EXCLUDED.MARKET
+              ,SECURITY_TYPE = EXCLUDED.SECURITY_TYPE
+              ,UPT_DAY       = NOW()
+    </insert>
+
+    <!-- 상장 주식 수 여러 개 한 번에 저장 (200개씩) -->
+    <update id="updateSharesBatch"
+            parameterType="java.util.List">
+        UPDATE T_STOCK S
+           SET SHARES_OUTSTANDING = V.SHARES
+          FROM (VALUES
+        <foreach collection="list" item="s" separator=",">
+                (#{s.stockId}::BIGINT, #{s.sharesOutstanding}::BIGINT)
+        </foreach>
+          ) AS V(ID, SHARES)
+         WHERE 1=1
+           AND S.ID = V.ID
+    </update>
+
+    <!--
+        시세 이력이 아직 없는 종목에 토스 현재가를 임시로 채움 (200개씩)
+        - 이력을 다 받기 전에도 목록에 바로 나오게 (전일 대비는 이력을 받은 뒤부터)
+        - 이미 종가가 있는 종목은 건드리지 않음
+    -->
+    <update id="fillMissingLastPrice"
+            parameterType="java.util.List">
+        UPDATE T_STOCK S
+           SET LAST_CLOSE      = V.PRICE
+              ,LAST_TRADE_DATE = V.TRADE_DATE
+          FROM (VALUES
+        <foreach collection="list" item="s" separator=",">
+                (#{s.stockId}::BIGINT, #{s.closePrice}::NUMERIC, #{s.tradeDate}::DATE)
+        </foreach>
+          ) AS V(ID, PRICE, TRADE_DATE)
+         WHERE 1=1
+           AND S.ID = V.ID
+           AND S.LAST_CLOSE IS NULL
+    </update>
 
     <!--
         종목 목록 저장 (토스 /api/v1/stocks/all)

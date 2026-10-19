@@ -1,0 +1,118 @@
+package com.sklabs1037.sklabs1037.mock.scheduler;
+
+import com.sklabs1037.sklabs1037.mock.service.IMockTradeService;
+import com.sklabs1037.sklabs1037.mock.service.MockMarketHours;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.util.List;
+
+/**
+ * 모의투자 지정가 주문 스케줄러
+ * - 정규장(평일 09:00~15:30) 1분마다: 지금 가격으로 조건이 맞는 주문 체결
+ * - 평일 15:35: 오늘이 마지막인 미체결 주문 만료 (묶어둔 돈 돌려줌)
+ * - 서버가 켜질 때: 서버가 꺼져 있어서 만료되지 못한 지난 주문 정리
+ *
+ * 주문 1건 = 트랜잭션 1개 → 한 건이 실패해도 나머지 주문은 계속 처리
+ */
+@Slf4j
+@Component
+public class MockOrderScheduler {
+
+    @Autowired
+    private IMockTradeService mockTradeService;
+
+    // 정규장 1분마다 체결 확인 (9시~15시대, 15:30 이후는 안에서 걸러냄)
+    @Scheduled(cron = "0 * 9-15 * * MON-FRI", zone = "Asia/Seoul")
+    public void matchOrders() {
+
+        if (!MockMarketHours.isOpen(MockMarketHours.now())) return;
+
+        try {
+
+            List<Long> ids = mockTradeService.findFillableOrderIds();
+            int filled = 0;
+
+            for (Long id : ids) {
+
+                try {
+
+                    if (mockTradeService.fillOrder(id)) filled++;
+
+                } catch (Exception e) {
+
+                    log.error("지정가 주문 체결 실패: {}", id, e);
+
+                }
+
+            }
+
+            if (filled > 0) log.info("지정가 주문 체결: {}건", filled);
+
+        } catch (Exception e) {
+
+            log.error("지정가 주문 확인 실패", e);
+
+        }
+
+    }
+
+    // 장 마감 후 미체결 주문 만료
+    @Scheduled(cron = "0 35 15 * * MON-FRI", zone = "Asia/Seoul")
+    public void expireOrders() {
+
+        expireUpTo(MockMarketHours.now().toLocalDate());
+
+    }
+
+    // 서버 시작 직후: 지난 거래일 주문 정리 (오늘 주문은 그대로)
+    @EventListener(ApplicationReadyEvent.class)
+    public void expireOnStart() {
+
+        ZonedDateTime now = MockMarketHours.now();
+        LocalDate upTo = now.toLocalDate().minusDays(1);
+
+        // 오늘 장 마감(15:35)이 지났으면 오늘 주문까지
+        if (now.toLocalTime().isAfter(java.time.LocalTime.of(15, 35))) upTo = now.toLocalDate();
+
+        expireUpTo(upTo);
+
+    }
+
+    private void expireUpTo(LocalDate upTo) {
+
+        try {
+
+            int expired = 0;
+
+            for (Long id : mockTradeService.findExpiredOrderIds(upTo)) {
+
+                try {
+
+                    if (mockTradeService.expireOrder(id)) expired++;
+
+                } catch (Exception e) {
+
+                    log.error("지정가 주문 만료 실패: {}", id, e);
+
+                }
+
+            }
+
+            if (expired > 0) log.info("미체결 지정가 주문 만료: {}건", expired);
+
+        } catch (Exception e) {
+
+            // 테이블이 아직 없는 환경(CI)에서도 서버는 정상적으로 켜지게
+            log.warn("지정가 주문 만료 처리 실패: {}", e.getMessage());
+
+        }
+
+    }
+}

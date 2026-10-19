@@ -1,13 +1,16 @@
 // ============================================
 // 모의투자 화면 (주소: /mock)
-// - 가상 자금 1,000만 원으로 시장가 매수/매도 → 보유 종목, 수익률, 랭킹
+// - 가상 자금 1,000만 원으로 매수/매도 → 보유 종목, 수익률, 랭킹
+//   · 시장가: 지금 가격으로 바로 체결
+//   · 지정가: 정해둔 가격이 되면 체결 (정규장 1분마다 확인, 그 거래일 장 마감까지 안 되면 자동 취소)
 // - 주소로 종목 골라서 열기: /mock?symbol=005930 (종목 화면 "모의 매수" 버튼)
-// - PC: 요약 카드 / [보유 종목 | 주문] / [거래 내역 | 수익률 랭킹]
-// - 휴대폰: 요약 → 주문 → 보유 종목 → 거래 내역 → 랭킹 (한 줄씩)
+// - PC: 요약 카드 / [보유 종목 + 거래 내역 | 주문 + 미체결 주문 + 수익률 랭킹]
+// - 휴대폰: 요약 → 주문 → 미체결 주문 → 보유 종목 → 거래 내역 → 랭킹 (한 줄씩)
 // - 백엔드 API
 //   GET  /api/mock/account                          내 계좌 + 보유 종목 + 주문 가능 종목
 //   GET  /api/mock/trades?page=1                    내 거래 내역 (20개씩)
-//   POST /api/mock/order { stockId, side, quantity }   시장가 주문
+//   POST /api/mock/order { stockId, side, quantity, orderType, limitPrice }   주문
+//   POST /api/mock/orders/{orderId}/cancel          지정가 주문 취소
 //   POST /api/mock/reset                            계좌 초기화
 //   GET  /api/mock/ranking?size=10                  수익률 랭킹 (누구나)
 // ============================================
@@ -54,6 +57,12 @@ const priceLabel = (stock) => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 기준 현재가`
 }
 
+// 한국 주식 호가 단위 (백엔드 MockMarketHours.tickSize와 같은 규칙)
+const tickSize = (p) => (p < 2000 ? 1 : p < 5000 ? 5 : p < 20000 ? 10 : p < 50000 ? 50 : p < 200000 ? 100 : p < 500000 ? 500 : 1000)
+
+// 2026-10-20 → 10월 20일
+const formatDay = (ymd) => (ymd ? `${Number(ymd.slice(5, 7))}월 ${Number(ymd.slice(8, 10))}일` : '')
+
 // 순위 표시
 const rankMark = (rank) => ({ 1: '🥇', 2: '🥈', 3: '🥉' })[rank] ?? rank
 
@@ -74,8 +83,10 @@ function MockTradePage() {
 
   // 주문 입력
   const [side, setSide] = useState('BUY')
+  const [orderType, setOrderType] = useState('MARKET')   // MARKET | LIMIT
   const [stockId, setStockId] = useState(null)
   const [quantity, setQuantity] = useState('')
+  const [limitPrice, setLimitPrice] = useState('')
   const [ordering, setOrdering] = useState(false)
   const [orderMsg, setOrderMsg] = useState(null)   // { type: 'ok' | 'error', text }
 
@@ -136,6 +147,8 @@ function MockTradePage() {
   // ===== 주문 종목 =====
   const stocks = useMemo(() => data?.stocks ?? [], [data])
   const holdings = useMemo(() => data?.holdings ?? [], [data])
+  const pendingOrders = useMemo(() => data?.pendingOrders ?? [], [data])
+  const market = data?.market
 
   // 선택 종목: 직접 고른 것 → 주소의 종목 → 첫 번째 종목
   const selectedId = stockId
@@ -145,11 +158,39 @@ function MockTradePage() {
   const holding = holdings.find((h) => h.stockId === selectedId)
 
   const price = Number(selected?.price ?? 0)
+  const isLimit = orderType === 'LIMIT'
+  const orderPrice = isLimit ? (Number(limitPrice) || 0) : price   // 수량·금액 계산에 쓰는 가격
   const qty = Number(quantity) || 0
   const cash = Number(data?.account?.cash ?? 0)
+  const sellable = holding?.sellable ?? 0
   const maxQty = side === 'BUY'
-    ? (price > 0 ? Math.floor(cash / price) : 0)
-    : (holding?.quantity ?? 0)
+    ? (orderPrice > 0 ? Math.floor(cash / orderPrice) : 0)
+    : sellable
+
+  // 종목 고르기 (지정가는 그 종목 현재가로 다시 맞춤)
+  const selectStock = (id) => {
+    const s = stocks.find((x) => x.stockId === id)
+    setStockId(id)
+    setQuantity('')
+    setLimitPrice(s ? String(Math.round(Number(s.price))) : '')
+    setOrderMsg(null)
+  }
+
+  // 시장가 / 지정가 바꾸기
+  const changeOrderType = (type) => {
+    setOrderType(type)
+    setLimitPrice(price > 0 ? String(Math.round(price)) : '')
+    setOrderMsg(null)
+  }
+
+  // 지정가 한 호가씩 올리고 내리기
+  const stepPrice = (dir) => {
+    const now = Number(limitPrice) || Math.round(price)
+    const tick = tickSize(dir > 0 ? now : now - 1)
+    const next = dir > 0 ? Math.floor(now / tick) * tick + tick : Math.ceil(now / tick) * tick - tick
+    setLimitPrice(String(Math.max(tick, next)))
+    setOrderMsg(null)
+  }
 
   const pickQuick = (rate) => {
     const n = Math.floor(maxQty * rate)
@@ -171,7 +212,13 @@ function MockTradePage() {
       const res = await fetch('/api/mock/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stockId: selected.stockId, side, quantity: qty }),
+        body: JSON.stringify({
+          stockId: selected.stockId,
+          side,
+          quantity: qty,
+          orderType,
+          limitPrice: isLimit ? orderPrice : null,
+        }),
       })
       const json = await res.json()
       if (!json.success) {
@@ -179,17 +226,37 @@ function MockTradePage() {
         return
       }
       const t = json.trade
-      const profitText = t.side === 'SELL' ? ` · 실현손익 ${signedWon(t.profit)}원` : ''
-      setOrderMsg({
-        type: 'ok',
-        text: `${t.name} ${won(t.quantity)}주 ${t.side === 'BUY' ? '매수' : '매도'} 체결 (${won(t.price)}원)${profitText}`,
-      })
+      const sideText = t.side === 'BUY' ? '매수' : '매도'
+      if (t.status === 'PENDING') {
+        setOrderMsg({
+          type: 'ok',
+          text: `지정가 주문 접수: ${t.name} ${won(t.quantity)}주 ${won(t.limitPrice)}원 ${sideText} · ${formatDay(t.orderDate)} 장 마감까지 기다려요`,
+        })
+      } else {
+        const profitText = t.side === 'SELL' ? ` · 실현손익 ${signedWon(t.profit)}원` : ''
+        setOrderMsg({
+          type: 'ok',
+          text: `${t.name} ${won(t.quantity)}주 ${sideText} 체결 (${won(t.price)}원)${profitText}`,
+        })
+      }
       setQuantity('')
       await Promise.all([loadAccount(), loadTrades(1), loadRanking()])
     } catch {
       setOrderMsg({ type: 'error', text: '서버에 연결할 수 없습니다.' })
     } finally {
       setOrdering(false)
+    }
+  }
+
+  // ===== 지정가 주문 취소 =====
+  const cancelOrder = async (orderId) => {
+    try {
+      const res = await fetch(`/api/mock/orders/${orderId}/cancel`, { method: 'POST' })
+      const json = await res.json()
+      setOrderMsg(json.success ? { type: 'ok', text: '주문을 취소했어요.' } : { type: 'error', text: json.message })
+      await loadAccount()
+    } catch {
+      setOrderMsg({ type: 'error', text: '서버에 연결할 수 없습니다.' })
     }
   }
 
@@ -202,7 +269,7 @@ function MockTradePage() {
         setOrderMsg({ type: 'error', text: json.message })
         return
       }
-      setOrderMsg({ type: 'ok', text: '계좌를 1,000만 원으로 초기화했어요.' })
+      setOrderMsg({ type: 'ok', text: '계좌를 1,000만 원으로 초기화했어요. (미체결 주문도 모두 취소)' })
       await Promise.all([loadAccount(), loadTrades(1), loadRanking()])
     } finally {
       setConfirmReset(false)
@@ -242,7 +309,7 @@ function MockTradePage() {
           )}
         </ol>
       )}
-      <p className="mock-note">총자산 = 현금 + 보유 주식 평가금액 · 거래 1번 이상 한 계좌만</p>
+      <p className="mock-note">총자산 = 현금 + 주문에 묶인 돈 + 보유 주식 평가금액 · 거래 1번 이상 한 계좌만</p>
     </section>
   )
 
@@ -264,7 +331,7 @@ function MockTradePage() {
             <h1>가상 1,000만 원으로 모의투자</h1>
             <p>실제 시세로 사고팔고, 수익률 랭킹에 도전해보세요. 진짜 돈은 들지 않아요.</p>
             <ul>
-              <li>토스증권 현재가로 체결되는 시장가 주문</li>
+              <li>토스증권 실시간 가격으로 체결되는 시장가 · 지정가 주문</li>
               <li>평균 단가 · 평가손익 · 종목 비중 자동 계산</li>
               <li>AI 비서에게 "내 포트폴리오 어때?" 물어보기</li>
             </ul>
@@ -297,6 +364,9 @@ function MockTradePage() {
         <div className="mock-summary-item">
           <span className="mock-label">주문 가능 현금</span>
           <strong>{won(account.cash)}원</strong>
+          {Number(account.pendingCash) > 0 && (
+            <span className="mock-small mock-muted">매수 주문 대기 {won(account.pendingCash)}원</span>
+          )}
         </div>
         <div className="mock-summary-item">
           <span className="mock-label">주식 평가금액</span>
@@ -314,7 +384,7 @@ function MockTradePage() {
             <button type="button" className="mock-reset" onClick={() => setConfirmReset(true)}>계좌 초기화</button>
           ) : (
             <span className="mock-reset-confirm">
-              보유 종목·거래 내역이 모두 지워져요.
+              보유 종목·주문·거래 내역이 모두 지워져요.
               <button type="button" className="mock-reset-yes" onClick={doReset}>초기화</button>
               <button type="button" className="mock-reset-no" onClick={() => setConfirmReset(false)}>취소</button>
             </span>
@@ -352,7 +422,7 @@ function MockTradePage() {
                     <tr
                       key={h.stockId}
                       className={h.stockId === selectedId ? 'mock-row-active' : ''}
-                      onClick={() => { setStockId(h.stockId); setQuantity(''); setOrderMsg(null) }}
+                      onClick={() => selectStock(h.stockId)}
                       title="눌러서 주문 칸에 이 종목 선택"
                     >
                       <td className="mock-cell-name">
@@ -412,7 +482,7 @@ function MockTradePage() {
                       <td className="mock-cell-name"><strong>{t.name}</strong></td>
                       <td>
                         <span className={`mock-side-chip ${t.side === 'BUY' ? 'mock-side-chip-buy' : 'mock-side-chip-sell'}`}>
-                          {t.side === 'BUY' ? '매수' : '매도'}
+                          {t.orderType === 'LIMIT' ? '지정 ' : ''}{t.side === 'BUY' ? '매수' : '매도'}
                         </span>
                       </td>
                       <td data-label="수량">{won(t.quantity)}주</td>
@@ -432,7 +502,7 @@ function MockTradePage() {
           </section>
         </div>
 
-        {/* 오른쪽: 주문 + 랭킹 */}
+        {/* 오른쪽: 주문 + 미체결 주문 + 랭킹 */}
         <div className="mock-col-side">
           {/* ===== 주문 ===== */}
           <section className="mock-card mock-order">
@@ -453,11 +523,25 @@ function MockTradePage() {
               </button>
             </div>
 
+            {/* 시장가 / 지정가 */}
+            <div className="mock-type-tabs">
+              {[['MARKET', '시장가'], ['LIMIT', '지정가']].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`mock-type-tab ${orderType === value ? 'mock-type-active' : ''}`}
+                  onClick={() => changeOrderType(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <label className="mock-field">
               <span>종목</span>
               <select
                 value={selectedId ?? ''}
-                onChange={(e) => { setStockId(Number(e.target.value)); setQuantity(''); setOrderMsg(null) }}
+                onChange={(e) => selectStock(Number(e.target.value))}
               >
                 {stocks.map((s) => (
                   <option key={s.stockId} value={s.stockId}>{s.name} ({s.symbol})</option>
@@ -468,8 +552,45 @@ function MockTradePage() {
             <div className="mock-price-box">
               <span className="mock-label">{priceLabel(selected)}</span>
               <strong>{won(selected?.price)}원</strong>
-              {selected?.priceSource === 'CLOSE' && <span className="mock-badge">실시간 시세를 못 받아 최근 종가로 체결돼요</span>}
+              {selected?.priceSource === 'CLOSE' && (
+                <span className="mock-badge">
+                  {isLimit ? '실시간 시세를 못 받는 동안은 지정가 주문이 체결되지 않아요' : '실시간 시세를 못 받아 최근 종가로 체결돼요'}
+                </span>
+              )}
             </div>
+
+            {/* 지정가: 가격 입력 (± 버튼은 한 호가씩) */}
+            {isLimit && (
+              <div className="mock-field">
+                <span className="mock-field-row">
+                  가격
+                  <button type="button" className="mock-link-btn" onClick={() => changeOrderType('LIMIT')}>현재가로</button>
+                </span>
+                <div className="mock-qty">
+                  <button type="button" onClick={() => stepPrice(-1)} aria-label="한 호가 내리기">−</button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min="1"
+                    placeholder="0"
+                    value={limitPrice}
+                    onChange={(e) => { setLimitPrice(e.target.value.replace(/[^0-9]/g, '')); setOrderMsg(null) }}
+                    aria-label="지정가"
+                  />
+                  <span className="mock-qty-unit">원</span>
+                  <button type="button" onClick={() => stepPrice(1)} aria-label="한 호가 올리기">+</button>
+                </div>
+                {orderPrice > 0 && price > 0 && (
+                  <span className={`mock-price-gap ${tone(orderPrice - price)}`}>
+                    현재가 대비 {signedRate(((orderPrice - price) / price) * 100)}
+                    {' · '}
+                    {side === 'BUY'
+                      ? (orderPrice >= price ? '지금 가격 이상이라 장중엔 바로 체결돼요' : '이 가격까지 내려오면 체결')
+                      : (orderPrice <= price ? '지금 가격 이하라 장중엔 바로 체결돼요' : '이 가격까지 오르면 체결')}
+                  </span>
+                )}
+              </div>
+            )}
 
             <label className="mock-field">
               <span>수량</span>
@@ -500,25 +621,77 @@ function MockTradePage() {
               {side === 'BUY' ? (
                 <div><dt>주문 가능</dt><dd>{won(cash)}원 · 최대 {won(maxQty)}주</dd></div>
               ) : (
-                <div><dt>보유 수량</dt><dd>{won(holding?.quantity ?? 0)}주{holding && ` · 평균 ${won(holding.avgPrice)}원`}</dd></div>
+                <div>
+                  <dt>매도 가능</dt>
+                  <dd>
+                    {won(sellable)}주
+                    {holding && sellable !== holding.quantity && ` (보유 ${won(holding.quantity)}주)`}
+                    {holding && ` · 평균 ${won(holding.avgPrice)}원`}
+                  </dd>
+                </div>
               )}
-              <div className="mock-order-total"><dt>예상 금액</dt><dd>{won(price * qty)}원</dd></div>
+              <div className="mock-order-total">
+                <dt>{isLimit ? (side === 'BUY' ? '묶어둘 금액' : '예상 금액') : '예상 금액'}</dt>
+                <dd>{won(orderPrice * qty)}원</dd>
+              </div>
             </dl>
 
             <button
               type="button"
               className={`mock-submit ${side === 'BUY' ? 'mock-submit-buy' : 'mock-submit-sell'}`}
-              disabled={!selected || qty < 1 || ordering}
+              disabled={!selected || qty < 1 || ordering || (isLimit && orderPrice < 1)}
               onClick={submitOrder}
             >
               {ordering
                 ? '주문 중...'
-                : `${selected?.name ?? ''} ${qty > 0 ? `${won(qty)}주 ` : ''}${side === 'BUY' ? '매수' : '매도'}`}
+                : `${selected?.name ?? ''} ${qty > 0 ? `${won(qty)}주 ` : ''}${isLimit ? '지정가 ' : ''}${side === 'BUY' ? '매수' : '매도'}`}
             </button>
 
             {orderMsg && <p className={`mock-msg mock-msg-${orderMsg.type}`}>{orderMsg.text}</p>}
 
-            <p className="mock-note">시장가 주문 · 수수료·세금 없음 · 주문하는 순간의 가격으로 체결</p>
+            <p className="mock-note">
+              {isLimit
+                ? (market?.open
+                  ? '정규장(09:00~15:30)에 1분마다 가격을 확인해서 체결 · 오늘 장 마감까지 안 되면 자동 취소, 묶어둔 돈은 돌려받아요'
+                  : `지금은 장 시간이 아니에요 · ${formatDay(market?.tradingDay)} 정규장(09:00~15:30)에 체결을 기다리고, 그날 장 마감까지 안 되면 자동 취소`)
+                : '시장가 주문 · 수수료·세금 없음 · 주문하는 순간의 가격으로 바로 체결'}
+            </p>
+          </section>
+
+          {/* ===== 미체결 주문 (주문 칸 바로 아래) ===== */}
+          <section className="mock-card mock-pending">
+            <div className="mock-card-head">
+              <h2>미체결 주문</h2>
+              <span className="mock-muted">{pendingOrders.length}건</span>
+            </div>
+            {pendingOrders.length === 0 ? (
+              <p className="mock-empty mock-empty-small">체결을 기다리는 지정가 주문이 없어요.</p>
+            ) : (
+              <ul className="mock-pending-list">
+                {pendingOrders.map((o) => {
+                  const gap = o.price ? ((Number(o.limitPrice) - Number(o.price)) / Number(o.price)) * 100 : null
+                  return (
+                    <li key={o.orderId} className="mock-pending-item">
+                      <div className="mock-pending-main">
+                        <span className={`mock-side-chip ${o.side === 'BUY' ? 'mock-side-chip-buy' : 'mock-side-chip-sell'}`}>
+                          {o.side === 'BUY' ? '매수' : '매도'}
+                        </span>
+                        <strong>{o.name}</strong>
+                        <span className="mock-pending-qty">{won(o.quantity)}주</span>
+                      </div>
+                      <div className="mock-pending-sub">
+                        <span>
+                          지정가 <b>{won(o.limitPrice)}</b>
+                          {gap !== null && <em className={tone(gap)}> ({signedRate(gap)})</em>}
+                        </span>
+                        <span className="mock-muted">{formatDay(o.orderDate)}까지</span>
+                      </div>
+                      <button type="button" className="mock-cancel" onClick={() => cancelOrder(o.orderId)}>취소</button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </section>
 
           {/* ===== 랭킹 ===== */}

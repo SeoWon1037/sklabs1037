@@ -89,7 +89,7 @@ public class AiChatServiceImpl implements IAiChatService {
                             "days", Map.of("type", "integer", "description", "최근 며칠 기사인지 (1~7, 기본 3)")),
                     List.of("query")),
             tool("get_my_mock_portfolio",
-                    "질문한 사용자 본인의 모의투자 계좌를 조회한다. 현금, 총자산, 시작 자금 대비 수익률, 보유 종목별 수량·평균 단가·현재가·평가손익·비중(%), 최근 거래 5건을 준다.",
+                    "질문한 사용자 본인의 모의투자 계좌를 조회한다. 현금, 총자산, 시작 자금 대비 수익률, 보유 종목별 수량·평균 단가·현재가·평가손익·비중(%), 체결 대기 중인 지정가 주문, 최근 거래 5건을 준다.",
                     Map.of(),
                     List.of())
     );
@@ -349,6 +349,7 @@ public class AiChatServiceImpl implements IAiChatService {
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("account", account.get("account"));
                 result.put("holdings", account.get("holdings"));
+                result.put("pendingOrders", account.get("pendingOrders"));
                 result.put("recentTrades", mockTradeService.getTrades(userId, 1, 5).get("trades"));
                 result.put("note", "가격 출처 LIVE=토스 현재가, CLOSE=최근 종가. 금액 단위는 원, 비율 단위는 %.");
 

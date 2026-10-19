@@ -8,18 +8,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.*;
 
 /**
  * 모의투자 Service 구현
  *
  * 주문 처리 (한 트랜잭션)
- *   1. 계좌 행을 잠금 (SELECT ... FOR UPDATE) → 같은 사람의 주문은 한 줄로 서서 하나씩 처리
+ *   1. 계좌 행을 잠금 (SELECT ... FOR UPDATE) → 같은 사람의 주문·체결·취소는 한 줄로 서서 하나씩 처리
  *   2. 현금 / 보유 수량 확인
  *   3. 보유 종목(수량·평균 단가), 현금, 거래 내역을 같이 저장
  *   → 중간에 하나라도 실패하면 전부 취소 (돈만 빠지고 주식이 안 들어오는 일 없음)
- *   → 버튼을 빠르게 두 번 눌러도 두 번째 주문은 첫 번째가 끝난 잔고로 다시 확인
  *   → 그래도 혹시 모를 경우를 위해 DB에도 CASH >= 0, QUANTITY > 0 CHECK 조건
+ *
+ * 시장가: 지금 가격으로 바로 체결
+ * 지정가: 조건이 맞을 때까지 대기
+ *   - 매수: (지정가 × 수량)만큼 현금을 미리 빼서 주문에 묶어둠 → 같은 돈으로 두 번 주문 못 함
+ *           체결되면 (묶어둔 돈 - 실제 체결 금액)을 돌려줌, 취소·만료되면 전부 돌려줌
+ *   - 매도: 주식은 그대로 두고, 대기 중인 매도 수량만큼은 다른 매도를 막음
+ *   - 체결 가격: 현재가가 지정가보다 같거나 유리하면 현재가로 (매수는 현재가 ≤ 지정가, 매도는 현재가 ≥ 지정가)
+ *   - 정규장(09:00~15:30)에 1분마다 MockOrderScheduler가 확인, 그 거래일 15:35에 미체결은 만료
  *
  * 평균 단가 (추가 매수할 때만 바뀜)
  *   (기존 수량 × 기존 평균 단가 + 이번 체결 금액) ÷ (기존 수량 + 이번 수량)
@@ -34,6 +43,12 @@ public class MockTradeServiceImpl implements IMockTradeService {
 
     // 한 번에 주문할 수 있는 최대 수량
     private static final int MAX_ORDER_QUANTITY = 100_000;
+
+    // 한 사람이 동시에 걸어둘 수 있는 지정가 주문 수
+    private static final int MAX_PENDING_ORDERS = 20;
+
+    // 지정가는 현재가 ±30% 안에서만 (실제 상·하한가 범위)
+    private static final BigDecimal PRICE_BAND = new BigDecimal("0.30");
 
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
@@ -54,7 +69,35 @@ public class MockTradeServiceImpl implements IMockTradeService {
         Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
         MockTradeVO account = mockTradeDao.selectAccount(userId);
 
-        // 1. 보유 종목별 평가
+        // 1. 미체결 주문 (종목별 대기 중인 매도 수량도 같이 계산)
+        List<Map<String, Object>> pendingOrders = new ArrayList<>();
+        Map<Long, Integer> pendingSell = new HashMap<>();
+        BigDecimal pendingCash = BigDecimal.ZERO;
+
+        for (MockTradeVO o : mockTradeDao.selectPendingOrders(userId)) {
+
+            MockTradeVO p = prices.get(o.getStockId());
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("orderId", o.getOrderId());
+            row.put("stockId", o.getStockId());
+            row.put("symbol", o.getSymbol());
+            row.put("name", o.getName());
+            row.put("side", o.getSide());
+            row.put("quantity", o.getQuantity());
+            row.put("limitPrice", o.getLimitPrice());
+            row.put("reservedAmount", o.getReservedAmount());
+            row.put("orderDate", o.getOrderDate().toString());
+            row.put("price", p == null ? null : p.getPrice());
+            row.put("insAt", o.getInsAt());
+            pendingOrders.add(row);
+
+            if ("SELL".equals(o.getSide())) pendingSell.merge(o.getStockId(), o.getQuantity(), Integer::sum);
+            pendingCash = pendingCash.add(o.getReservedAmount());
+
+        }
+
+        // 2. 보유 종목별 평가
         List<Map<String, Object>> holdings = new ArrayList<>();
         BigDecimal stockValue = BigDecimal.ZERO;
         BigDecimal buyTotal = BigDecimal.ZERO;
@@ -74,6 +117,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
             row.put("symbol", h.getSymbol());
             row.put("name", h.getName());
             row.put("quantity", h.getQuantity());
+            row.put("sellable", h.getQuantity() - pendingSell.getOrDefault(h.getStockId(), 0));   // 매도 주문 걸린 수량 빼고
             row.put("avgPrice", h.getAvgPrice());
             row.put("price", price);
             row.put("priceSource", p == null ? "AVG" : p.getPriceSource());
@@ -88,17 +132,20 @@ public class MockTradeServiceImpl implements IMockTradeService {
 
         }
 
-        // 2. 계좌 합계
-        BigDecimal totalAsset = account.getCash().add(stockValue);
+        // 3. 계좌 합계 (총자산 = 현금 + 매수 주문에 묶인 돈 + 주식 평가금액)
+        BigDecimal totalAsset = account.getCash().add(pendingCash).add(stockValue);
         BigDecimal totalProfit = totalAsset.subtract(account.getInitCash());
 
-        // 3. 종목 비중 (총자산 대비 %)
+        // 4. 종목 비중 (총자산 대비 %)
         for (Map<String, Object> row : holdings) {
             row.put("weight", rate((BigDecimal) row.get("value"), totalAsset));
         }
 
+        ZonedDateTime now = MockMarketHours.now();
+
         Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("cash", account.getCash());
+        summary.put("cash", account.getCash());                      // 주문 가능 현금
+        summary.put("pendingCash", pendingCash);                     // 매수 주문에 묶인 돈
         summary.put("initCash", account.getInitCash());
         summary.put("stockValue", stockValue);
         summary.put("buyTotal", buyTotal);
@@ -108,10 +155,16 @@ public class MockTradeServiceImpl implements IMockTradeService {
         summary.put("returnRate", rate(totalProfit, account.getInitCash()));
         summary.put("resetCount", account.getResetCount());
 
+        Map<String, Object> market = new LinkedHashMap<>();
+        market.put("open", MockMarketHours.isOpen(now));             // 지금 정규장인지
+        market.put("tradingDay", MockMarketHours.tradingDay(now).toString());   // 지금 지정가 주문을 넣으면 유효한 거래일
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("account", summary);
         result.put("holdings", holdings);
+        result.put("pendingOrders", pendingOrders);
         result.put("stocks", stockList(prices));
+        result.put("market", market);
 
         return result;
 
@@ -137,6 +190,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
             row.put("symbol", t.getSymbol());
             row.put("name", t.getName());
             row.put("side", t.getSide());
+            row.put("orderType", t.getOrderId() == null ? "MARKET" : "LIMIT");
             row.put("quantity", t.getQuantity());
             row.put("price", t.getPrice());
             row.put("amount", t.getAmount());
@@ -158,32 +212,296 @@ public class MockTradeServiceImpl implements IMockTradeService {
     }
 
     // ============================================
-    // 주문 (시장가)
+    // 주문
     // ============================================
     @Override
     @Transactional
-    public Map<String, Object> order(Long userId, Long stockId, String side, int quantity) {
+    public Map<String, Object> order(Long userId, MockTradeVO request) {
 
         // 1. 입력 확인
+        Long stockId = request.getStockId();
+        String side = request.getSide();
+        int quantity = (request.getQuantity() == null) ? 0 : request.getQuantity();
+        boolean limit = "LIMIT".equals(request.getOrderType());
+
         if (stockId == null) throw new IllegalArgumentException("종목을 선택해주세요.");
         if (!"BUY".equals(side) && !"SELL".equals(side)) throw new IllegalArgumentException("매수 / 매도를 선택해주세요.");
         if (quantity < 1) throw new IllegalArgumentException("수량은 1주 이상 입력해주세요.");
-        if (quantity > MAX_ORDER_QUANTITY) throw new IllegalArgumentException("한 번에 " + String.format("%,d", MAX_ORDER_QUANTITY) + "주까지 주문할 수 있어요.");
+        if (quantity > MAX_ORDER_QUANTITY) throw new IllegalArgumentException("한 번에 " + won(MAX_ORDER_QUANTITY) + "주까지 주문할 수 있어요.");
 
         MockTradeVO stock = mockPriceService.getPrices().get(stockId);
         if (stock == null) throw new IllegalArgumentException("주문할 수 없는 종목입니다.");
 
-        BigDecimal price = stock.getPrice();
-        BigDecimal qty = BigDecimal.valueOf(quantity);
-        BigDecimal amount = price.multiply(qty);
-
-        // 2. 계좌 잠금 (이 트랜잭션이 끝날 때까지 같은 계좌의 다른 주문은 대기)
+        // 2. 계좌 잠금 (이 트랜잭션이 끝날 때까지 같은 계좌의 다른 주문·체결은 대기)
         ensureAccount(userId);
         MockTradeVO account = mockTradeDao.selectAccountForUpdate(userId);
 
+        return limit
+                ? placeLimitOrder(userId, account, stock, side, quantity, request.getLimitPrice())
+                : placeMarketOrder(userId, account, stock, side, quantity);
+
+    }
+
+    // 시장가: 지금 가격으로 바로 체결
+    private Map<String, Object> placeMarketOrder(Long userId, MockTradeVO account, MockTradeVO stock, String side, int quantity) {
+
+        BigDecimal price = stock.getPrice();
+        BigDecimal amount = price.multiply(BigDecimal.valueOf(quantity));
+
+        if ("BUY".equals(side)) {
+
+            if (account.getCash().compareTo(amount) < 0) {
+
+                long max = account.getCash().divide(price, 0, RoundingMode.DOWN).longValue();
+                throw new IllegalArgumentException("현금이 부족해요. 지금 가격으로 최대 " + won(max) + "주까지 살 수 있어요.");
+
+            }
+
+        } else {
+
+            checkSellable(userId, stock.getStockId(), quantity);
+
+        }
+
+        MockTradeVO trade = execute(userId, stock, side, quantity, price, account.getCash(), null);
+
+        Map<String, Object> result = tradeResult(stock, trade);
+        result.put("orderType", "MARKET");
+        result.put("status", "FILLED");
+
+        return result;
+
+    }
+
+    // 지정가: 돈/수량 묶고 대기 (정규장이고 조건이 이미 맞으면 바로 체결)
+    private Map<String, Object> placeLimitOrder(Long userId, MockTradeVO account, MockTradeVO stock,
+                                                String side, int quantity, BigDecimal limitPrice) {
+
+        // 1. 지정가 확인 (호가 단위, 현재가 ±30%)
+        if (limitPrice == null || limitPrice.signum() <= 0) throw new IllegalArgumentException("지정가를 입력해주세요.");
+
+        limitPrice = limitPrice.setScale(0, RoundingMode.DOWN);
+        BigDecimal tick = MockMarketHours.tickSize(limitPrice);
+
+        if (limitPrice.remainder(tick).signum() != 0) {
+            throw new IllegalArgumentException("이 가격대는 " + won(tick.longValue()) + "원 단위로 주문할 수 있어요.");
+        }
+
+        BigDecimal current = stock.getPrice();
+        BigDecimal band = current.multiply(PRICE_BAND);
+
+        if (limitPrice.compareTo(current.add(band)) > 0 || limitPrice.compareTo(current.subtract(band)) < 0) {
+            throw new IllegalArgumentException("지정가는 현재가의 ±30% 안에서만 정할 수 있어요.");
+        }
+
+        if (mockTradeDao.countPendingOrders(userId) >= MAX_PENDING_ORDERS) {
+            throw new IllegalArgumentException("미체결 주문은 " + MAX_PENDING_ORDERS + "개까지 걸 수 있어요. 기존 주문을 먼저 취소해주세요.");
+        }
+
+        // 2. 매수는 돈을 묶고, 매도는 팔 수 있는 수량 확인
+        BigDecimal reserved = BigDecimal.ZERO;
+
+        if ("BUY".equals(side)) {
+
+            reserved = limitPrice.multiply(BigDecimal.valueOf(quantity));
+
+            if (account.getCash().compareTo(reserved) < 0) {
+
+                long max = account.getCash().divide(limitPrice, 0, RoundingMode.DOWN).longValue();
+                throw new IllegalArgumentException("현금이 부족해요. 이 가격으로 최대 " + won(max) + "주까지 주문할 수 있어요.");
+
+            }
+
+            account.setCash(account.getCash().subtract(reserved));
+            updateCash(userId, account.getCash());
+
+        } else {
+
+            checkSellable(userId, stock.getStockId(), quantity);
+
+        }
+
+        // 3. 주문 저장
+        ZonedDateTime now = MockMarketHours.now();
+
+        MockTradeVO order = new MockTradeVO();
+        order.setUserId(userId);
+        order.setStockId(stock.getStockId());
+        order.setSide(side);
+        order.setQuantity(quantity);
+        order.setLimitPrice(limitPrice);
+        order.setReservedAmount(reserved);
+        order.setOrderDate(MockMarketHours.tradingDay(now));
+        mockTradeDao.insertOrder(order);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("orderType", "LIMIT");
+        result.put("orderId", order.getOrderId());
+        result.put("symbol", stock.getSymbol());
+        result.put("name", stock.getName());
+        result.put("side", side);
+        result.put("quantity", quantity);
+        result.put("limitPrice", limitPrice);
+        result.put("orderDate", order.getOrderDate().toString());
+
+        // 4. 정규장인데 조건이 이미 맞으면 바로 체결 (실시간 가격일 때만)
+        if (MockMarketHours.isOpen(now) && "LIVE".equals(stock.getPriceSource()) && crosses(side, current, limitPrice)) {
+
+            order.setStatus("PENDING");
+            MockTradeVO trade = fillLocked(account, order, stock);
+
+            result.putAll(tradeResult(stock, trade));
+            result.put("status", "FILLED");
+
+        } else {
+
+            result.put("status", "PENDING");
+            result.put("cash", account.getCash());
+
+        }
+
+        return result;
+
+    }
+
+    // ============================================
+    // 지정가 주문 취소 / 체결 / 만료
+    // ============================================
+    @Override
+    @Transactional
+    public void cancelOrder(Long userId, Long orderId) {
+
+        MockTradeVO order = (orderId == null) ? null : mockTradeDao.selectOrder(orderId);
+
+        if (order == null || !order.getUserId().equals(userId)) throw new IllegalArgumentException("주문을 찾을 수 없습니다.");
+
+        if (!closeOrder(order.getUserId(), orderId, "CANCELED")) {
+            throw new IllegalArgumentException("이미 체결됐거나 취소된 주문입니다.");
+        }
+
+    }
+
+    @Override
+    public List<Long> findFillableOrderIds() {
+
+        List<MockTradeVO> orders = mockTradeDao.selectMatchableOrders(MockMarketHours.now().toLocalDate());
+        if (orders.isEmpty()) return List.of();   // 대기 주문이 없으면 토스도 호출하지 않음
+
+        Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
+        List<Long> ids = new ArrayList<>();
+
+        for (MockTradeVO o : orders) {
+
+            MockTradeVO p = prices.get(o.getStockId());
+
+            // 실시간 가격일 때만 체결 (토스 실패로 종가를 쓰는 중이면 기다림)
+            if (p != null && "LIVE".equals(p.getPriceSource()) && crosses(o.getSide(), p.getPrice(), o.getLimitPrice())) {
+                ids.add(o.getOrderId());
+            }
+
+        }
+
+        return ids;
+
+    }
+
+    @Override
+    @Transactional
+    public boolean fillOrder(Long orderId) {
+
+        MockTradeVO first = mockTradeDao.selectOrder(orderId);
+        if (first == null || !"PENDING".equals(first.getStatus())) return false;
+
+        // 계좌 잠금 → 주문 상태 다시 확인 (그사이 취소됐을 수 있음)
+        MockTradeVO account = mockTradeDao.selectAccountForUpdate(first.getUserId());
+        MockTradeVO order = mockTradeDao.selectOrderForUpdate(orderId);
+        if (order == null || !"PENDING".equals(order.getStatus())) return false;
+
+        MockTradeVO stock = mockPriceService.getPrices().get(order.getStockId());
+        if (stock == null || !"LIVE".equals(stock.getPriceSource())) return false;
+        if (!crosses(order.getSide(), stock.getPrice(), order.getLimitPrice())) return false;
+
+        fillLocked(account, order, stock);
+
+        return true;
+
+    }
+
+    @Override
+    public List<Long> findExpiredOrderIds(LocalDate upTo) {
+
+        MockTradeVO param = new MockTradeVO();
+        param.setOrderDate(upTo);
+
+        return mockTradeDao.selectExpiredOrders(param).stream().map(MockTradeVO::getOrderId).toList();
+
+    }
+
+    @Override
+    @Transactional
+    public boolean expireOrder(Long orderId) {
+
+        MockTradeVO order = mockTradeDao.selectOrder(orderId);
+
+        return order != null && closeOrder(order.getUserId(), orderId, "EXPIRED");
+
+    }
+
+    // 지정가 체결 (계좌·주문이 잠긴 상태에서만 호출)
+    private MockTradeVO fillLocked(MockTradeVO account, MockTradeVO order, MockTradeVO stock) {
+
+        // 매수: 묶어둔 돈을 현금으로 되돌린 다음 실제 체결 금액만큼 뺌 (차액 환불)
+        BigDecimal cashBefore = account.getCash().add(order.getReservedAmount());
+
+        MockTradeVO trade = execute(order.getUserId(), stock, order.getSide(), order.getQuantity(),
+                stock.getPrice(), cashBefore, order.getOrderId());
+
+        account.setCash(trade.getCash());
+
+        MockTradeVO status = new MockTradeVO();
+        status.setOrderId(order.getOrderId());
+        status.setStatus("FILLED");
+        status.setTradeId(trade.getTradeId());
+        mockTradeDao.updateOrderStatus(status);
+
+        return trade;
+
+    }
+
+    // 취소 / 만료: 계좌 잠금 → 주문이 아직 대기 중이면 묶어둔 돈 돌려주고 상태 변경
+    private boolean closeOrder(Long userId, Long orderId, String newStatus) {
+
+        MockTradeVO account = mockTradeDao.selectAccountForUpdate(userId);
+        MockTradeVO order = mockTradeDao.selectOrderForUpdate(orderId);
+
+        if (order == null || !"PENDING".equals(order.getStatus())) return false;
+
+        if (order.getReservedAmount().signum() > 0) {
+            updateCash(userId, account.getCash().add(order.getReservedAmount()));
+        }
+
+        MockTradeVO status = new MockTradeVO();
+        status.setOrderId(orderId);
+        status.setStatus(newStatus);
+        mockTradeDao.updateOrderStatus(status);
+
+        return true;
+
+    }
+
+    // ============================================
+    // 체결 공통: 보유 종목 · 현금 · 거래 내역 저장
+    // - cashBefore: 이번 체결에 쓸 수 있는 현금 (지정가 매수면 묶어둔 돈 포함)
+    // ============================================
+    private MockTradeVO execute(Long userId, MockTradeVO stock, String side, int quantity,
+                                BigDecimal price, BigDecimal cashBefore, Long orderId) {
+
+        BigDecimal qty = BigDecimal.valueOf(quantity);
+        BigDecimal amount = price.multiply(qty);
+
         MockTradeVO key = new MockTradeVO();
         key.setUserId(userId);
-        key.setStockId(stockId);
+        key.setStockId(stock.getStockId());
         MockTradeVO holding = mockTradeDao.selectHolding(key);
 
         int holdingQty = (holding == null) ? 0 : holding.getQuantity();
@@ -192,14 +510,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
 
         if ("BUY".equals(side)) {
 
-            // 3-1. 매수: 현금 확인 → 평균 단가 다시 계산
-            if (account.getCash().compareTo(amount) < 0) {
-
-                long max = account.getCash().divide(price, 0, RoundingMode.DOWN).longValue();
-                throw new IllegalArgumentException("현금이 부족해요. 지금 가격으로 최대 " + String.format("%,d", max) + "주까지 살 수 있어요.");
-
-            }
-
+            // 평균 단가 다시 계산
             BigDecimal oldCost = (holding == null) ? BigDecimal.ZERO
                     : holding.getAvgPrice().multiply(BigDecimal.valueOf(holdingQty));
             int newQty = holdingQty + quantity;
@@ -208,18 +519,12 @@ public class MockTradeServiceImpl implements IMockTradeService {
             key.setAvgPrice(oldCost.add(amount).divide(BigDecimal.valueOf(newQty), 2, RoundingMode.HALF_UP));
             mockTradeDao.upsertHolding(key);
 
-            cash = account.getCash().subtract(amount);
+            cash = cashBefore.subtract(amount);
 
         } else {
 
-            // 3-2. 매도: 보유 수량 확인 → 실현손익 계산 (평균 단가는 그대로)
-            if (holdingQty < quantity) {
-
-                throw new IllegalArgumentException(holdingQty == 0
-                        ? "보유하지 않은 종목입니다."
-                        : "보유 수량이 부족해요. (보유 " + String.format("%,d", holdingQty) + "주)");
-
-            }
+            // 실현손익 (평균 단가는 그대로)
+            if (holding == null || holdingQty < quantity) throw new IllegalStateException("보유 수량 부족: " + stock.getSymbol());
 
             profit = price.subtract(holding.getAvgPrice()).multiply(qty).setScale(0, RoundingMode.HALF_UP);
 
@@ -235,41 +540,27 @@ public class MockTradeServiceImpl implements IMockTradeService {
 
             }
 
-            cash = account.getCash().add(amount);
+            cash = cashBefore.add(amount);
 
         }
 
-        // 4. 현금 + 거래 내역 저장
-        MockTradeVO cashParam = new MockTradeVO();
-        cashParam.setUserId(userId);
-        cashParam.setCash(cash);
-        mockTradeDao.updateCash(cashParam);
+        updateCash(userId, cash);
 
         MockTradeVO trade = new MockTradeVO();
         trade.setUserId(userId);
-        trade.setStockId(stockId);
+        trade.setStockId(stock.getStockId());
         trade.setSide(side);
         trade.setQuantity(quantity);
         trade.setPrice(price);
         trade.setAmount(amount);
         trade.setProfit(profit);
         trade.setPriceSource(stock.getPriceSource());
+        trade.setOrderId(orderId);
         mockTradeDao.insertTrade(trade);
 
-        // 5. 체결 결과
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("tradeId", trade.getTradeId());
-        result.put("symbol", stock.getSymbol());
-        result.put("name", stock.getName());
-        result.put("side", side);
-        result.put("quantity", quantity);
-        result.put("price", price);
-        result.put("amount", amount);
-        result.put("profit", profit);
-        result.put("priceSource", stock.getPriceSource());
-        result.put("cash", cash);
+        trade.setCash(cash);
 
-        return result;
+        return trade;
 
     }
 
@@ -281,8 +572,9 @@ public class MockTradeServiceImpl implements IMockTradeService {
     public void reset(Long userId) {
 
         ensureAccount(userId);
-        mockTradeDao.selectAccountForUpdate(userId);   // 주문과 겹치지 않게 잠금
+        mockTradeDao.selectAccountForUpdate(userId);   // 주문·체결과 겹치지 않게 잠금
 
+        mockTradeDao.deleteAllOrders(userId);          // 거래 내역을 가리키고 있어서 먼저 삭제
         mockTradeDao.deleteAllHoldings(userId);
         mockTradeDao.deleteAllTrades(userId);
         mockTradeDao.resetAccount(userId);
@@ -310,12 +602,13 @@ public class MockTradeServiceImpl implements IMockTradeService {
 
         }
 
-        // 2. 회원별 총자산 · 수익률
+        // 2. 회원별 총자산 · 수익률 (총자산 = 현금 + 매수 주문에 묶인 돈 + 주식)
         List<Map<String, Object>> rows = new ArrayList<>();
 
         for (MockTradeVO a : mockTradeDao.selectRankingAccounts()) {
 
-            BigDecimal totalAsset = a.getCash().add(stockValues.getOrDefault(a.getUserId(), BigDecimal.ZERO));
+            BigDecimal pending = (a.getPendingCash() == null) ? BigDecimal.ZERO : a.getPendingCash();
+            BigDecimal totalAsset = a.getCash().add(pending).add(stockValues.getOrDefault(a.getUserId(), BigDecimal.ZERO));
 
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("nickname", a.getNickname());
@@ -370,6 +663,64 @@ public class MockTradeServiceImpl implements IMockTradeService {
 
     }
 
+    // 팔 수 있는 수량 확인 (보유 수량 - 이미 걸어둔 매도 주문 수량)
+    private void checkSellable(Long userId, Long stockId, int quantity) {
+
+        MockTradeVO key = new MockTradeVO();
+        key.setUserId(userId);
+        key.setStockId(stockId);
+
+        MockTradeVO holding = mockTradeDao.selectHolding(key);
+        int holdingQty = (holding == null) ? 0 : holding.getQuantity();
+        int pending = mockTradeDao.sumPendingSellQuantity(key);
+        int sellable = holdingQty - pending;
+
+        if (holdingQty == 0) throw new IllegalArgumentException("보유하지 않은 종목입니다.");
+
+        if (sellable < quantity) {
+            throw new IllegalArgumentException(pending > 0
+                    ? "팔 수 있는 수량이 부족해요. (보유 " + won(holdingQty) + "주 중 " + won(pending) + "주는 매도 주문 대기 중)"
+                    : "보유 수량이 부족해요. (보유 " + won(holdingQty) + "주)");
+        }
+
+    }
+
+    // 지정가 체결 조건 (매수: 현재가 ≤ 지정가 / 매도: 현재가 ≥ 지정가)
+    private boolean crosses(String side, BigDecimal price, BigDecimal limitPrice) {
+
+        return "BUY".equals(side) ? price.compareTo(limitPrice) <= 0 : price.compareTo(limitPrice) >= 0;
+
+    }
+
+    private void updateCash(Long userId, BigDecimal cash) {
+
+        MockTradeVO vo = new MockTradeVO();
+        vo.setUserId(userId);
+        vo.setCash(cash);
+
+        mockTradeDao.updateCash(vo);
+
+    }
+
+    // 체결 결과 (화면 안내용)
+    private Map<String, Object> tradeResult(MockTradeVO stock, MockTradeVO trade) {
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("tradeId", trade.getTradeId());
+        result.put("symbol", stock.getSymbol());
+        result.put("name", stock.getName());
+        result.put("side", trade.getSide());
+        result.put("quantity", trade.getQuantity());
+        result.put("price", trade.getPrice());
+        result.put("amount", trade.getAmount());
+        result.put("profit", trade.getProfit());
+        result.put("priceSource", trade.getPriceSource());
+        result.put("cash", trade.getCash());
+
+        return result;
+
+    }
+
     // 주문 화면 종목 목록
     private List<Map<String, Object>> stockList(Map<Long, MockTradeVO> prices) {
 
@@ -398,6 +749,13 @@ public class MockTradeServiceImpl implements IMockTradeService {
         if (base == null || base.signum() == 0) return BigDecimal.ZERO.setScale(2);
 
         return part.multiply(HUNDRED).divide(base, 2, RoundingMode.HALF_UP);
+
+    }
+
+    // 1,234 형식
+    private String won(long value) {
+
+        return String.format("%,d", value);
 
     }
 }

@@ -19,9 +19,12 @@ import java.util.Map;
  * 모의투자 Controller
  *
  * API 목록
- *   GET  /api/mock/account                         내 계좌 + 보유 종목 + 주문 가능 종목 → { success, loggedIn, account, holdings, stocks }
+ *   GET  /api/mock/account                         내 계좌 + 보유 종목 + 미체결 주문 + 주문 가능 종목
+ *                                                  → { success, loggedIn, account, holdings, pendingOrders, stocks, market }
  *   GET  /api/mock/trades?page=1                   내 거래 내역 (20개씩)              → { success, trades, total, page, size }
- *   POST /api/mock/order { stockId, side, quantity }  시장가 주문 (BUY / SELL)        → { success, trade }
+ *   POST /api/mock/order { stockId, side, quantity, orderType, limitPrice }
+ *                                                  주문 (MARKET 바로 체결 / LIMIT 대기) → { success, trade }
+ *   POST /api/mock/orders/{orderId}/cancel         지정가 주문 취소                   → { success }
  *   POST /api/mock/reset                           계좌 초기화                        → { success }
  *   GET  /api/mock/ranking?size=10                 수익률 랭킹 (누구나)                → { success, ranking, me, participants }
  *
@@ -107,9 +110,7 @@ public class MockTradeController {
 
         try {
 
-            int quantity = (vo.getQuantity() == null) ? 0 : vo.getQuantity();
-
-            Map<String, Object> trade = mockTradeService.order(loginUser.getId(), vo.getStockId(), vo.getSide(), quantity);
+            Map<String, Object> trade = mockTradeService.order(loginUser.getId(), vo);
 
             Map<String, Object> body = new HashMap<>();
             body.put("success", true);
@@ -126,6 +127,35 @@ public class MockTradeController {
 
             log.error("모의투자 주문 오류", e);
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "주문을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.");
+
+        }
+
+    }
+
+    // 지정가 주문 취소
+    @PostMapping("/orders/{orderId}/cancel")
+    public ResponseEntity<Map<String, Object>> cancel(@PathVariable Long orderId, HttpServletRequest request) {
+
+        UserLoginVO loginUser = getLoginUser(request);
+        if (loginUser == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
+
+        try {
+
+            mockTradeService.cancelOrder(loginUser.getId(), orderId);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", true);
+
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        } catch (Exception e) {
+
+            log.error("모의투자 주문 취소 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "주문을 취소하지 못했습니다.");
 
         }
 

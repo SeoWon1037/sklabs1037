@@ -1,7 +1,7 @@
 /* ============================================
    모의투자 화면 (/mock)
-   - PC: 요약 카드 / [보유 종목 + 거래 내역 | 주문 + 랭킹]
-   - 960px 이하: 한 줄씩 (요약 → 주문 → 보유 종목 → 거래 내역 → 랭킹)
+   - PC: 요약 카드 / [보유 종목 + 거래 내역 | 주문 + 미체결 주문 + 랭킹]
+   - 960px 이하: 한 줄씩 (요약 → 주문 → 미체결 주문 → 보유 종목 → 거래 내역 → 랭킹)
    - 640px 이하: 표를 카드 모양으로
    - 상승 빨강 / 하락 파랑 (한국 주식 관례)
    ============================================ */
@@ -208,6 +208,49 @@
   color: #fff;
 }
 
+/* 시장가 / 지정가 (매수·매도 탭보다 작게) */
+.mock-type-tabs {
+  display: flex;
+  gap: 4px;
+  margin: -6px 0 14px;
+}
+.mock-type-tab {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mock-muted);
+}
+.mock-type-active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.mock-field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mock-link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.mock-price-gap {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.mock-price-gap:not(.mock-up):not(.mock-down) {
+  color: var(--mock-muted);
+}
+
 .mock-field {
   display: flex;
   flex-direction: column;
@@ -370,6 +413,74 @@
 }
 .mock-submit-sell {
   background: var(--mock-down);
+}
+
+/* ===== 미체결 주문 ===== */
+.mock-empty-small {
+  padding: 12px 0 4px;
+  font-size: 13px;
+}
+.mock-pending-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mock-pending-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.mock-pending-item:last-child {
+  border-bottom: none;
+}
+.mock-pending-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+}
+.mock-pending-main strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mock-pending-qty {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+.mock-pending-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  grid-column: 1;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+}
+.mock-pending-sub em {
+  font-style: normal;
+  font-weight: 700;
+}
+.mock-pending-sub .mock-muted {
+  font-size: 12px;
+}
+.mock-cancel {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.mock-cancel:hover {
+  background: var(--hover);
 }
 
 .mock-msg {
@@ -639,14 +750,17 @@
   .mock-order {
     order: 1;
   }
-  .mock-holdings {
+  .mock-pending {
     order: 2;
   }
-  .mock-trades {
+  .mock-holdings {
     order: 3;
   }
-  .mock-ranking {
+  .mock-trades {
     order: 4;
+  }
+  .mock-ranking {
+    order: 5;
   }
 
   .mock-guest {

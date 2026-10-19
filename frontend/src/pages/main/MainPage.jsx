@@ -4,12 +4,14 @@
 // - 2×2 배치 (위·아래 줄마다 양쪽 박스 끝이 맞음)
 //   · 왼쪽 위: 뉴스 + 💬토론 탭 (박스 안에서 스크롤)    · 오른쪽 위: 로그인 + 내 관심 종목(로그인 시) + 오늘의 시세
 //   · 왼쪽 아래: 날씨                       · 오른쪽 아래: 💬 지금 토론 중 (최근 글 3개)
+// - 맨 아래 (전체 폭): 🏆 모의투자 수익률 랭킹 TOP 5 (MockRankingBox)
 // - 백엔드 API
 //   GET /api/news?category=&stockId=&size=   뉴스 목록
 //   GET /api/news/summary?stockId=           AI 뉴스 요약 (NewsSummaryBox)
 //   GET /api/stock/dashboard?days=5          종목 시세 (탭 이름 + 시세 위젯)
 //   GET /api/user/me                         로그인 상태
 //   GET /api/stock/board/recent?size=        전 종목 최근 토론 글 (💬 토론 탭 + 지금 토론 중 박스)
+//   GET /api/mock/ranking?size=5             모의투자 수익률 랭킹 (MockRankingBox)
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -17,10 +19,12 @@ import './MainPage.css'
 import WeatherBox from '../../components/weather/WeatherBox'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import WatchlistBox from '../../components/stock/WatchlistBox'
+import MockRankingBox from '../../components/mock/MockRankingBox'
 
 // 바로가기 아이콘
 const SHORTCUTS = [
   { icon: '📈', label: '주식 종목', to: '/stock' },
+  { icon: '💰', label: '모의투자', to: '/mock' },
   { icon: '🤖', label: 'AI 비서', to: '/ai' },
   { icon: '🍀', label: '오늘의 숫자', to: '/lotto' },
   { icon: '🏭', label: '기업 정보', to: `/ai?q=${encodeURIComponent('')}` },
@@ -393,6 +397,9 @@ function MainPage() {
             토론 글 더보기 →
           </button>
         </section>
+
+        {/* ===== 맨 아래 (전체 폭): 모의투자 수익률 랭킹 TOP 5 ===== */}
+        <MockRankingBox />
 
       </div>
 

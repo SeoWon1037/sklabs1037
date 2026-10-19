@@ -5,7 +5,7 @@
 <!--
     모의투자 SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
-    사용 테이블: T_MOCK_ACCOUNT, T_MOCK_HOLDING, T_MOCK_TRADE (+ T_STOCK, T_STOCK_PRICE, T_USER)
+    사용 테이블: T_MOCK_ACCOUNT, T_MOCK_HOLDING, T_MOCK_TRADE, T_MOCK_ORDER (+ T_STOCK, T_STOCK_PRICE, T_USER)
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.mock.dao.MockTradeDao">
 
@@ -189,6 +189,7 @@
               ,AMOUNT
               ,PROFIT
               ,PRICE_SOURCE
+              ,ORDER_ID
         ) VALUES (
                #{userId}
               ,#{stockId}
@@ -198,6 +199,7 @@
               ,#{amount}
               ,#{profit}
               ,#{priceSource}
+              ,#{orderId}
         )
     </insert>
 
@@ -218,6 +220,7 @@
                ,T.AMOUNT
                ,T.PROFIT
                ,T.PRICE_SOURCE
+               ,T.ORDER_ID
                ,(EXTRACT(EPOCH FROM T.INS_DAY) * 1000)::BIGINT AS INS_AT
           FROM T_MOCK_TRADE T
           JOIN T_STOCK S ON S.ID = T.STOCK_ID
@@ -245,6 +248,164 @@
     </delete>
 
     <!-- ============================================
+         지정가 주문
+         ============================================ -->
+
+    <!-- 주문 넣기 -->
+    <insert id="insertOrder"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO"
+            useGeneratedKeys="true" keyProperty="orderId" keyColumn="id">
+        INSERT INTO T_MOCK_ORDER (
+               USER_ID
+              ,STOCK_ID
+              ,SIDE
+              ,QUANTITY
+              ,LIMIT_PRICE
+              ,RESERVED_AMOUNT
+              ,ORDER_DATE
+        ) VALUES (
+               #{userId}
+              ,#{stockId}
+              ,#{side}
+              ,#{quantity}
+              ,#{limitPrice}
+              ,#{reservedAmount}
+              ,#{orderDate}
+        )
+    </insert>
+
+    <!-- 주문 1개 (누구 주문인지 먼저 알아야 계좌를 잠글 수 있어서, 잠그지 않고 조회) -->
+    <select id="selectOrder"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  O.ID          AS ORDER_ID
+               ,O.USER_ID
+               ,O.STOCK_ID
+               ,O.STATUS
+          FROM T_MOCK_ORDER O
+         WHERE 1=1
+           AND O.ID = #{orderId}
+    </select>
+
+    <!-- 주문 1개 + 잠금 (계좌를 잠근 다음에, 상태를 다시 확인할 때) -->
+    <select id="selectOrderForUpdate"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  O.ID          AS ORDER_ID
+               ,O.USER_ID
+               ,O.STOCK_ID
+               ,O.SIDE
+               ,O.QUANTITY
+               ,O.LIMIT_PRICE
+               ,O.RESERVED_AMOUNT
+               ,O.STATUS
+               ,O.ORDER_DATE
+          FROM T_MOCK_ORDER O
+         WHERE 1=1
+           AND O.ID = #{orderId}
+           FOR UPDATE
+    </select>
+
+    <!-- 주문 상태 변경 (체결 / 취소 / 만료) -->
+    <update id="updateOrderStatus"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        UPDATE T_MOCK_ORDER
+           SET STATUS   = #{status}
+              ,TRADE_ID = #{tradeId}
+              ,UPD_DAY  = NOW()
+         WHERE 1=1
+           AND ID     = #{orderId}
+           AND STATUS = 'PENDING'
+    </update>
+
+    <!-- 내 미체결 주문 (최신순) -->
+    <select id="selectPendingOrders"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  O.ID                                        AS ORDER_ID
+               ,O.STOCK_ID
+               ,S.SYMBOL
+               ,S.NAME
+               ,O.SIDE
+               ,O.QUANTITY
+               ,O.LIMIT_PRICE
+               ,O.RESERVED_AMOUNT
+               ,O.ORDER_DATE
+               ,(EXTRACT(EPOCH FROM O.INS_DAY) * 1000)::BIGINT AS INS_AT
+          FROM T_MOCK_ORDER O
+          JOIN T_STOCK S ON S.ID = O.STOCK_ID
+         WHERE 1=1
+           AND O.USER_ID = #{userId}
+           AND O.STATUS  = 'PENDING'
+         ORDER BY O.ID DESC
+    </select>
+
+    <!-- 내 미체결 주문 수 (너무 많이 걸지 못하게) -->
+    <select id="countPendingOrders"
+            resultType="int">
+        SELECT  COUNT(*)
+          FROM T_MOCK_ORDER O
+         WHERE 1=1
+           AND O.USER_ID = #{userId}
+           AND O.STATUS  = 'PENDING'
+    </select>
+
+    <!-- 이 종목에 걸어둔 매도 수량 (그만큼은 다른 매도 주문에 못 씀) -->
+    <select id="sumPendingSellQuantity"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO"
+            resultType="int">
+        SELECT  COALESCE(SUM(O.QUANTITY), 0)
+          FROM T_MOCK_ORDER O
+         WHERE 1=1
+           AND O.USER_ID  = #{userId}
+           AND O.STOCK_ID = #{stockId}
+           AND O.SIDE     = 'SELL'
+           AND O.STATUS   = 'PENDING'
+    </select>
+
+    <!-- 매수 주문에 묶여 있는 돈 합계 -->
+    <select id="sumPendingCash"
+            resultType="java.math.BigDecimal">
+        SELECT  COALESCE(SUM(O.RESERVED_AMOUNT), 0)
+          FROM T_MOCK_ORDER O
+         WHERE 1=1
+           AND O.USER_ID = #{userId}
+           AND O.STATUS  = 'PENDING'
+    </select>
+
+    <!-- 오늘 체결을 기다리는 전체 주문 (스케줄러) -->
+    <select id="selectMatchableOrders"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  O.ID          AS ORDER_ID
+               ,O.USER_ID
+               ,O.STOCK_ID
+               ,O.SIDE
+               ,O.LIMIT_PRICE
+          FROM T_MOCK_ORDER O
+         WHERE 1=1
+           AND O.STATUS     = 'PENDING'
+           AND O.ORDER_DATE = #{today}
+         ORDER BY O.ID
+    </select>
+
+    <!-- 만료할 주문 (유효한 거래일이 기준일 이전 또는 같은 날) -->
+    <select id="selectExpiredOrders"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  O.ID          AS ORDER_ID
+               ,O.USER_ID
+          FROM T_MOCK_ORDER O
+         WHERE 1=1
+           AND O.STATUS     = 'PENDING'
+           AND O.ORDER_DATE <![CDATA[<=]]> #{orderDate}
+         ORDER BY O.ID
+    </select>
+
+    <!-- 주문 전체 삭제 (초기화, 거래 내역보다 먼저 지워야 함) -->
+    <delete id="deleteAllOrders">
+        DELETE FROM T_MOCK_ORDER
+         WHERE 1=1
+           AND USER_ID = #{userId}
+    </delete>
+
+    <!-- ============================================
          수익률 랭킹
          - 평가금액은 현재가가 필요해서 서비스에서 계산
          - 거래를 1번 이상 한 계좌만, 탈퇴한 회원 제외
@@ -257,6 +418,13 @@
                ,U.NICKNAME
                ,A.CASH
                ,A.INIT_CASH
+               ,(
+                    SELECT  COALESCE(SUM(O.RESERVED_AMOUNT), 0)
+                      FROM T_MOCK_ORDER O
+                     WHERE 1=1
+                       AND O.USER_ID = A.USER_ID
+                       AND O.STATUS  = 'PENDING'
+                )                                           AS PENDING_CASH
                ,(
                     SELECT  COUNT(*)
                       FROM T_MOCK_TRADE T

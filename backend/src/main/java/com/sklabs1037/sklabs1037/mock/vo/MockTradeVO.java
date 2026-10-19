@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 /**
  * 모의투자 VO
- * - 사용 테이블: T_MOCK_ACCOUNT, T_MOCK_HOLDING, T_MOCK_TRADE (+ T_STOCK, T_STOCK_PRICE, T_USER)
+ * - 사용 테이블: T_MOCK_ACCOUNT, T_MOCK_HOLDING, T_MOCK_TRADE, T_MOCK_ORDER (+ T_STOCK, T_STOCK_PRICE, T_USER)
  */
 @Getter
 @Setter
@@ -31,6 +31,7 @@ public class MockTradeVO {
     private BigDecimal cash;            // 현금
     private BigDecimal initCash;        // 시작 자금
     private Integer resetCount;         // 초기화 횟수
+    private BigDecimal pendingCash;     // 매수 주문에 묶여 있는 돈
 
     // ===== 보유 종목 / 주문 =====
     private Integer quantity;           // 수량
@@ -43,7 +44,15 @@ public class MockTradeVO {
     private BigDecimal amount;          // 체결 금액
     private BigDecimal profit;          // 매도 실현손익
     private String priceSource;         // LIVE / CLOSE
-    private Long insAt;                 // 거래 시각 (밀리초)
+    private Long insAt;                 // 거래·주문 시각 (밀리초)
+
+    // ===== 지정가 주문 =====
+    private Long orderId;
+    private String orderType;           // MARKET / LIMIT (요청)
+    private BigDecimal limitPrice;      // 지정가
+    private BigDecimal reservedAmount;  // 매수 주문에 묶어둔 돈
+    private String status;              // PENDING / FILLED / CANCELED / EXPIRED
+    private LocalDate orderDate;        // 이 주문이 유효한 거래일
 
     // ===== 랭킹 =====
     private String nickname;

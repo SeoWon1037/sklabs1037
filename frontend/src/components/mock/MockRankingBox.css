@@ -1,0 +1,141 @@
+/* ============================================
+   메인 화면 모의투자 랭킹 (2×2 아래 가로 한 줄, 양쪽 칸 전체 폭)
+   - 상승 빨강(.up) / 하락 파랑(.down)은 공통 클래스 사용
+   ============================================ */
+.home-rank {
+  grid-column: 1 / -1;
+}
+.home-rank-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.home-rank-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.home-rank-title .home-box-title {
+  margin: 0;
+}
+.home-rank-mine {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  font-size: 12px;
+}
+.home-rank-mine b {
+  margin-left: 2px;
+}
+.home-rank-go {
+  margin: 0;
+}
+.home-rank-empty {
+  margin: 14px 0 2px;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+.home-rank-empty a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 5칸 가로 */
+.home-rank-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.home-rank-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'no name'
+    'no rate'
+    'no asset';
+  align-items: center;
+  column-gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+.home-rank-me {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.home-rank-no {
+  grid-area: no;
+  min-width: 28px;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+.home-rank-name {
+  grid-area: name;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.home-rank-name em {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--primary);
+  font-size: 11px;
+  font-style: normal;
+  color: var(--primary-text);
+}
+.home-rank-rate {
+  grid-area: rate;
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.home-rank-asset {
+  grid-area: asset;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+
+/* 중간 폭: 5칸이 좁으면 3칸씩 */
+@media (max-width: 1080px) {
+  .home-rank-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ============================================
+   휴대폰 (640px 이하): 한 줄씩 (순위 · 닉네임 · 수익률)
+   ============================================ */
+@media (max-width: 640px) {
+  .home-rank-list {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .home-rank-item {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'no name rate'
+      'no asset rate';
+    padding: 10px 12px;
+  }
+  .home-rank-no {
+    font-size: 18px;
+  }
+  .home-rank-rate {
+    font-size: 15px;
+    text-align: right;
+  }
+  .home-rank-go {
+    font-size: 13px;
+  }
+}

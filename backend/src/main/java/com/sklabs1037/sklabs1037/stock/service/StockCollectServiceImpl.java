@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,7 @@ import java.util.Map;
  *   Extract   : 토스증권 API 일봉 조회
  *   Transform : 문자열 가격 → BigDecimal, ISO 시간 → 날짜
  *   Load      : T_STOCK_PRICE UPSERT (다시 받아도 중복 없음)
+ *   + 상장 주식 수(T_STOCK.SHARES_OUTSTANDING)도 같이 갱신 → 메인 화면 시가총액 TOP 3 계산용
  *
  * - 종목 하나가 실패해도 나머지는 계속 수집 (종목별 try/catch)
  * - 일부러 @Transactional을 쓰지 않음 (한 종목 실패로 전체가 롤백되지 않게)
@@ -40,7 +42,56 @@ public class StockCollectServiceImpl implements IStockCollectService {
             return 0;
         }
 
-        return collectStocks(stockCollectDao.selectTargetStocks(), count);
+        int saved = collectStocks(stockCollectDao.selectTargetStocks(), count);
+
+        // 상장 주식 수는 실패해도 시세 수집 결과에 영향 없게 따로
+        try {
+            updateSharesOutstanding();
+        } catch (Exception e) {
+            log.warn("상장 주식 수 갱신 실패: {}", e.getMessage());
+        }
+
+        return saved;
+
+    }
+
+    @Override
+    public int updateSharesOutstanding() {
+
+        if (!tossApiClient.isConfigured()) return 0;
+
+        List<StockCollectVO> stocks = stockCollectDao.selectTargetStocks();
+        if (stocks.isEmpty()) return 0;
+
+        // 1. 전 종목 한 번에 조회 → 종목코드별 상장 주식 수
+        String symbols = String.join(",", stocks.stream().map(StockCollectVO::getSymbol).toList());
+        Map<String, Long> shares = new HashMap<>();
+
+        for (Map<String, Object> row : tossApiClient.getStocks(symbols)) {
+
+            Object value = row.get("sharesOutstanding");
+            if (value == null) continue;
+
+            shares.put(String.valueOf(row.get("symbol")), new BigDecimal(String.valueOf(value)).longValue());
+
+        }
+
+        // 2. 저장
+        int updated = 0;
+
+        for (StockCollectVO stock : stocks) {
+
+            Long n = shares.get(stock.getSymbol());
+            if (n == null || n <= 0) continue;
+
+            stock.setSharesOutstanding(n);
+            updated += stockCollectDao.updateSharesOutstanding(stock);
+
+        }
+
+        log.info("상장 주식 수 갱신: {}종목", updated);
+
+        return updated;
 
     }
 

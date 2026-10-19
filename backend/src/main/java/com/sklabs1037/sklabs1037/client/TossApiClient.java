@@ -23,6 +23,7 @@ import java.util.Map;
  *   POST /oauth2/token     토큰 발급 (client_credentials)
  *   GET  /api/v1/prices    현재가 (symbols=005930,000660)
  *   GET  /api/v1/candles   일봉   (symbol=005930&interval=1d&count=100, 최신 날짜부터)
+ *   GET  /api/v1/stocks    종목 정보 (symbols=005930,000660 → sharesOutstanding 상장 주식 수 등)
  */
 @Slf4j
 @Component
@@ -76,6 +77,20 @@ public class TossApiClient {
 
         Map<String, Object> body = restClient.get()
                 .uri(baseUrl + "/api/v1/prices?symbols={symbols}", symbols)
+                .header("Authorization", "Bearer " + getAccessToken())
+                .retrieve()
+                .body(MAP_TYPE);
+
+        return (List<Map<String, Object>>) body.get("result");
+
+    }
+
+    // 종목 정보 조회 → 목록 (각 항목: symbol, name, market, sharesOutstanding(문자) ...)
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getStocks(String symbols) {
+
+        Map<String, Object> body = restClient.get()
+                .uri(baseUrl + "/api/v1/stocks?symbols={symbols}", symbols)
                 .header("Authorization", "Bearer " + getAccessToken())
                 .retrieve()
                 .body(MAP_TYPE);

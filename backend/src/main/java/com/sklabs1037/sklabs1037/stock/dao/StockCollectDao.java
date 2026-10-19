@@ -23,4 +23,7 @@ public interface StockCollectDao {
 
     // 일봉 저장 (UPSERT)
     void upsertStockPrice(StockCollectVO vo);
+
+    // 상장 주식 수 저장
+    int updateSharesOutstanding(StockCollectVO vo);
 }

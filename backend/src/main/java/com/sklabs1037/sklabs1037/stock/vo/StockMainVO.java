@@ -36,6 +36,10 @@ public class StockMainVO {
     private BigDecimal changeRate;   // 전일 대비 (%)
     private Long volume;             // 거래량
 
+    // ===== 시가총액 =====
+    private Long sharesOutstanding;  // 상장 주식 수
+    private BigDecimal marketCap;    // 시가총액 (상장 주식 수 × 최신 종가, 주식 수가 없으면 null)
+
     // ===== 종목 설명 문서 =====
     private String docTitle;
     private String docContent;

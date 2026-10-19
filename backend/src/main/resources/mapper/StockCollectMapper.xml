@@ -77,4 +77,13 @@
         ,UPT_DAY     = NOW()
     </insert>
 
+    <!-- 상장 주식 수 저장 (시가총액 = 상장 주식 수 × 종가) -->
+    <update id="updateSharesOutstanding"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockCollectVO">
+        UPDATE T_STOCK
+           SET SHARES_OUTSTANDING = #{sharesOutstanding}
+         WHERE 1=1
+           AND ID = #{stockId}
+    </update>
+
 </mapper>

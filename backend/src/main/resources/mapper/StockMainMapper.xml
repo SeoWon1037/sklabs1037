@@ -8,7 +8,7 @@
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.stock.dao.StockMainDao">
 
-    <!-- 종목별 최신 종가 + 전일 대비 (최신일=1, 전일=2 번호를 매겨서 비교) -->
+    <!-- 종목별 최신 종가 + 전일 대비 (최신일=1, 전일=2 번호를 매겨서 비교) + 시가총액 -->
     <select id="selectStockSummary"
             resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
         WITH RANKED AS (
@@ -29,6 +29,8 @@
         ,B.CLOSE_PRICE AS PREV_CLOSE
         ,L.CLOSE_PRICE - B.CLOSE_PRICE AS CHANGE_AMOUNT
         ,ROUND((L.CLOSE_PRICE - B.CLOSE_PRICE) / B.CLOSE_PRICE * 100, 2) AS CHANGE_RATE
+        ,S.SHARES_OUTSTANDING
+        ,L.CLOSE_PRICE * S.SHARES_OUTSTANDING AS MARKET_CAP
         FROM T_STOCK S
         JOIN RANKED L      ON L.STOCK_ID = S.ID
         AND L.RN       = 1

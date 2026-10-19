@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    목표가 알림 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+    사용 테이블: T_PRICE_ALERT (+ T_STOCK, T_USER)
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.alert.dao.PriceAlertDao">
+
+    <!-- 내 알림 (stockId가 있으면 그 종목만, 최신순) -->
+    <select id="selectMyAlerts"
+            parameterType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO"
+            resultType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO">
+        SELECT  A.ID                                         AS ALERT_ID
+               ,A.STOCK_ID
+               ,S.SYMBOL
+               ,S.NAME
+               ,A.CONDITION
+               ,A.TARGET_PRICE
+               ,A.STATUS
+               ,A.SENT_PRICE
+               ,(EXTRACT(EPOCH FROM A.SENT_DAY) * 1000)::BIGINT AS SENT_AT
+               ,(EXTRACT(EPOCH FROM A.INS_DAY) * 1000)::BIGINT  AS INS_AT
+          FROM T_PRICE_ALERT A
+          JOIN T_STOCK S ON S.ID = A.STOCK_ID
+         WHERE 1=1
+           AND A.USER_ID = #{userId}
+        <if test="stockId != null">
+           AND A.STOCK_ID = #{stockId}
+        </if>
+         ORDER BY A.ID DESC
+    </select>
+
+    <!-- 켜져 있는 내 알림 수 (너무 많이 걸지 못하게) -->
+    <select id="countActiveAlerts"
+            resultType="int">
+        SELECT  COUNT(*)
+          FROM T_PRICE_ALERT A
+         WHERE 1=1
+           AND A.USER_ID = #{userId}
+           AND A.STATUS  = 'ACTIVE'
+    </select>
+
+    <!-- 알림 만들기 (T_STOCK에 있는 종목만) -->
+    <insert id="insertAlert"
+            parameterType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO">
+        INSERT INTO T_PRICE_ALERT (
+               USER_ID
+              ,STOCK_ID
+              ,CONDITION
+              ,TARGET_PRICE
+        )
+        SELECT  #{userId}
+               ,S.ID
+               ,#{condition}
+               ,#{targetPrice}
+          FROM T_STOCK S
+         WHERE 1=1
+           AND S.ID = #{stockId}
+    </insert>
+
+    <!-- 알림 삭제 (본인 것만) -->
+    <delete id="deleteAlert"
+            parameterType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO">
+        DELETE FROM T_PRICE_ALERT
+         WHERE 1=1
+           AND ID      = #{alertId}
+           AND USER_ID = #{userId}
+    </delete>
+
+    <!-- 알림 1개 (본인 것만, 다시 켜기 전에 확인) -->
+    <select id="selectMyAlert"
+            parameterType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO"
+            resultType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO">
+        SELECT  A.ID          AS ALERT_ID
+               ,A.STOCK_ID
+               ,A.CONDITION
+               ,A.TARGET_PRICE
+               ,A.STATUS
+          FROM T_PRICE_ALERT A
+         WHERE 1=1
+           AND A.ID      = #{alertId}
+           AND A.USER_ID = #{userId}
+    </select>
+
+    <!-- 다시 켜기 (보낸 알림 → 켜짐) -->
+    <update id="reactivateAlert"
+            parameterType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO">
+        UPDATE T_PRICE_ALERT
+           SET STATUS     = 'ACTIVE'
+              ,SENT_PRICE = NULL
+              ,SENT_DAY   = NULL
+              ,UPD_DAY    = NOW()
+         WHERE 1=1
+           AND ID      = #{alertId}
+           AND USER_ID = #{userId}
+           AND STATUS  = 'SENT'
+    </update>
+
+    <!--
+        확인할 알림 전체 (스케줄러)
+        - 받는 사람 이메일·닉네임 같이 (탈퇴 회원 제외)
+    -->
+    <select id="selectActiveAlerts"
+            resultType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO">
+        SELECT  A.ID          AS ALERT_ID
+               ,A.USER_ID
+               ,A.STOCK_ID
+               ,S.SYMBOL
+               ,S.NAME
+               ,A.CONDITION
+               ,A.TARGET_PRICE
+               ,U.EMAIL
+               ,U.NICKNAME
+          FROM T_PRICE_ALERT A
+          JOIN T_STOCK S ON S.ID = A.STOCK_ID
+          JOIN T_USER  U ON U.ID = A.USER_ID
+         WHERE 1=1
+           AND A.STATUS  = 'ACTIVE'
+           AND U.DEL_DAY IS NULL
+         ORDER BY A.ID
+    </select>
+
+    <!--
+        보냄으로 표시 (켜져 있을 때만 → 여러 번 실행돼도 메일은 1번)
+        - 1이 돌아오면 이번에 처음 잡은 것 → 메일 발송
+    -->
+    <update id="markSent"
+            parameterType="com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO">
+        UPDATE T_PRICE_ALERT
+           SET STATUS     = 'SENT'
+              ,SENT_PRICE = #{sentPrice}
+              ,SENT_DAY   = NOW()
+              ,UPD_DAY    = NOW()
+         WHERE 1=1
+           AND ID     = #{alertId}
+           AND STATUS = 'ACTIVE'
+    </update>
+
+    <!-- 메일 발송 실패 → 다시 켜짐으로 (다음 확인 때 재시도) -->
+    <update id="revertSent">
+        UPDATE T_PRICE_ALERT
+           SET STATUS     = 'ACTIVE'
+              ,SENT_PRICE = NULL
+              ,SENT_DAY   = NULL
+         WHERE 1=1
+           AND ID = #{alertId}
+    </update>
+
+</mapper>

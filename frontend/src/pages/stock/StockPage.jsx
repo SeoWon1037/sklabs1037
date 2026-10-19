@@ -11,6 +11,7 @@
 //   GET/POST/DELETE /api/watchlist          관심 종목 (☆ / ★)
 //   /api/stock/board/**                     종목 토론방 (StockBoard)
 // - "모의 매수" 버튼 → /mock?symbol=005930 (모의투자 화면에서 이 종목이 선택된 채로 열림)
+// - "🔔 알림" 버튼 → 종목 헤더 아래에 목표가 알림 창 (PriceAlertPanel, /api/alerts)
 // ============================================
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -19,6 +20,7 @@ import CandleChart from '../../components/stock/CandleChart'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import WatchStar from '../../components/stock/WatchStar'
 import StockBoard from '../../components/stock/StockBoard'
+import PriceAlertPanel from '../../components/alert/PriceAlertPanel'
 import './StockPage.css'
 
 const TABS = [
@@ -109,6 +111,7 @@ function StockPage() {
   // ===== 관심 종목 =====
   const [watch, setWatch] = useState({ loggedIn: false, ids: [] })
   const [watchMsg, setWatchMsg] = useState('')
+  const [alertOpen, setAlertOpen] = useState(false)   // 목표가 알림 창
 
   // 처음 한 번: 종목 목록
   useEffect(() => {
@@ -323,11 +326,31 @@ function StockPage() {
                     <div><dt>{daily.length}일 최고</dt><dd className="up">{formatPrice(rangeHigh)}</dd></div>
                     <div><dt>{daily.length}일 최저</dt><dd className="down">{formatPrice(rangeLow)}</dd></div>
                   </dl>
-                  <Link to={`/mock?symbol=${detail.stock.symbol}`} className="btn btn-primary detail-mock-btn">
-                    💰 모의 매수
-                  </Link>
+                  <div className="detail-actions">
+                    <button
+                      type="button"
+                      className={`btn detail-alert-btn ${alertOpen ? 'detail-alert-on' : ''}`}
+                      onClick={() => setAlertOpen((v) => !v)}
+                    >
+                      🔔 알림
+                    </button>
+                    <Link to={`/mock?symbol=${detail.stock.symbol}`} className="btn btn-primary detail-mock-btn">
+                      💰 모의 매수
+                    </Link>
+                  </div>
                 </div>
               </div>
+
+              {/* 목표가 알림 창 */}
+              {alertOpen && latest && (
+                <PriceAlertPanel
+                  key={stockId}
+                  stockId={stockId}
+                  stockName={detail.stock.name}
+                  price={latest.close}
+                  onClose={() => setAlertOpen(false)}
+                />
+              )}
 
               {/* 탭 */}
               <div className="detail-tabs">

@@ -7,10 +7,12 @@
 //   POST /api/user/mypage/password   { currentPassword, newPassword }
 //   POST /api/user/mypage/withdraw   { currentPassword, confirmText }
 //   GET  /api/user/mypage/chats?page=1   내 AI 질문 기록 (10개씩)
+//   /api/alerts/**                    내 가격 알림 (MyAlertsBox)
 // - 닉네임 변경/탈퇴 후 "sklabs:user-updated" 이벤트 → 상단바가 로그인 정보를 다시 불러옴
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import MyAlertsBox from '../../components/alert/MyAlertsBox'
 import './UserMyPage.css'
 
 const WITHDRAW_TEXT = '탈퇴합니다'
@@ -219,6 +221,9 @@ function UserMyPage() {
           <div><dt>가입일</dt><dd>{formatDate(user.insDay)}</dd></div>
         </dl>
       </section>
+
+      {/* 내 가격 알림 */}
+      <MyAlertsBox hasEmail={Boolean(user.email && user.email.includes('@'))} />
 
       {/* 내 AI 질문 기록 */}
       <section className="mypage-box">

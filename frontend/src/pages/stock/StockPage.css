@@ -187,11 +187,25 @@
   align-items: flex-end;
   gap: 10px;
 }
-.detail-mock-btn {
+.detail-actions {
+  display: flex;
+  gap: 6px;
+}
+.detail-mock-btn,
+.detail-alert-btn {
   height: 34px;
   padding: 0 14px;
   font-size: 13px;
   white-space: nowrap;
+}
+.detail-alert-btn {
+  border: 1px solid color-mix(in srgb, #f59e0b 55%, transparent);
+  background: transparent;
+  color: var(--text);
+}
+.detail-alert-btn:hover,
+.detail-alert-on {
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
 }
 .detail-range {
   display: flex;

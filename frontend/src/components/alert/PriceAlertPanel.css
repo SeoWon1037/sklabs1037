@@ -1,0 +1,291 @@
+/* ============================================
+   목표가 알림 창 (주식 종목 화면 헤더 아래) + 마이페이지 알림 목록 공통 색
+   - 이상(오를 때) 빨강 / 이하(내릴 때) 파랑
+   ============================================ */
+.alert-up {
+  color: #e5484d;
+}
+.alert-down {
+  color: #3b82f6;
+}
+
+.alert-panel {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+}
+.alert-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.alert-panel-close {
+  border: none;
+  background: none;
+  font-size: 16px;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+.alert-panel-desc {
+  margin: 0;
+  font-size: 14px;
+}
+.alert-panel-desc a,
+.alert-note a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 한 줄: [이상|이하] [− 가격 원 +] [알림 받기] */
+.alert-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.alert-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+}
+.alert-seg button {
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.55;
+}
+.alert-seg button.alert-seg-active {
+  background: var(--bg);
+  opacity: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.alert-price {
+  display: grid;
+  grid-template-columns: 36px 130px auto 36px;
+  align-items: center;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 10px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.alert-price button {
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: var(--text);
+}
+.alert-price input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: right;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.alert-price input::-webkit-outer-spin-button,
+.alert-price input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.alert-price span {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.alert-submit {
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 10px;
+  background: #f59e0b;
+  color: #111;
+  font-size: 14px;
+  font-weight: 800;
+}
+.alert-submit:disabled {
+  opacity: 0.5;
+}
+
+.alert-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.alert-quick button {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+.alert-gap {
+  margin-left: 6px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+
+.alert-msg {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.alert-msg-ok {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  color: #16a34a;
+}
+.alert-msg-error {
+  background: color-mix(in srgb, #e5484d 12%, transparent);
+  color: #e5484d;
+}
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.alert-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  font-size: 13px;
+}
+.alert-list li.alert-sent {
+  opacity: 0.6;
+}
+.alert-list li button {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text);
+}
+.alert-item-text small {
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+.alert-badge {
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #16a34a 16%, transparent);
+  font-size: 11px;
+  font-weight: 800;
+  color: #16a34a;
+}
+.alert-badge-sent {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+
+.alert-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+
+/* ============================================
+   휴대폰 (640px 이하): 가격 칸을 넓게, 버튼은 아래 줄 전체
+   ============================================ */
+@media (max-width: 640px) {
+  .alert-panel {
+    padding: 14px;
+  }
+  .alert-seg {
+    width: 100%;
+  }
+  .alert-seg button {
+    flex: 1;
+  }
+  .alert-price {
+    flex: 1;
+    grid-template-columns: 40px minmax(0, 1fr) auto 40px;
+    height: 44px;
+  }
+  .alert-submit {
+    width: 100%;
+    height: 44px;
+  }
+  .alert-gap {
+    width: 100%;
+    margin: 4px 0 0;
+  }
+}
+
+/* ===== 마이페이지 내 가격 알림 ===== */
+.my-alert-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.my-alert-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.my-alert-list li.alert-sent {
+  opacity: 0.65;
+}
+.my-alert-main {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+  font-size: 14px;
+}
+.my-alert-name {
+  font-weight: 800;
+  color: var(--text);
+}
+.my-alert-main small {
+  width: 100%;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+.my-alert-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+.my-alert-actions button {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .my-alert-actions {
+    flex-direction: column;
+  }
+}

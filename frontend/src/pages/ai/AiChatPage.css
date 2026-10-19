@@ -172,3 +172,21 @@
 .ai-feedback-done {
   color: color-mix(in srgb, var(--text) 70%, transparent);
 }
+
+/* ============================================
+   휴대폰 화면 (640px 이하)
+   - 아이폰 사파리는 100vh에 아래 주소창 영역까지 포함돼서 입력칸이 가려짐
+     → 실제로 보이는 높이(dvh) 기준으로 계산 (지원 안 하는 브라우저는 위 vh 값 사용)
+   - 상단바가 2줄이라 빼는 높이도 조금 더 크게
+   - PC 화면에는 영향 없음
+   ============================================ */
+@media (max-width: 640px) {
+  .ai-page {
+    padding: 12px;
+  }
+  .ai-card {
+    height: calc(100vh - 120px);
+    height: calc(100dvh - 120px);
+    min-height: 420px;
+  }
+}

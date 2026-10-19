@@ -469,3 +469,50 @@
     font-size: 24px;
   }
 }
+
+/* ============================================
+   휴대폰 화면 (640px 이하)
+   - PC 화면에는 영향 없음
+   ============================================ */
+@media (max-width: 640px) {
+
+  .stock-page {
+    padding: 12px 12px 40px;
+  }
+
+  /* 종목 헤더: 이름·가격 아래에 최고·최저가 */
+  .detail-head {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .detail-name {
+    flex-wrap: wrap;
+  }
+  .detail-range {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  /* 탭 4개: 한 줄 + 넘치면 옆으로 스크롤 */
+  .detail-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .detail-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .detail-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 12px;
+  }
+
+  /* 차트 위 버튼 줄이 넘치면 아래로 */
+  .chart-toolbar {
+    flex-wrap: wrap;
+  }
+  .chart-box {
+    padding: 10px 8px 4px;
+  }
+}

@@ -267,3 +267,23 @@
   border: 1px solid var(--border, #27272a);
   color: inherit;
 }
+
+/* ============================================
+   휴대폰 화면 (640px 이하)
+   - 입력칸이 줄어들지 않아서 옆 버튼이 박스 밖으로 밀려나던 것 수정
+   - PC 화면에는 영향 없음
+   ============================================ */
+@media (max-width: 640px) {
+  .mypage {
+    padding: 24px 16px 48px;
+  }
+  .mypage-box {
+    padding: 18px 16px;
+  }
+  .mypage-input {
+    min-width: 0;
+  }
+  .mypage-form > .btn {
+    flex-shrink: 0;
+  }
+}

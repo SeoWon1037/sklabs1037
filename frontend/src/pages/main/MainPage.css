@@ -701,3 +701,111 @@
     border-top: 1px solid var(--border);
   }
 }
+
+
+/* ============================================
+   휴대폰 화면 (640px 이하)
+   - PC 화면에는 영향 없음
+   ============================================ */
+@media (max-width: 640px) {
+
+  .home {
+    padding: 16px 16px 24px;
+  }
+
+  /* 검색창: 화면 폭에 꽉 차게 (가운데 정렬 때문에 내용 크기로 줄어드는 것 방지) */
+  .home-search-area {
+    gap: 14px;
+    padding: 4px 0 20px;
+  }
+  .home-search-row {
+    align-items: stretch;
+  }
+  .home-logo {
+    text-align: center;
+  }
+  .home-search {
+    width: 100%;
+    box-sizing: border-box;
+    height: 50px;
+    padding-left: 16px;
+  }
+  .home-search-input {
+    font-size: 16px;   /* 16px보다 작으면 아이폰이 입력할 때 화면을 확대함 */
+  }
+
+  /* 바로가기 4개를 한 줄에 */
+  .home-shortcuts {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    width: 100%;
+    gap: 4px;
+  }
+  .home-shortcut {
+    flex: 1;
+    width: auto;
+  }
+  .home-shortcut-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+  .home-shortcut-label {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  /* 한 줄 배치에서 박스가 내용 때문에 화면 밖으로 밀려나지 않게 */
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 박스 여백 줄이기 */
+  .home-box {
+    padding: 16px;
+    min-width: 0;
+  }
+
+  /* 뉴스 탭: 두 줄로 꺾이지 않게 한 줄 + 옆으로 스크롤 */
+  .home-news-head {
+    flex-wrap: nowrap;
+    gap: 12px;
+  }
+  .home-news-head .home-box-title {
+    flex-shrink: 0;
+  }
+  .home-tabs {
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .home-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .home-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 8px 14px;
+  }
+  .home-tab-active::after {
+    left: 8px;
+    right: 8px;
+  }
+
+  .home-news-item {
+    padding: 12px 2px;
+  }
+  .home-news-title {
+    font-size: 15px;
+  }
+
+  /* 날씨: 시간별 예보 글씨 조금 작게 */
+  .weather-temp {
+    font-size: 12px;
+  }
+  .weather-icon {
+    font-size: 16px;
+  }
+}

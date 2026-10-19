@@ -134,24 +134,83 @@
   color: var(--text);
 }
 
-/* 휴대폰 화면: 메뉴 간격·버튼 조금 작게 */
-@media (max-width: 640px) {
-  .header-left {
-    gap: 12px;
-  }
-  .header-menu-link {
-    padding: 8px 6px;
-    font-size: 14px;
-  }
-  .btn {
-    padding: 0 12px;
-    font-size: 13px;
-  }
-}
-
-
 /* 넓은 화면(주식 종목)에서는 상단바 안쪽 폭도 본문과 같이 */
 .header-inner-wide {
   max-width: 1600px;
   padding: 0 24px;
+}
+
+
+/* ============================================
+   휴대폰 화면 (640px 이하): 상단바를 2줄로
+   - 1줄: 로고 + 버튼 / 2줄: 메뉴 (넘치면 손가락으로 옆으로 밀기)
+   - PC 화면에는 영향 없음
+   - 파일 맨 아래에 있어야 위의 .header-inner-wide 보다 우선 적용됨
+   ============================================ */
+@media (max-width: 640px) {
+
+  .header-inner,
+  .header-inner-wide {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 8px 16px 0;
+    row-gap: 2px;
+  }
+
+  /* 로고·메뉴 묶음을 풀어서, 로고 / 버튼 / 메뉴 순서를 따로 정함 */
+  .header-left {
+    display: contents;
+  }
+  .header-logo {
+    order: 1;
+    font-size: 18px;
+  }
+  .header-actions {
+    order: 2;
+    gap: 4px;
+  }
+
+  /* 2줄: 메뉴는 화면 폭 전체, 줄바꿈 없이 옆으로 스크롤 */
+  .header-menu {
+    order: 3;
+    width: calc(100% + 32px);
+    margin: 0 -16px;
+    padding: 0 10px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .header-menu::-webkit-scrollbar {
+    display: none;
+  }
+  .header-menu-link {
+    flex-shrink: 0;
+    padding: 10px 10px 12px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .header-menu-active::after {
+    left: 10px;
+    right: 10px;
+    bottom: 3px;
+  }
+
+  /* 오른쪽 버튼들 작게, 글자 세로로 꺾이지 않게 */
+  .theme-toggle {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+  .btn {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .header-user-chip {
+    padding: 5px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
 }

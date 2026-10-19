@@ -84,3 +84,14 @@
   font-size: 12px;
   color: color-mix(in srgb, var(--text) 40%, transparent);
 }
+
+/* 출처 이름이 중간에서 끊기지 않게 (예: "Open-" / "Meteo")
+   - 출처 하나씩은 안 끊기고, 줄이 모자라면 출처 단위로 다음 줄로 */
+.footer-sources {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.footer-sources > span {
+  white-space: nowrap;
+}

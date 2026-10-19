@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -34,7 +36,9 @@ public class StockCollectScheduler {
 
     // 앱 시작 직후: 종목 목록 동기화 → 이력 부족한 종목 보충 → 상장 주식 수
     // - 처음 한 번은 3,000종목 이력을 받느라 10분 넘게 걸려서, 서버 시작을 막지 않게 별도 스레드에서
+    // - 시작 작업 중 가장 먼저 (뉴스 최초 수집이 끝날 때까지 기다리지 않게)
     @EventListener(ApplicationReadyEvent.class)
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public void initialLoad() {
 
         Thread worker = new Thread(() -> {

@@ -1,17 +1,18 @@
 // ============================================
 // 메인 화면 (주소: /) — 네이버 메인 스타일
-// - 위: 검색창(= AI 비서에게 질문) + 바로가기
-// - 2×2 배치 (위·아래 줄마다 양쪽 박스 끝이 맞음)
-//   · 왼쪽 위: 뉴스 + 💬토론 탭 (박스 안에서 스크롤)    · 오른쪽 위: 로그인 + 내 관심 종목(로그인 시) + 오늘의 시세
-//   · 왼쪽 아래: 날씨                       · 오른쪽 아래: 💬 지금 토론 중 (최근 글 3개)
-// - 맨 아래 (전체 폭): 🏆 모의투자 수익률 랭킹 TOP 5 (MockRankingBox)
+// - PC: 스크롤 없이 한 화면에 (브라우저 높이에 맞춰 2×2가 꽉 차고, 긴 목록은 박스 안에서 스크롤)
+//   · 위: 로고 + 검색창(= AI 비서에게 질문) + 바로가기 한 줄
+//   · 왼쪽 위: 뉴스 + 💬토론 탭       · 오른쪽 위: 로그인(한 줄) + 🏆 모의투자 TOP 3 + [오늘의 시세 | ⭐ 관심 종목] 탭
+//   · 왼쪽 아래: 날씨                 · 오른쪽 아래: 💬 지금 토론 중 (최근 글 3개)
+//   · 화면 높이가 아주 낮으면(노트북 768px 등) 박스가 찌그러지지 않게 최소 높이 → 그때만 살짝 스크롤
+// - 휴대폰: 한 줄씩 (뉴스 → 로그인 → TOP 3 → 시세 → 날씨 → 토론)
 // - 백엔드 API
 //   GET /api/news?category=&stockId=&size=   뉴스 목록
 //   GET /api/news/summary?stockId=           AI 뉴스 요약 (NewsSummaryBox)
 //   GET /api/stock/dashboard?days=5          종목 시세 (탭 이름 + 시세 위젯)
 //   GET /api/user/me                         로그인 상태
 //   GET /api/stock/board/recent?size=        전 종목 최근 토론 글 (💬 토론 탭 + 지금 토론 중 박스)
-//   GET /api/mock/ranking?size=5             모의투자 수익률 랭킹 (MockRankingBox)
+//   GET /api/mock/ranking?size=3             모의투자 수익률 TOP 3 (MockRankingBox)
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -83,6 +84,7 @@ function MainPage() {
   const [stocks, setStocks] = useState([])
   const [baseDate, setBaseDate] = useState(null)
   const [user, setUser] = useState(null)
+  const [quoteTab, setQuoteTab] = useState(null)   // 'MARKET' | 'WATCH' (null = 로그인했으면 관심 종목, 아니면 시세)
 
   // ===== 지금 토론 중 (오른쪽 아래) =====
   const [hotPosts, setHotPosts] = useState(null)   // null = 불러오는 중
@@ -188,6 +190,7 @@ function MainPage() {
   ]
 
   const isBoard = tab === 'BOARD'
+  const shownQuoteTab = user ? (quoteTab ?? 'WATCH') : 'MARKET'
 
   return (
     <main className="home">
@@ -309,51 +312,78 @@ function MainPage() {
           </p>
         </section>
 
-        {/* ===== 오른쪽 위: 로그인 + 관심 종목 + 시세 ===== */}
+        {/* ===== 오른쪽 위: 로그인 + 모의투자 TOP 3 + 시세/관심 종목 ===== */}
         <aside className="home-side">
 
-          {/* 로그인 박스 */}
+          {/* 로그인 박스 (한 줄) */}
           <section className="home-box home-login">
             {user ? (
               <>
-                <p className="home-login-hello"><strong>{user.nickname}</strong>님, 반가워요 👋</p>
-                <p className="home-login-desc">궁금한 종목을 AI 비서에게 물어보세요.</p>
-                <Link to="/ai" className="btn btn-primary home-login-btn">🤖 AI 비서 시작하기</Link>
-                <Link to="/mypage" className="home-box-link">👤 마이페이지 →</Link>
+                <div className="home-login-text">
+                  <p className="home-login-hello"><strong>{user.nickname}</strong>님, 반가워요 👋</p>
+                  <Link to="/mypage" className="home-login-sub">👤 마이페이지 →</Link>
+                </div>
+                <Link to="/ai" className="btn btn-primary home-login-btn">🤖 AI 비서</Link>
               </>
             ) : (
               <>
-                <p className="home-login-desc">로그인하고 AI 주식 비서를 이용해보세요.</p>
-                <Link to="/login" className="btn btn-primary home-login-btn">SKLabs 로그인</Link>
+                <div className="home-login-text">
+                  <p className="home-login-desc">로그인하고 AI 비서 · 모의투자를 이용해보세요.</p>
+                </div>
+                <Link to="/login" className="btn btn-primary home-login-btn">로그인</Link>
               </>
             )}
           </section>
 
-          {/* 내 관심 종목 (로그인했을 때만) */}
-          {user && <WatchlistBox />}
+          {/* 모의투자 1·2·3등 */}
+          <MockRankingBox />
 
-          {/* 오늘의 시세 (위 줄 높이가 모자라면 박스 안에서 스크롤) */}
+          {/* [오늘의 시세 | ⭐ 관심 종목] (남은 높이를 채우고, 넘치면 박스 안에서 스크롤) */}
           <section className="home-box home-quotes-box">
             <div className="home-box-head">
-              <h2 className="home-box-title">오늘의 시세</h2>
-              {baseDate && <span className="home-box-sub">{baseDate} 종가</span>}
+              <div className="home-quote-tabs">
+                <button
+                  type="button"
+                  className={`home-quote-tab ${shownQuoteTab === 'MARKET' ? 'home-quote-tab-active' : ''}`}
+                  onClick={() => setQuoteTab('MARKET')}
+                >
+                  오늘의 시세
+                </button>
+                {user && (
+                  <button
+                    type="button"
+                    className={`home-quote-tab ${shownQuoteTab === 'WATCH' ? 'home-quote-tab-active' : ''}`}
+                    onClick={() => setQuoteTab('WATCH')}
+                  >
+                    ⭐ 관심 종목
+                  </button>
+                )}
+              </div>
+              {shownQuoteTab === 'MARKET' && baseDate && <span className="home-box-sub">{baseDate} 종가</span>}
             </div>
-            <ul className="home-quotes">
-              {stocks.map((s) => {
-                const change = Number(s.changeAmount)
-                const cls = change > 0 ? 'up' : change < 0 ? 'down' : ''
-                return (
-                  <li key={s.symbol} className="home-quote">
-                    <span className="home-quote-name">{s.name}</span>
-                    <span className="home-quote-price">{formatPrice(s.closePrice)}</span>
-                    <span className={`home-quote-rate ${cls}`}>
-                      {change > 0 ? '▲' : change < 0 ? '▼' : ''} {s.changeRate == null ? '-' : `${Number(s.changeRate).toFixed(2)}%`}
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
-            <Link to="/stock" className="home-box-link">주식 종목 더보기 →</Link>
+
+            {shownQuoteTab === 'WATCH' ? (
+              <WatchlistBox bare />
+            ) : (
+              <>
+                <ul className="home-quotes">
+                  {stocks.map((s) => {
+                    const change = Number(s.changeAmount)
+                    const cls = change > 0 ? 'up' : change < 0 ? 'down' : ''
+                    return (
+                      <li key={s.symbol} className="home-quote">
+                        <span className="home-quote-name">{s.name}</span>
+                        <span className="home-quote-price">{formatPrice(s.closePrice)}</span>
+                        <span className={`home-quote-rate ${cls}`}>
+                          {change > 0 ? '▲' : change < 0 ? '▼' : ''} {s.changeRate == null ? '-' : `${Number(s.changeRate).toFixed(2)}%`}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <Link to="/stock" className="home-box-link">주식 종목 더보기 →</Link>
+              </>
+            )}
           </section>
         </aside>
 
@@ -397,9 +427,6 @@ function MainPage() {
             토론 글 더보기 →
           </button>
         </section>
-
-        {/* ===== 맨 아래 (전체 폭): 모의투자 수익률 랭킹 TOP 5 ===== */}
-        <MockRankingBox />
 
       </div>
 

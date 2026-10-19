@@ -1,24 +1,22 @@
 // ============================================
-// 모의투자 수익률 랭킹 TOP 5 (메인 화면 2×2 아래 가로 한 줄)
-// - PC: 5칸 가로로 / 휴대폰: 한 줄씩
-// - 로그인했고 TOP 5 밖이면 제목 옆에 내 순위
-// - 1분마다 자동 새로고침
-// - 백엔드 API: GET /api/mock/ranking?size=5 (누구나)
+// 모의투자 수익률 TOP 3 (메인 화면 오른쪽 위, 로그인 박스 바로 아래)
+// - 1·2·3등만 한눈에 + 로그인했고 3등 밖이면 맨 아래에 내 순위
+// - 1분마다 자동 새로고침 (다른 탭을 보고 있을 땐 건너뜀)
+// - 백엔드 API: GET /api/mock/ranking?size=3 (누구나)
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './MockRankingBox.css'
 
-const SIZE = 5
+const SIZE = 3
 const REFRESH_MS = 60 * 1000
+const MEDALS = { 1: '🥇', 2: '🥈', 3: '🥉' }
 
-const won = (value) => Math.round(Number(value ?? 0)).toLocaleString('ko-KR')
 const signedRate = (value) => {
   const n = Number(value ?? 0)
   return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`
 }
 const tone = (value) => (Number(value) > 0 ? 'up' : Number(value) < 0 ? 'down' : '')
-const MEDALS = { 1: '🥇', 2: '🥈', 3: '🥉' }
 
 function MockRankingBox() {
 
@@ -42,24 +40,19 @@ function MockRankingBox() {
 
   return (
     <section className="home-box home-rank">
-      <div className="home-rank-head">
-        <div className="home-rank-title">
-          <h2 className="home-box-title">🏆 모의투자 수익률 랭킹</h2>
-          <span className="home-box-sub">
-            {data ? `${data.participants}명 참여 · 가상 1,000만 원` : '불러오는 중...'}
-          </span>
-          {meOutside && (
-            <span className="home-rank-mine">
-              내 순위 <strong>{me.rank}위</strong> <b className={tone(me.returnRate)}>{signedRate(me.returnRate)}</b>
-            </span>
-          )}
-        </div>
-        <Link to="/mock" className="home-box-link home-rank-go">💰 모의투자 하러 가기 →</Link>
+      <div className="home-box-head">
+        <h2 className="home-box-title">🏆 모의투자 TOP 3</h2>
+        <Link to="/mock" className="home-rank-go">
+          {data ? `${data.participants}명 참여 · ` : ''}전체 순위 →
+        </Link>
       </div>
+
+      {!data && <p className="home-rank-empty">불러오는 중...</p>}
 
       {data && list.length === 0 && (
         <p className="home-rank-empty">
-          아직 참여한 사람이 없어요. <Link to="/mock">가상 1,000만 원으로 첫 주문 해보기 →</Link>
+          아직 참여한 사람이 없어요.<br />
+          <Link to="/mock">가상 1,000만 원으로 1등 해보기 →</Link>
         </p>
       )}
 
@@ -73,9 +66,15 @@ function MockRankingBox() {
                 {r.me && <em>나</em>}
               </span>
               <strong className={`home-rank-rate ${tone(r.returnRate)}`}>{signedRate(r.returnRate)}</strong>
-              <small className="home-rank-asset">{won(r.totalAsset)}원</small>
             </li>
           ))}
+          {meOutside && (
+            <li className="home-rank-item home-rank-me home-rank-mine">
+              <span className="home-rank-no">{me.rank}</span>
+              <span className="home-rank-name">{me.nickname}<em>나</em></span>
+              <strong className={`home-rank-rate ${tone(me.returnRate)}`}>{signedRate(me.returnRate)}</strong>
+            </li>
+          )}
         </ol>
       )}
     </section>

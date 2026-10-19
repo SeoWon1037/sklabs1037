@@ -403,15 +403,35 @@
   font-family: inherit;
 }
 
-/* ===== 로그인 박스 ===== */
+/* ===== 로그인 박스 (한 줄: 인사 + 버튼) ===== */
 .home-login {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.home-login-text {
+  display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 2px;
+  min-width: 0;
 }
 .home-login-hello {
   margin: 0;
-  font-size: 16px;
+  overflow: hidden;
+  font-size: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.home-login-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+.home-login-sub:hover {
   color: var(--text);
 }
 .home-login-desc {
@@ -422,9 +442,34 @@
 
 /* 포인트 색 ② 로그인 버튼 (.btn-primary) */
 .home-login-btn {
-  width: 100%;
-  height: 46px;
-  font-size: 15px;
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* ===== [오늘의 시세 | 관심 종목] 탭 ===== */
+.home-quote-tabs {
+  display: flex;
+  gap: 14px;
+}
+.home-quote-tab {
+  padding: 0 0 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-size: 16px;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+  white-space: nowrap;
+}
+.home-quote-tab:hover {
+  color: var(--text);
+}
+.home-quote-tab-active {
+  border-bottom-color: var(--text);
+  color: var(--text);
 }
 .home-login-links {
   display: flex;
@@ -510,22 +555,91 @@
 }
 
 
-/* ===== 2×2 배치: 위 줄(뉴스 | 로그인·시세), 아래 줄(날씨 | 추천 질문) =====
-   같은 줄에 있는 두 박스는 높이가 똑같이 맞춰짐 (넓은 화면에서만) */
+/* ===== PC: 스크롤 없이 한 화면 =====
+   - 위: 로고 + 검색창 + 바로가기 한 줄
+   - 2×2 최소 높이 = 브라우저 높이 - (상단바 64 + 위아래 여백 32 + 검색 줄 80)
+     → 위 줄이 남는 높이를 다 쓰고, 긴 목록(뉴스·시세)은 박스 안에서 스크롤
+   - 위 줄은 최소 450px (화면이 아주 낮으면 박스가 겹치지 않고 아래로 밀림 → 그때만 페이지 스크롤)
+   - 높이가 1000px 이하인 화면에서는 "지금 토론 중"을 2개만 (아래 줄을 낮게)
+   - 같은 줄에 있는 두 박스는 높이가 똑같이 맞춰짐 */
 @media (min-width: 861px) {
 
-  /* 위 줄 높이는 650px로 고정 (로그인해서 관심 종목이 생겨도 똑같이)
-     → 오른쪽이 넘치면 오늘의 시세가 박스 안에서 스크롤 */
+  .home {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  /* 검색 영역: 세로로 쌓던 것을 한 줄로 */
+  .home-search-area {
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    padding: 0 0 16px;
+  }
+  .home-search-row {
+    flex: 1;
+    max-width: none;
+    gap: 16px;
+  }
+  .home-logo {
+    font-size: 24px;
+  }
+  .home-search {
+    height: 48px;
+  }
+  .home-shortcuts {
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+  .home-shortcut {
+    width: 64px;
+    gap: 4px;
+    padding: 4px 0;
+  }
+  .home-shortcut-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    font-size: 18px;
+  }
+  .home-shortcut-label {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
   .home-grid {
     align-items: stretch;
-    grid-template-rows: minmax(650px, auto) auto;
+    min-height: calc(100dvh - 176px);
+    grid-template-rows: minmax(450px, 1fr) auto;
   }
+  .home-side {
+    min-height: 0;
+  }
+
+  /* 지금 토론 중: 아래 줄이 너무 높아지지 않게 조금 촘촘하게 */
+  .home-hot-list {
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .home-hot-item {
+    padding: 7px 12px;
+  }
+}
+
+/* 낮은 PC 화면: 지금 토론 중 2개만 */
+@media (min-width: 861px) and (max-height: 1000px) {
+  .home-hot-list li:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+@media (min-width: 861px) {
 
   /* 오늘의 시세: 남은 높이만큼만 차지하고, 넘치는 종목은 안에서 스크롤 */
   .home-quotes-box {
     flex: 1;
     contain: size;
-    min-height: 160px;
+    min-height: 140px;
     display: flex;
     flex-direction: column;
   }

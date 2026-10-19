@@ -2,6 +2,7 @@
 // 내 관심 종목 박스 (메인 화면 오른쪽, 로그인했을 때만)
 // - 백엔드 API: GET /api/watchlist
 // - 비어 있으면 주식 종목 화면에서 ☆를 눌러 추가하라고 안내
+// - bare: 박스 테두리·제목 없이 목록만 (메인 화면 [오늘의 시세 | 관심 종목] 탭 안에 넣을 때)
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -9,7 +10,7 @@ import './Watchlist.css'
 
 const formatPrice = (value) => (value == null ? '-' : Number(value).toLocaleString('ko-KR'))
 
-function WatchlistBox() {
+function WatchlistBox({ bare = false }) {
 
   const [stocks, setStocks] = useState(null)   // null = 불러오는 중
 
@@ -20,14 +21,10 @@ function WatchlistBox() {
       .catch(() => setStocks([]))
   }, [])
 
-  if (stocks === null) return null
+  if (stocks === null) return bare ? <p className="watch-empty">불러오는 중...</p> : null
 
-  return (
-    <section className="home-box">
-      <div className="home-box-head">
-        <h2 className="home-box-title">⭐ 내 관심 종목</h2>
-      </div>
-
+  const body = (
+    <>
       {stocks.length === 0 ? (
         <p className="watch-empty">
           주식 종목 화면에서 ☆를 눌러<br />관심 종목을 추가해 보세요.
@@ -54,6 +51,17 @@ function WatchlistBox() {
         <Link to="/stock" className="home-box-link">관심 종목 관리 →</Link>
         {stocks.length > 0 && <Link to="/ai?briefing=1" className="home-box-link">AI 브리핑 받기 →</Link>}
       </div>
+    </>
+  )
+
+  if (bare) return body
+
+  return (
+    <section className="home-box">
+      <div className="home-box-head">
+        <h2 className="home-box-title">⭐ 내 관심 종목</h2>
+      </div>
+      {body}
     </section>
   )
 }

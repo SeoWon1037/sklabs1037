@@ -15,6 +15,7 @@ import UserOAuthResultPage from './pages/user/UserOAuthResultPage'
 import UserFindPage from './pages/user/UserFindPage'
 import UserMyPage from './pages/user/UserMyPage'
 import AiChatPage from './pages/ai/AiChatPage'
+import MockTradePage from './pages/mock/MockTradePage'
 import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
 import LottoPage from './pages/lotto/LottoPage'
 
@@ -28,6 +29,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainPage />} />                        {/* 메인 (오늘의 뉴스) */}
         <Route path="/stock" element={<StockPage />} />                  {/* 주식 종목 */}
+        <Route path="/mock" element={<MockTradePage />} />              {/* 모의투자 */}
         <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
         <Route path="/admin" element={<AdminFeedbackPage />} />          {/* 관리자: AI 피드백 대시보드 */}
         <Route path="/signup" element={<UserSignUpPage />} />            {/* 회원가입 */}

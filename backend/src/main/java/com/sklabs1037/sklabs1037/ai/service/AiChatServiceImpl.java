@@ -5,6 +5,7 @@ import com.sklabs1037.sklabs1037.client.TossApiClient;
 import com.sklabs1037.sklabs1037.ai.dao.AiChatDao;
 import com.sklabs1037.sklabs1037.ai.vo.AiChatVO;
 import com.sklabs1037.sklabs1037.ai.vo.AiStockVO;
+import com.sklabs1037.sklabs1037.mock.service.IMockTradeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,8 @@ import java.util.*;
  *     → get_return_ranking 도구 추가 (계산은 SQL, AI는 설명만) : 도구 호출 6회 → 1회
  *   - "왜 올랐/내렸어?" 같은 질문에 숫자만 답하던 문제
  *     → search_news 도구 추가 (30분마다 수집하는 T_NEWS를 RAG 검색 대상으로)
+ *   - 모의투자 기능 추가 후 "내 포트폴리오 어때?"에 답하지 못하던 문제
+ *     → get_my_mock_portfolio 도구 추가 (질문한 회원 본인의 계좌만 조회, 회원 번호는 AI가 아니라 서버 세션에서)
  */
 @Slf4j
 @Service
@@ -47,6 +50,9 @@ public class AiChatServiceImpl implements IAiChatService {
             - 여러 종목의 수익률 비교나 순위 질문은 get_return_ranking 한 번으로 답해. 수익률을 직접 계산하지 마.
             - 회사가 무슨 사업을 하는지 같은 질문은 search_stock_docs로 문서를 찾아 그 내용을 근거로 답해.
             - 최근 이슈, 주가가 오르거나 내린 이유, 뉴스 질문은 search_news로 최근 기사를 찾아 근거로 답해.
+            - "내 포트폴리오", "내 모의투자", "내 계좌", "내 보유 종목" 질문은 get_my_mock_portfolio로 조회해서 답해.
+              종목 비중이 한쪽에 몰렸는지, 수익/손실 종목, 현금 비중을 짚어주고 필요하면 다른 도구로 해당 종목 흐름·뉴스를 확인해.
+              모의투자는 가상 자금 1,000만 원으로 하는 연습 계좌라는 점을 기억해.
             - 근거는 가장 중요한 3~4개만 골라 짧게 요약해. 비슷한 기사는 하나로 묶어.
             - 지원 종목은 DB에 있는 종목뿐이야. 없는 종목이면 지원하지 않는다고 말해.
             - 시세 데이터의 기준 날짜를 함께 알려줘.
@@ -81,7 +87,11 @@ public class AiChatServiceImpl implements IAiChatService {
                     "30분마다 수집되는 최근 뉴스(제목, 언론사, 발행 시각)를 키워드로 검색해 최신순으로 최대 10건 준다. 최근 이슈, 주가 변동 이유를 답할 때 근거로 사용.",
                     Map.of("query", Map.of("type", "string", "description", "핵심 단어만 공백으로 구분. 예: '삼성전자', '코스피 외국인'"),
                             "days", Map.of("type", "integer", "description", "최근 며칠 기사인지 (1~7, 기본 3)")),
-                    List.of("query"))
+                    List.of("query")),
+            tool("get_my_mock_portfolio",
+                    "질문한 사용자 본인의 모의투자 계좌를 조회한다. 현금, 총자산, 시작 자금 대비 수익률, 보유 종목별 수량·평균 단가·현재가·평가손익·비중(%), 최근 거래 5건을 준다.",
+                    Map.of(),
+                    List.of())
     );
 
     @Autowired
@@ -92,6 +102,9 @@ public class AiChatServiceImpl implements IAiChatService {
 
     @Autowired
     private AiChatDao aiChatDao;
+
+    @Autowired
+    private IMockTradeService mockTradeService;
 
     // 도구 결과를 JSON 문자열로 바꿀 때 사용 (Spring Boot가 만들어둔 것 재사용)
     @Autowired
@@ -153,7 +166,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
                 try {
 
-                    result.put("content", jsonMapper.writeValueAsString(runTool(toolName, input)));
+                    result.put("content", jsonMapper.writeValueAsString(runTool(toolName, input, vo.getUserId())));
 
                 } catch (Exception e) {
 
@@ -214,7 +227,8 @@ public class AiChatServiceImpl implements IAiChatService {
     // ============================================
     // 도구 실행
     // ============================================
-    private Object runTool(String toolName, Map<String, Object> input) {
+    // userId: 질문한 회원 (내 포트폴리오 조회용, AI가 고를 수 없게 서버 세션 값만 사용)
+    private Object runTool(String toolName, Map<String, Object> input, Long userId) {
 
         switch (toolName) {
 
@@ -326,6 +340,22 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "get_my_mock_portfolio": {
+
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+
+                Map<String, Object> account = mockTradeService.getAccount(userId);
+
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("account", account.get("account"));
+                result.put("holdings", account.get("holdings"));
+                result.put("recentTrades", mockTradeService.getTrades(userId, 1, 5).get("trades"));
+                result.put("note", "가격 출처 LIVE=토스 현재가, CLOSE=최근 종가. 금액 단위는 원, 비율 단위는 %.");
+
+                return result;
+
+            }
+
             default:
                 throw new IllegalArgumentException("알 수 없는 도구: " + toolName);
 
@@ -359,6 +389,7 @@ public class AiChatServiceImpl implements IAiChatService {
             case "get_return_ranking" -> "수익률 순위 (" + input.get("days") + "거래일)";
             case "search_stock_docs"  -> "문서 검색 (" + str(input.get("query")) + ")";
             case "search_news"        -> "뉴스 검색 (" + str(input.get("query")) + ")";
+            case "get_my_mock_portfolio" -> "내 모의투자 계좌 조회";
             default                   -> toolName;
         };
 

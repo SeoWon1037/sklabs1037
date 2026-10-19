@@ -10,6 +10,7 @@
 //   GET /api/news/summary?stockId=1         AI 뉴스 요약 (NewsSummaryBox)
 //   GET/POST/DELETE /api/watchlist          관심 종목 (☆ / ★)
 //   /api/stock/board/**                     종목 토론방 (StockBoard)
+// - "모의 매수" 버튼 → /mock?symbol=005930 (모의투자 화면에서 이 종목이 선택된 채로 열림)
 // ============================================
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -317,10 +318,15 @@ function StockPage() {
                   )}
                 </div>
 
-                <dl className="detail-range">
-                  <div><dt>{daily.length}일 최고</dt><dd className="up">{formatPrice(rangeHigh)}</dd></div>
-                  <div><dt>{daily.length}일 최저</dt><dd className="down">{formatPrice(rangeLow)}</dd></div>
-                </dl>
+                <div className="detail-side">
+                  <dl className="detail-range">
+                    <div><dt>{daily.length}일 최고</dt><dd className="up">{formatPrice(rangeHigh)}</dd></div>
+                    <div><dt>{daily.length}일 최저</dt><dd className="down">{formatPrice(rangeLow)}</dd></div>
+                  </dl>
+                  <Link to={`/mock?symbol=${detail.stock.symbol}`} className="btn btn-primary detail-mock-btn">
+                    💰 모의 매수
+                  </Link>
+                </div>
               </div>
 
               {/* 탭 */}

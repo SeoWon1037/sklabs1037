@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    모의투자 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+    사용 테이블: T_MOCK_ACCOUNT, T_MOCK_HOLDING, T_MOCK_TRADE (+ T_STOCK, T_STOCK_PRICE, T_USER)
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.mock.dao.MockTradeDao">
+
+    <!-- ============================================
+         종목 + 최근 종가 (주문 목록, 토스 현재가를 못 받을 때 대신 쓰는 가격)
+         ============================================ -->
+    <select id="selectStocks"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  S.ID          AS STOCK_ID
+               ,S.SYMBOL
+               ,S.NAME
+               ,L.TRADE_DATE
+               ,L.CLOSE_PRICE
+          FROM T_STOCK S
+          LEFT JOIN LATERAL (
+                SELECT  P.TRADE_DATE
+                       ,P.CLOSE_PRICE
+                  FROM T_STOCK_PRICE P
+                 WHERE 1=1
+                   AND P.STOCK_ID = S.ID
+                 ORDER BY P.TRADE_DATE DESC
+                 LIMIT 1
+          ) L ON TRUE
+         WHERE 1=1
+           AND S.USE_YN  = 'Y'
+           AND S.DEL_DAY IS NULL
+         ORDER BY S.ID
+    </select>
+
+    <!-- ============================================
+         계좌
+         ============================================ -->
+
+    <!-- 계좌 만들기 (이미 있으면 그대로) -->
+    <insert id="insertAccount"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        INSERT INTO T_MOCK_ACCOUNT (
+               USER_ID
+              ,CASH
+              ,INIT_CASH
+        ) VALUES (
+               #{userId}
+              ,#{initCash}
+              ,#{initCash}
+        )
+        ON CONFLICT (USER_ID) DO NOTHING
+    </insert>
+
+    <!-- 계좌 조회 -->
+    <select id="selectAccount"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  A.USER_ID
+               ,A.CASH
+               ,A.INIT_CASH
+               ,A.RESET_COUNT
+          FROM T_MOCK_ACCOUNT A
+         WHERE 1=1
+           AND A.USER_ID = #{userId}
+    </select>
+
+    <!--
+        계좌 조회 + 잠금 (주문, 초기화할 때)
+        - FOR UPDATE: 이 트랜잭션이 끝날 때까지 같은 계좌의 다른 주문은 여기서 기다림
+          → 버튼을 빠르게 두 번 눌러도 잔고 확인과 차감이 섞이지 않음
+    -->
+    <select id="selectAccountForUpdate"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  A.USER_ID
+               ,A.CASH
+               ,A.INIT_CASH
+               ,A.RESET_COUNT
+          FROM T_MOCK_ACCOUNT A
+         WHERE 1=1
+           AND A.USER_ID = #{userId}
+           FOR UPDATE
+    </select>
+
+    <!-- 현금 변경 -->
+    <update id="updateCash"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        UPDATE T_MOCK_ACCOUNT
+           SET CASH    = #{cash}
+              ,UPD_DAY = NOW()
+         WHERE 1=1
+           AND USER_ID = #{userId}
+    </update>
+
+    <!-- 초기화: 현금을 시작 자금으로 -->
+    <update id="resetAccount">
+        UPDATE T_MOCK_ACCOUNT
+           SET CASH        = INIT_CASH
+              ,RESET_COUNT = RESET_COUNT + 1
+              ,RESET_DAY   = NOW()
+              ,UPD_DAY     = NOW()
+         WHERE 1=1
+           AND USER_ID = #{userId}
+    </update>
+
+    <!-- ============================================
+         보유 종목
+         ============================================ -->
+
+    <!-- 내 보유 종목 -->
+    <select id="selectHoldings"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  H.STOCK_ID
+               ,S.SYMBOL
+               ,S.NAME
+               ,H.QUANTITY
+               ,H.AVG_PRICE
+          FROM T_MOCK_HOLDING H
+          JOIN T_STOCK S ON S.ID = H.STOCK_ID
+         WHERE 1=1
+           AND H.USER_ID = #{userId}
+         ORDER BY H.INS_DAY
+    </select>
+
+    <!-- 보유 종목 1개 (주문할 때) -->
+    <select id="selectHolding"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  H.STOCK_ID
+               ,H.QUANTITY
+               ,H.AVG_PRICE
+          FROM T_MOCK_HOLDING H
+         WHERE 1=1
+           AND H.USER_ID  = #{userId}
+           AND H.STOCK_ID = #{stockId}
+    </select>
+
+    <!-- 보유 종목 저장 (없으면 추가, 있으면 수량·평균 단가 교체. 계산은 서비스에서) -->
+    <insert id="upsertHolding"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        INSERT INTO T_MOCK_HOLDING (
+               USER_ID
+              ,STOCK_ID
+              ,QUANTITY
+              ,AVG_PRICE
+        ) VALUES (
+               #{userId}
+              ,#{stockId}
+              ,#{quantity}
+              ,#{avgPrice}
+        )
+        ON CONFLICT (USER_ID, STOCK_ID) DO UPDATE
+           SET QUANTITY  = EXCLUDED.QUANTITY
+              ,AVG_PRICE = EXCLUDED.AVG_PRICE
+              ,UPD_DAY   = NOW()
+    </insert>
+
+    <!-- 보유 종목 삭제 (전량 매도) -->
+    <delete id="deleteHolding"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        DELETE FROM T_MOCK_HOLDING
+         WHERE 1=1
+           AND USER_ID  = #{userId}
+           AND STOCK_ID = #{stockId}
+    </delete>
+
+    <!-- 보유 종목 전체 삭제 (초기화) -->
+    <delete id="deleteAllHoldings">
+        DELETE FROM T_MOCK_HOLDING
+         WHERE 1=1
+           AND USER_ID = #{userId}
+    </delete>
+
+    <!-- ============================================
+         거래 내역
+         ============================================ -->
+
+    <!-- 거래 기록 -->
+    <insert id="insertTrade"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO"
+            useGeneratedKeys="true" keyProperty="tradeId" keyColumn="id">
+        INSERT INTO T_MOCK_TRADE (
+               USER_ID
+              ,STOCK_ID
+              ,SIDE
+              ,QUANTITY
+              ,PRICE
+              ,AMOUNT
+              ,PROFIT
+              ,PRICE_SOURCE
+        ) VALUES (
+               #{userId}
+              ,#{stockId}
+              ,#{side}
+              ,#{quantity}
+              ,#{price}
+              ,#{amount}
+              ,#{profit}
+              ,#{priceSource}
+        )
+    </insert>
+
+    <!--
+        내 거래 내역 (최신순)
+        - 거래 시각은 밀리초 숫자로 (화면에서 시간대 문제 없게)
+    -->
+    <select id="selectTrades"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  T.ID                                        AS TRADE_ID
+               ,T.STOCK_ID
+               ,S.SYMBOL
+               ,S.NAME
+               ,T.SIDE
+               ,T.QUANTITY
+               ,T.PRICE
+               ,T.AMOUNT
+               ,T.PROFIT
+               ,T.PRICE_SOURCE
+               ,(EXTRACT(EPOCH FROM T.INS_DAY) * 1000)::BIGINT AS INS_AT
+          FROM T_MOCK_TRADE T
+          JOIN T_STOCK S ON S.ID = T.STOCK_ID
+         WHERE 1=1
+           AND T.USER_ID = #{userId}
+         ORDER BY T.ID DESC
+         LIMIT  #{limit}
+        OFFSET  #{offset}
+    </select>
+
+    <!-- 내 거래 수 -->
+    <select id="countTrades"
+            resultType="int">
+        SELECT  COUNT(*)
+          FROM T_MOCK_TRADE T
+         WHERE 1=1
+           AND T.USER_ID = #{userId}
+    </select>
+
+    <!-- 거래 내역 전체 삭제 (초기화) -->
+    <delete id="deleteAllTrades">
+        DELETE FROM T_MOCK_TRADE
+         WHERE 1=1
+           AND USER_ID = #{userId}
+    </delete>
+
+    <!-- ============================================
+         수익률 랭킹
+         - 평가금액은 현재가가 필요해서 서비스에서 계산
+         - 거래를 1번 이상 한 계좌만, 탈퇴한 회원 제외
+         ============================================ -->
+
+    <!-- 랭킹 대상 계좌 -->
+    <select id="selectRankingAccounts"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  A.USER_ID
+               ,U.NICKNAME
+               ,A.CASH
+               ,A.INIT_CASH
+               ,(
+                    SELECT  COUNT(*)
+                      FROM T_MOCK_TRADE T
+                     WHERE 1=1
+                       AND T.USER_ID = A.USER_ID
+                )                                           AS TRADE_COUNT
+          FROM T_MOCK_ACCOUNT A
+          JOIN T_USER U ON U.ID = A.USER_ID
+         WHERE 1=1
+           AND U.DEL_DAY IS NULL
+           AND EXISTS (
+                SELECT  1
+                  FROM T_MOCK_TRADE T
+                 WHERE 1=1
+                   AND T.USER_ID = A.USER_ID
+           )
+    </select>
+
+    <!-- 랭킹 대상 계좌들의 보유 종목 -->
+    <select id="selectRankingHoldings"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  H.USER_ID
+               ,H.STOCK_ID
+               ,H.QUANTITY
+          FROM T_MOCK_HOLDING H
+          JOIN T_USER U ON U.ID = H.USER_ID
+         WHERE 1=1
+           AND U.DEL_DAY IS NULL
+    </select>
+
+</mapper>

@@ -181,6 +181,18 @@
   font-size: 13px;
   color: color-mix(in srgb, var(--text) 50%, transparent);
 }
+.detail-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.detail-mock-btn {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
 .detail-range {
   display: flex;
   flex-direction: column;
@@ -491,6 +503,18 @@
   .detail-range {
     flex-direction: row;
     gap: 16px;
+  }
+  /* 최고·최저가 옆에 모의 매수 버튼 */
+  .detail-side {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .detail-range dt,
+  .detail-range dd {
+    white-space: nowrap;
   }
 
   /* 탭 4개: 한 줄 + 넘치면 옆으로 스크롤 */

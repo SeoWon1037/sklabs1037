@@ -1,0 +1,766 @@
+/* ============================================
+   모의투자 화면 (/mock)
+   - PC: 요약 카드 / [보유 종목 + 거래 내역 | 주문 + 랭킹]
+   - 960px 이하: 한 줄씩 (요약 → 주문 → 보유 종목 → 거래 내역 → 랭킹)
+   - 640px 이하: 표를 카드 모양으로
+   - 상승 빨강 / 하락 파랑 (한국 주식 관례)
+   ============================================ */
+
+.mock-page {
+  --mock-up: #e5484d;
+  --mock-down: #3b82f6;
+  --mock-card: color-mix(in srgb, var(--text) 3%, transparent);
+  --mock-muted: color-mix(in srgb, var(--text) 50%, transparent);
+
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.mock-up {
+  color: var(--mock-up);
+}
+.mock-down {
+  color: var(--mock-down);
+}
+.mock-muted {
+  color: var(--mock-muted);
+  font-size: 13px;
+}
+.mock-status {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--mock-muted);
+}
+.mock-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mock-muted);
+}
+.mock-small {
+  font-size: 13px;
+  font-weight: 600;
+}
+.mock-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mock-muted);
+}
+.mock-empty {
+  margin: 0;
+  padding: 28px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--mock-muted);
+}
+
+/* 공통 카드 */
+.mock-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--mock-card);
+}
+.mock-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.mock-card-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* ===== 요약 ===== */
+.mock-summary {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 1px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--border);   /* 칸 사이 1px 선 */
+  overflow: hidden;
+}
+.mock-summary > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 20px 22px;
+  background: var(--bg);
+}
+.mock-summary-main {
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg)) !important;
+}
+.mock-total {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.mock-total small {
+  margin-left: 2px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.mock-total-change {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.mock-summary-item strong {
+  font-size: 19px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.mock-summary-actions {
+  align-items: stretch;
+}
+.mock-ai-btn {
+  width: 100%;
+}
+.mock-reset {
+  align-self: center;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: var(--mock-muted);
+  text-decoration: underline;
+}
+.mock-reset:hover {
+  color: var(--text);
+}
+.mock-reset-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--mock-muted);
+}
+.mock-reset-yes,
+.mock-reset-no {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.mock-reset-yes {
+  border: 1px solid var(--mock-up);
+  background: var(--mock-up);
+  color: #fff;
+}
+.mock-reset-no {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+/* ===== 2단 배치 ===== */
+.mock-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+.mock-col-main,
+.mock-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ===== 주문 ===== */
+.mock-side-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.mock-side-tab {
+  height: 38px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--mock-muted);
+}
+.mock-side-buy.mock-side-active {
+  background: var(--mock-up);
+  color: #fff;
+}
+.mock-side-sell.mock-side-active {
+  background: var(--mock-down);
+  color: #fff;
+}
+
+.mock-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mock-muted);
+}
+.mock-field select,
+.mock-qty {
+  height: 44px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+}
+.mock-field select {
+  padding: 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.mock-field select:focus,
+.mock-qty:focus-within {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.mock-price-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.mock-price-box strong {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.mock-badge {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #d97706;
+}
+
+.mock-qty {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto 44px;
+  align-items: center;
+  overflow: hidden;
+}
+.mock-qty button {
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  color: var(--text);
+}
+.mock-qty button:hover {
+  background: var(--hover);
+}
+.mock-qty input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 800;
+  text-align: right;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.mock-qty input::-webkit-outer-spin-button,
+.mock-qty input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.mock-qty-unit {
+  padding: 0 8px 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mock-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.mock-quick button {
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.mock-quick button:hover:not(:disabled) {
+  background: var(--hover);
+}
+.mock-quick button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mock-order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+.mock-order-info div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mock-order-info dt {
+  color: var(--mock-muted);
+}
+.mock-order-info dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.mock-order-total {
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 15px;
+}
+
+.mock-submit {
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  transition: filter 0.15s, opacity 0.15s;
+}
+.mock-submit:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.mock-submit:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.mock-submit-buy {
+  background: var(--mock-up);
+}
+.mock-submit-sell {
+  background: var(--mock-down);
+}
+
+.mock-msg {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.mock-msg-ok {
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  color: #16a34a;
+}
+.mock-msg-error {
+  background: color-mix(in srgb, var(--mock-up) 12%, transparent);
+  color: var(--mock-up);
+}
+
+/* ===== 표 (보유 종목, 거래 내역) ===== */
+.mock-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.mock-table th {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mock-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+.mock-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  text-align: right;
+  white-space: nowrap;
+}
+.mock-table th:first-child,
+.mock-table td:first-child {
+  text-align: left;
+}
+.mock-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.mock-table td small {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+}
+.mock-cell-name strong {
+  display: block;
+  font-weight: 700;
+}
+.mock-cell-name small {
+  color: var(--mock-muted);
+}
+.mock-cell-time {
+  color: var(--mock-muted);
+  font-size: 13px;
+}
+
+.mock-holding-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.mock-holding-table tbody tr:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+.mock-row-active {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.mock-weight {
+  display: inline-block;
+  width: 44px;
+  height: 6px;
+  margin-right: 8px;
+  vertical-align: middle;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  overflow: hidden;
+}
+.mock-weight i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--primary);
+}
+
+.mock-side-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.mock-side-chip-buy {
+  background: color-mix(in srgb, var(--mock-up) 14%, transparent);
+  color: var(--mock-up);
+}
+.mock-side-chip-sell {
+  background: color-mix(in srgb, var(--mock-down) 14%, transparent);
+  color: var(--mock-down);
+}
+.mock-trade-table th:nth-child(2),
+.mock-trade-table td:nth-child(2) {
+  text-align: left;
+}
+.mock-table td small.mock-close-tag {
+  display: inline;
+  margin-left: 4px;
+  color: #d97706;
+}
+.mock-trade-table td:nth-child(3) {
+  text-align: center;
+}
+.mock-trade-table th:nth-child(3) {
+  text-align: center;
+}
+
+.mock-more {
+  display: block;
+  width: 100%;
+  height: 38px;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.mock-more:hover {
+  background: var(--hover);
+}
+
+/* ===== 랭킹 ===== */
+.mock-rank-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mock-rank-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 8px;
+  border-radius: 10px;
+}
+.mock-rank-me {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.mock-rank-mine {
+  margin-top: 8px;
+  position: relative;
+}
+.mock-rank-mine::before {
+  content: '···';
+  position: absolute;
+  top: -14px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mock-muted);
+}
+.mock-rank-no {
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--mock-muted);
+}
+.mock-rank-name {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mock-rank-name em {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--primary);
+  font-size: 11px;
+  font-style: normal;
+  color: var(--primary-text);
+}
+.mock-rank-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.mock-rank-value strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+.mock-rank-value small {
+  font-size: 11px;
+  color: var(--mock-muted);
+}
+
+/* ===== 로그아웃 상태 ===== */
+.mock-guest {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+.mock-guest-card {
+  padding: 36px;
+}
+.mock-guest-icon {
+  font-size: 40px;
+}
+.mock-guest-card h1 {
+  margin: 12px 0 8px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.mock-guest-card p {
+  margin: 0 0 16px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+}
+.mock-guest-card ul {
+  margin: 0 0 24px;
+  padding-left: 18px;
+  line-height: 1.9;
+  font-size: 14px;
+}
+.mock-guest-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+
+/* ============================================
+   좁은 화면 (960px 이하): 한 줄씩
+   - 두 칸 묶음을 풀고(display: contents) order로 순서를 정함
+   ============================================ */
+@media (max-width: 960px) {
+
+  .mock-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+  .mock-summary-main {
+    grid-column: 1 / -1;
+  }
+
+  .mock-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mock-col-main,
+  .mock-col-side {
+    display: contents;
+  }
+  .mock-order {
+    order: 1;
+  }
+  .mock-holdings {
+    order: 2;
+  }
+  .mock-trades {
+    order: 3;
+  }
+  .mock-ranking {
+    order: 4;
+  }
+
+  .mock-guest {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ============================================
+   휴대폰 화면 (640px 이하)
+   - PC 화면에는 영향 없음
+   - 표 → 카드 (칸 이름은 data-label로 표시)
+   ============================================ */
+@media (max-width: 640px) {
+
+  .mock-page {
+    padding: 12px 12px 40px;
+  }
+  .mock-card {
+    padding: 16px;
+  }
+
+  /* 요약: 총자산 한 줄, 아래 2칸씩 */
+  .mock-summary > div {
+    padding: 14px 16px;
+  }
+  .mock-total {
+    font-size: 26px;
+  }
+  .mock-summary-item strong {
+    font-size: 16px;
+  }
+  .mock-summary-actions {
+    grid-column: 1 / -1;
+  }
+
+  /* 표 머리글 숨기고 행을 카드로 */
+  .mock-table thead {
+    display: none;
+  }
+  .mock-table,
+  .mock-table tbody {
+    display: block;
+  }
+  .mock-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    padding: 12px 4px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  }
+  .mock-table tbody tr:last-child {
+    border-bottom: none;
+  }
+  .mock-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 0;
+    border: none;
+    font-size: 13px;
+    white-space: normal;
+  }
+  .mock-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mock-muted);
+  }
+  .mock-table td small {
+    display: inline;
+    margin-left: 4px;
+  }
+
+  /* 보유 종목 카드: 첫 줄 = 종목명 전체 폭 */
+  .mock-holding-table td.mock-cell-name {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 15px;
+  }
+  .mock-holding-table td.mock-cell-name strong {
+    display: inline;
+  }
+  .mock-weight {
+    display: none;
+  }
+
+  /* 거래 내역 카드: 첫 줄 = 시각 · 종목 · 매수/매도 */
+  .mock-trade-table tr {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .mock-trade-table td:nth-child(-n + 3) {
+    justify-content: flex-start;
+  }
+  .mock-trade-table td:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+  .mock-trade-table td.mock-cell-name strong {
+    display: inline;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .mock-guest-card {
+    padding: 24px 20px;
+  }
+  .mock-guest-card h1 {
+    font-size: 20px;
+  }
+}

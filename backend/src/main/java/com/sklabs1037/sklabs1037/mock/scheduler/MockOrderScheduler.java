@@ -17,7 +17,8 @@ import java.util.List;
  * 모의투자 지정가 주문 스케줄러
  * - 정규장(평일 09:00~15:30) 1분마다: 지금 가격으로 조건이 맞는 주문 체결
  * - 평일 15:35: 오늘이 마지막인 미체결 주문 만료 (묶어둔 돈 돌려줌)
- * - 서버가 켜질 때: 서버가 꺼져 있어서 만료되지 못한 지난 주문 정리
+ * - 평일 15:40: 거래한 적 있는 계좌의 오늘 총자산 기록 (수익률 그래프, 이번 주 랭킹)
+ * - 서버가 켜질 때: 서버가 꺼져 있어서 만료되지 못한 지난 주문 정리 (+ 장 마감 뒤면 오늘 기록)
  *
  * 주문 1건 = 트랜잭션 1개 → 한 건이 실패해도 나머지 주문은 계속 처리
  */
@@ -71,6 +72,23 @@ public class MockOrderScheduler {
 
     }
 
+    // 장 마감 후 일별 자산 기록 (만료 처리 다음, 종가가 반영된 뒤)
+    @Scheduled(cron = "0 40 15 * * MON-FRI", zone = "Asia/Seoul")
+    public void snapshot() {
+
+        try {
+
+            int saved = mockTradeService.snapshotAll(MockMarketHours.now().toLocalDate());
+            log.info("모의투자 일별 자산 기록: {}계좌", saved);
+
+        } catch (Exception e) {
+
+            log.error("모의투자 일별 자산 기록 실패", e);
+
+        }
+
+    }
+
     // 서버 시작 직후: 지난 거래일 주문 정리 (오늘 주문은 그대로)
     @EventListener(ApplicationReadyEvent.class)
     public void expireOnStart() {
@@ -82,6 +100,12 @@ public class MockOrderScheduler {
         if (now.toLocalTime().isAfter(java.time.LocalTime.of(15, 35))) upTo = now.toLocalDate();
 
         expireUpTo(upTo);
+
+        // 평일 장 마감(15:40) 뒤에 서버가 켜졌으면 오늘 기록도 (그 시각에 꺼져 있었을 수 있어서, 같은 날은 덮어씀)
+        java.time.DayOfWeek d = now.getDayOfWeek();
+        boolean weekday = d != java.time.DayOfWeek.SATURDAY && d != java.time.DayOfWeek.SUNDAY;
+
+        if (weekday && now.toLocalTime().isAfter(java.time.LocalTime.of(15, 40))) snapshot();
 
     }
 

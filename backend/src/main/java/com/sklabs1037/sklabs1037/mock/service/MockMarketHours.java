@@ -54,6 +54,13 @@ public final class MockMarketHours {
 
     }
 
+    // 그 주의 월요일 (주간 랭킹 기준)
+    public static LocalDate weekStart(LocalDate day) {
+
+        return day.with(DayOfWeek.MONDAY);
+
+    }
+
     // 한국 주식 호가 단위 (2023년 기준)
     public static BigDecimal tickSize(BigDecimal price) {
 

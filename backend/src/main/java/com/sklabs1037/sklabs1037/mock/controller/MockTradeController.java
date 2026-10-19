@@ -26,7 +26,8 @@ import java.util.Map;
  *                                                  주문 (MARKET 바로 체결 / LIMIT 대기) → { success, trade }
  *   POST /api/mock/orders/{orderId}/cancel         지정가 주문 취소                   → { success }
  *   POST /api/mock/reset                           계좌 초기화                        → { success }
- *   GET  /api/mock/ranking?size=10                 수익률 랭킹 (누구나)                → { success, ranking, me, participants }
+ *   GET  /api/mock/ranking?size=10&period=ALL      수익률 랭킹 (누구나, period=ALL|WEEK) → { success, period, ranking, me, participants }
+ *   GET  /api/mock/history                         내 수익률 추이 (그래프)            → { success, initCash, points: [{ date, totalAsset, returnRate, live? }] }
  *
  * - 랭킹은 누구나, 나머지는 로그인한 사람만 (본인 계좌만)
  * - 랭킹에는 닉네임만 보내고 회원 번호는 보내지 않음
@@ -189,6 +190,7 @@ public class MockTradeController {
     // 수익률 랭킹 (누구나)
     @GetMapping("/ranking")
     public ResponseEntity<Map<String, Object>> ranking(@RequestParam(defaultValue = "10") int size,
+                                                       @RequestParam(defaultValue = "ALL") String period,
                                                        HttpServletRequest request) {
 
         UserLoginVO loginUser = getLoginUser(request);
@@ -196,7 +198,7 @@ public class MockTradeController {
 
         try {
 
-            Map<String, Object> body = new HashMap<>(mockTradeService.getRanking(loginUser == null ? null : loginUser.getId(), safeSize));
+            Map<String, Object> body = new HashMap<>(mockTradeService.getRanking(loginUser == null ? null : loginUser.getId(), safeSize, period));
             body.put("success", true);
 
             return ResponseEntity.ok(body);
@@ -205,6 +207,29 @@ public class MockTradeController {
 
             log.error("모의투자 랭킹 조회 오류", e);
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "랭킹을 불러오지 못했습니다.");
+
+        }
+
+    }
+
+    // 내 수익률 추이
+    @GetMapping("/history")
+    public ResponseEntity<Map<String, Object>> history(HttpServletRequest request) {
+
+        UserLoginVO loginUser = getLoginUser(request);
+        if (loginUser == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
+
+        try {
+
+            Map<String, Object> body = new HashMap<>(mockTradeService.getHistory(loginUser.getId()));
+            body.put("success", true);
+
+            return ResponseEntity.ok(body);
+
+        } catch (Exception e) {
+
+            log.error("모의투자 수익률 추이 조회 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "수익률 추이를 불러오지 못했습니다.");
 
         }
 

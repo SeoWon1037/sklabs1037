@@ -4,22 +4,31 @@
 //   · 시장가: 지금 가격으로 바로 체결
 //   · 지정가: 정해둔 가격이 되면 체결 (정규장 1분마다 확인, 그 거래일 장 마감까지 안 되면 자동 취소)
 // - 주소로 종목 골라서 열기: /mock?symbol=005930 (종목 화면 "모의 매수" 버튼)
-// - PC: 요약 카드 / [보유 종목 + 거래 내역 | 주문 + 미체결 주문 + 수익률 랭킹]
-// - 휴대폰: 요약 → 주문 → 미체결 주문 → 보유 종목 → 거래 내역 → 랭킹 (한 줄씩)
+// - PC: 요약 카드 / [수익률 추이 + 보유 종목 + 거래 내역 | 주문 + 미체결 주문 + 수익률 랭킹]
+// - 휴대폰: 요약 → 주문 → 미체결 주문 → 수익률 추이 → 보유 종목 → 거래 내역 → 랭킹 (한 줄씩)
 // - 백엔드 API
 //   GET  /api/mock/account                          내 계좌 + 보유 종목 + 주문 가능 종목
 //   GET  /api/mock/trades?page=1                    내 거래 내역 (20개씩)
 //   POST /api/mock/order { stockId, side, quantity, orderType, limitPrice }   주문
 //   POST /api/mock/orders/{orderId}/cancel          지정가 주문 취소
 //   POST /api/mock/reset                            계좌 초기화
-//   GET  /api/mock/ranking?size=10                  수익률 랭킹 (누구나)
+//   GET  /api/mock/ranking?size=10&period=ALL|WEEK  수익률 랭킹 (누구나, 전체 / 이번 주)
+//   GET  /api/mock/history                          내 수익률 추이 (평일 15:40 기록 + 지금)
 // ============================================
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import ReturnChart from '../../components/mock/ReturnChart'
 import './MockTradePage.css'
 
 // 현재가 자동 새로고침 간격 (30초)
 const REFRESH_MS = 30_000
+
+// 수익률 그래프 기간
+const HISTORY_PERIODS = [
+  { value: 7, label: '1주' },
+  { value: 31, label: '1개월' },
+  { value: 0, label: '전체' },
+]
 
 // 수량 빠른 선택
 const QUICK_RATES = [
@@ -78,8 +87,13 @@ function MockTradePage() {
   // 거래 내역
   const [trades, setTrades] = useState({ items: [], total: 0, page: 1 })
 
-  // 랭킹
+  // 랭킹 (ALL: 시작 자금 대비 / WEEK: 이번 주)
   const [ranking, setRanking] = useState(null)
+  const [rankPeriod, setRankPeriod] = useState('ALL')
+
+  // 수익률 추이
+  const [history, setHistory] = useState(null)
+  const [historyDays, setHistoryDays] = useState(31)
 
   // 주문 입력
   const [side, setSide] = useState('BUY')
@@ -120,9 +134,16 @@ function MockTradePage() {
   }, [])
 
   const loadRanking = useCallback(() => {
-    return fetch('/api/mock/ranking?size=10')
+    return fetch(`/api/mock/ranking?size=10&period=${rankPeriod}`)
       .then((res) => res.json())
       .then((json) => json.success && setRanking(json))
+      .catch(() => {})
+  }, [rankPeriod])
+
+  const loadHistory = useCallback(() => {
+    return fetch('/api/mock/history')
+      .then((res) => res.json())
+      .then((json) => json.success && setHistory(json))
       .catch(() => {})
   }, [])
 
@@ -139,10 +160,12 @@ function MockTradePage() {
     return () => clearInterval(timer)
   }, [loadAccount, loadRanking])
 
-  // 로그인 상태면 거래 내역
+  // 로그인 상태면 거래 내역 + 수익률 추이
   useEffect(() => {
-    if (data?.loggedIn) loadTrades(1)
-  }, [data?.loggedIn, loadTrades])
+    if (!data?.loggedIn) return
+    loadTrades(1)
+    loadHistory()
+  }, [data?.loggedIn, loadTrades, loadHistory])
 
   // ===== 주문 종목 =====
   const stocks = useMemo(() => data?.stocks ?? [], [data])
@@ -240,7 +263,7 @@ function MockTradePage() {
         })
       }
       setQuantity('')
-      await Promise.all([loadAccount(), loadTrades(1), loadRanking()])
+      await Promise.all([loadAccount(), loadTrades(1), loadRanking(), loadHistory()])
     } catch {
       setOrderMsg({ type: 'error', text: '서버에 연결할 수 없습니다.' })
     } finally {
@@ -270,7 +293,7 @@ function MockTradePage() {
         return
       }
       setOrderMsg({ type: 'ok', text: '계좌를 1,000만 원으로 초기화했어요. (미체결 주문도 모두 취소)' })
-      await Promise.all([loadAccount(), loadTrades(1), loadRanking()])
+      await Promise.all([loadAccount(), loadTrades(1), loadRanking(), loadHistory()])
     } finally {
       setConfirmReset(false)
     }
@@ -282,6 +305,18 @@ function MockTradePage() {
       <div className="mock-card-head">
         <h2>수익률 랭킹</h2>
         {ranking && <span className="mock-muted">{ranking.participants}명 참여</span>}
+        <div className="mock-seg mock-seg-right">
+          {[['ALL', '전체'], ['WEEK', '이번 주']].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={rankPeriod === value ? 'mock-seg-active' : ''}
+              onClick={() => setRankPeriod(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       {!ranking && <p className="mock-empty">불러오는 중...</p>}
       {ranking && ranking.ranking.length === 0 && <p className="mock-empty">아직 참여한 사람이 없어요. 첫 주문의 주인공이 되어보세요!</p>}
@@ -309,7 +344,11 @@ function MockTradePage() {
           )}
         </ol>
       )}
-      <p className="mock-note">총자산 = 현금 + 주문에 묶인 돈 + 보유 주식 평가금액 · 거래 1번 이상 한 계좌만</p>
+      <p className="mock-note">
+        {rankPeriod === 'WEEK'
+          ? '이번 주 수익률 = 지난주 마지막 장 마감 기록 대비 (이번 주에 시작했으면 1,000만 원 대비)'
+          : '총자산 = 현금 + 주문에 묶인 돈 + 보유 주식 평가금액 · 거래 1번 이상 한 계좌만'}
+      </p>
     </section>
   )
 
@@ -347,6 +386,13 @@ function MockTradePage() {
   }
 
   const account = data.account
+
+  // 그래프 기간 자르기 (마지막 "지금" 점은 항상 포함)
+  const allPoints = history?.points ?? []
+  const lastDay = allPoints.length ? new Date(allPoints[allPoints.length - 1].date).getTime() : 0   // 오늘 (마지막 "지금" 점)
+  const historyPoints = historyDays === 0
+    ? allPoints
+    : allPoints.filter((p) => p.live || (lastDay - new Date(p.date).getTime()) / 86400000 <= historyDays)
 
   return (
     <main className="mock-page">
@@ -396,6 +442,32 @@ function MockTradePage() {
 
         {/* 왼쪽: 보유 종목 + 거래 내역 */}
         <div className="mock-col-main">
+          {/* ===== 수익률 추이 ===== */}
+          <section className="mock-card mock-history">
+            <div className="mock-card-head">
+              <h2>📈 내 수익률 추이</h2>
+              <strong className={`mock-history-now ${tone(account.returnRate)}`}>{signedRate(account.returnRate)}</strong>
+              <div className="mock-seg mock-seg-right">
+                {HISTORY_PERIODS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    className={historyDays === p.value ? 'mock-seg-active' : ''}
+                    onClick={() => setHistoryDays(p.value)}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {historyPoints.length > 0 && <ReturnChart points={historyPoints} />}
+            <p className="mock-note">
+              {historyPoints.length < 2
+                ? '평일 장 마감(15:40)마다 하루 한 점씩 쌓여요. 다음 장 마감부터 선이 그려져요.'
+                : '평일 장 마감(15:40) 기록 + 마지막 점은 지금 가격 기준'}
+            </p>
+          </section>
+
           {/* ===== 보유 종목 ===== */}
           <section className="mock-card mock-holdings">
             <div className="mock-card-head">

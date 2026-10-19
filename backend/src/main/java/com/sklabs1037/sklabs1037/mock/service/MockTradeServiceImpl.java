@@ -30,6 +30,9 @@ import java.util.*;
  *   - 체결 가격: 현재가가 지정가보다 같거나 유리하면 현재가로 (매수는 현재가 ≤ 지정가, 매도는 현재가 ≥ 지정가)
  *   - 정규장(09:00~15:30)에 1분마다 MockOrderScheduler가 확인, 그 거래일 15:35에 미체결은 만료
  *
+ * 일별 기록 (T_MOCK_SNAPSHOT)
+ *   - 평일 15:40 거래한 적 있는 계좌의 총자산을 하루 한 줄 저장 → 수익률 그래프, 이번 주 랭킹 기준
+ *
  * 평균 단가 (추가 매수할 때만 바뀜)
  *   (기존 수량 × 기존 평균 단가 + 이번 체결 금액) ÷ (기존 수량 + 이번 수량)
  * 실현손익 (매도할 때)
@@ -577,6 +580,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
         mockTradeDao.deleteAllOrders(userId);          // 거래 내역을 가리키고 있어서 먼저 삭제
         mockTradeDao.deleteAllHoldings(userId);
         mockTradeDao.deleteAllTrades(userId);
+        mockTradeDao.deleteSnapshots(userId);          // 수익률 그래프도 처음부터
         mockTradeDao.resetAccount(userId);
 
     }
@@ -585,42 +589,28 @@ public class MockTradeServiceImpl implements IMockTradeService {
     // 수익률 랭킹
     // ============================================
     @Override
-    public Map<String, Object> getRanking(Long userId, int size) {
+    public Map<String, Object> getRanking(Long userId, int size, String period) {
 
-        Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
+        boolean week = "WEEK".equals(period);
 
-        // 1. 회원별 주식 평가금액
-        Map<Long, BigDecimal> stockValues = new HashMap<>();
-
-        for (MockTradeVO h : mockTradeDao.selectRankingHoldings()) {
-
-            MockTradeVO p = prices.get(h.getStockId());
-            if (p == null) continue;
-
-            BigDecimal value = p.getPrice().multiply(BigDecimal.valueOf(h.getQuantity()));
-            stockValues.merge(h.getUserId(), value, BigDecimal::add);
-
-        }
-
-        // 2. 회원별 총자산 · 수익률 (총자산 = 현금 + 매수 주문에 묶인 돈 + 주식)
+        // 1. 회원별 총자산 · 수익률
         List<Map<String, Object>> rows = new ArrayList<>();
 
-        for (MockTradeVO a : mockTradeDao.selectRankingAccounts()) {
+        for (MockTradeVO a : accountTotals()) {
 
-            BigDecimal pending = (a.getPendingCash() == null) ? BigDecimal.ZERO : a.getPendingCash();
-            BigDecimal totalAsset = a.getCash().add(pending).add(stockValues.getOrDefault(a.getUserId(), BigDecimal.ZERO));
+            BigDecimal base = week ? a.getWeekBase() : a.getInitCash();
 
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("nickname", a.getNickname());
-            row.put("totalAsset", totalAsset);
-            row.put("returnRate", rate(totalAsset.subtract(a.getInitCash()), a.getInitCash()));
+            row.put("totalAsset", a.getTotalAsset());
+            row.put("returnRate", rate(a.getTotalAsset().subtract(base), base));
             row.put("tradeCount", a.getTradeCount());
             row.put("me", a.getUserId().equals(userId));
             rows.add(row);
 
         }
 
-        // 3. 수익률 높은 순 (같으면 총자산 큰 순), 같은 수익률은 같은 순위
+        // 2. 수익률 높은 순 (같으면 총자산 큰 순), 같은 수익률은 같은 순위
         rows.sort(Comparator
                 .comparing((Map<String, Object> r) -> (BigDecimal) r.get("returnRate")).reversed()
                 .thenComparing(r -> (BigDecimal) r.get("totalAsset"), Comparator.reverseOrder()));
@@ -640,11 +630,112 @@ public class MockTradeServiceImpl implements IMockTradeService {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("period", week ? "WEEK" : "ALL");
+        result.put("weekStart", MockMarketHours.weekStart(MockMarketHours.now().toLocalDate()).toString());
         result.put("ranking", rows.subList(0, Math.min(size, rows.size())));
         result.put("me", me);                    // 나 (TOP N 밖이어도 내 순위를 보여주려고)
         result.put("participants", rows.size());
 
         return result;
+
+    }
+
+    // 거래한 적 있는 계좌들의 지금 총자산 (= 현금 + 매수 주문에 묶인 돈 + 주식 평가금액)
+    // - 랭킹(전체·이번 주)과 장 마감 기록에서 같이 씀
+    private List<MockTradeVO> accountTotals() {
+
+        Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
+
+        // 회원별 주식 평가금액
+        Map<Long, BigDecimal> stockValues = new HashMap<>();
+
+        for (MockTradeVO h : mockTradeDao.selectRankingHoldings()) {
+
+            MockTradeVO p = prices.get(h.getStockId());
+            if (p == null) continue;
+
+            BigDecimal value = p.getPrice().multiply(BigDecimal.valueOf(h.getQuantity()));
+            stockValues.merge(h.getUserId(), value, BigDecimal::add);
+
+        }
+
+        List<MockTradeVO> accounts = mockTradeDao.selectRankingAccounts(
+                MockMarketHours.weekStart(MockMarketHours.now().toLocalDate()));
+
+        for (MockTradeVO a : accounts) {
+
+            BigDecimal pending = (a.getPendingCash() == null) ? BigDecimal.ZERO : a.getPendingCash();
+            a.setTotalAsset(a.getCash().add(pending).add(stockValues.getOrDefault(a.getUserId(), BigDecimal.ZERO)));
+
+        }
+
+        return accounts;
+
+    }
+
+    // ============================================
+    // 수익률 추이 (그래프)
+    // ============================================
+    @Override
+    public Map<String, Object> getHistory(Long userId) {
+
+        Map<String, Object> account = getAccount(userId);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> summary = (Map<String, Object>) account.get("account");
+
+        LocalDate today = MockMarketHours.now().toLocalDate();
+        List<Map<String, Object>> points = new ArrayList<>();
+
+        // 1. 장 마감 기록 (오늘 기록은 아래 "지금"으로 대신)
+        for (MockTradeVO n : mockTradeDao.selectSnapshots(userId)) {
+
+            if (!n.getSnapDate().isBefore(today)) continue;
+
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("date", n.getSnapDate().toString());
+            p.put("totalAsset", n.getTotalAsset());
+            p.put("returnRate", n.getReturnRate());
+            points.add(p);
+
+        }
+
+        // 2. 지금 (실시간 가격 기준)
+        Map<String, Object> now = new LinkedHashMap<>();
+        now.put("date", today.toString());
+        now.put("totalAsset", summary.get("totalAsset"));
+        now.put("returnRate", summary.get("returnRate"));
+        now.put("live", true);
+        points.add(now);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("initCash", summary.get("initCash"));
+        result.put("points", points);
+
+        return result;
+
+    }
+
+    // ============================================
+    // 장 마감 기록 (스케줄러)
+    // ============================================
+    @Override
+    public int snapshotAll(LocalDate day) {
+
+        int saved = 0;
+
+        for (MockTradeVO a : accountTotals()) {
+
+            MockTradeVO snap = new MockTradeVO();
+            snap.setUserId(a.getUserId());
+            snap.setSnapDate(day);
+            snap.setTotalAsset(a.getTotalAsset().setScale(0, RoundingMode.HALF_UP));
+            snap.setReturnRate(rate(a.getTotalAsset().subtract(a.getInitCash()), a.getInitCash()));
+
+            saved += mockTradeDao.upsertSnapshot(snap);
+
+        }
+
+        return saved;
 
     }
 

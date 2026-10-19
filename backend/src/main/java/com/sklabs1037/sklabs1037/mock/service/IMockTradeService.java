@@ -28,7 +28,11 @@ public interface IMockTradeService {
     void reset(Long userId);
 
     // 수익률 랭킹 TOP N (+ 로그인했으면 내 순위)
-    Map<String, Object> getRanking(Long userId, int size);
+    // period: ALL(시작 자금 대비) / WEEK(이번 주 월요일 전 마지막 기록 대비)
+    Map<String, Object> getRanking(Long userId, int size, String period);
+
+    // 내 수익률 추이 (일별 기록 + 지금 시점 1개)
+    Map<String, Object> getHistory(Long userId);
 
     // ===== 스케줄러용 =====
 
@@ -43,4 +47,7 @@ public interface IMockTradeService {
 
     // 주문 1건 만료 (묶어둔 돈 돌려줌)
     boolean expireOrder(Long orderId);
+
+    // 거래한 적 있는 전 계좌의 오늘 총자산 기록 → 저장한 계좌 수
+    int snapshotAll(LocalDate day);
 }

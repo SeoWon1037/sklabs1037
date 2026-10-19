@@ -72,7 +72,14 @@ public interface MockTradeDao {
     int deleteAllOrders(Long userId);
 
     // ===== 랭킹 =====
-    List<MockTradeVO> selectRankingAccounts();
+    List<MockTradeVO> selectRankingAccounts(LocalDate weekStart);
 
     List<MockTradeVO> selectRankingHoldings();
+
+    // ===== 일별 자산 기록 =====
+    int upsertSnapshot(MockTradeVO vo);
+
+    List<MockTradeVO> selectSnapshots(Long userId);
+
+    int deleteSnapshots(Long userId);
 }

@@ -5,7 +5,7 @@
 <!--
     모의투자 SQL
     namespace: 이 SQL을 쓸 Dao의 전체 경로
-    사용 테이블: T_MOCK_ACCOUNT, T_MOCK_HOLDING, T_MOCK_TRADE, T_MOCK_ORDER (+ T_STOCK, T_STOCK_PRICE, T_USER)
+    사용 테이블: T_MOCK_ACCOUNT, T_MOCK_HOLDING, T_MOCK_TRADE, T_MOCK_ORDER, T_MOCK_SNAPSHOT (+ T_STOCK, T_STOCK_PRICE, T_USER)
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.mock.dao.MockTradeDao">
 
@@ -411,13 +411,25 @@
          - 거래를 1번 이상 한 계좌만, 탈퇴한 회원 제외
          ============================================ -->
 
-    <!-- 랭킹 대상 계좌 -->
+    <!--
+        랭킹 대상 계좌
+        - WEEK_BASE: 이번 주 수익률 기준 = 이번 주 월요일 전 마지막 기록의 총자산 (없으면 시작 자금)
+    -->
     <select id="selectRankingAccounts"
             resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
         SELECT  A.USER_ID
                ,U.NICKNAME
                ,A.CASH
                ,A.INIT_CASH
+               ,COALESCE((
+                    SELECT  N.TOTAL_ASSET
+                      FROM T_MOCK_SNAPSHOT N
+                     WHERE 1=1
+                       AND N.USER_ID   = A.USER_ID
+                       AND N.SNAP_DATE <![CDATA[<]]> #{weekStart}
+                     ORDER BY N.SNAP_DATE DESC
+                     LIMIT 1
+                ), A.INIT_CASH)                             AS WEEK_BASE
                ,(
                     SELECT  COALESCE(SUM(O.RESERVED_AMOUNT), 0)
                       FROM T_MOCK_ORDER O
@@ -454,5 +466,49 @@
          WHERE 1=1
            AND U.DEL_DAY IS NULL
     </select>
+
+    <!-- ============================================
+         일별 자산 기록 (수익률 그래프 + 주간 랭킹)
+         ============================================ -->
+
+    <!-- 기록 저장 (같은 날이면 덮어씀) -->
+    <insert id="upsertSnapshot"
+            parameterType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        INSERT INTO T_MOCK_SNAPSHOT (
+               USER_ID
+              ,SNAP_DATE
+              ,TOTAL_ASSET
+              ,RETURN_RATE
+        ) VALUES (
+               #{userId}
+              ,#{snapDate}
+              ,#{totalAsset}
+              ,#{returnRate}
+        )
+        ON CONFLICT (USER_ID, SNAP_DATE) DO UPDATE
+           SET TOTAL_ASSET = EXCLUDED.TOTAL_ASSET
+              ,RETURN_RATE = EXCLUDED.RETURN_RATE
+              ,INS_DAY     = NOW()
+    </insert>
+
+    <!-- 내 기록 (오래된 날짜부터, 최근 1년) -->
+    <select id="selectSnapshots"
+            resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
+        SELECT  N.SNAP_DATE
+               ,N.TOTAL_ASSET
+               ,N.RETURN_RATE
+          FROM T_MOCK_SNAPSHOT N
+         WHERE 1=1
+           AND N.USER_ID   = #{userId}
+           AND N.SNAP_DATE <![CDATA[>=]]> CURRENT_DATE - 365
+         ORDER BY N.SNAP_DATE
+    </select>
+
+    <!-- 내 기록 전체 삭제 (초기화) -->
+    <delete id="deleteSnapshots">
+        DELETE FROM T_MOCK_SNAPSHOT
+         WHERE 1=1
+           AND USER_ID = #{userId}
+    </delete>
 
 </mapper>

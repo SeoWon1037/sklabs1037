@@ -52,6 +52,7 @@ public class TossApiClient {
     // 재사용할 토큰 + 만료 시각
     private String accessToken;
     private Instant tokenExpiresAt = Instant.EPOCH;
+    private Instant tokenIssuedAt = Instant.EPOCH;
 
     // 키가 설정돼 있는지 (CI처럼 키가 없는 환경에서는 수집을 건너뛰려고)
     public boolean isConfigured() {
@@ -123,15 +124,26 @@ public class TossApiClient {
     }
 
     // 429(호출이 너무 많음)이면 1초 → 2초 → 4초 쉬고 다시 시도, 그래도 안 되면 그대로 실패
+    // 401(유효하지 않은 토큰)이면 토큰을 새로 받아서 1번만 다시 시도
+    //   → 같은 키로 다른 서버(로컬 PC ↔ 운영 EC2)가 토큰을 새로 받으면 이쪽 토큰이 무효가 되기 때문
     private <T> T withRetry(Supplier<T> call) {
 
         long waitMs = 1000;
+        boolean tokenRenewed = false;
 
         for (int attempt = 1; ; attempt++) {
 
             try {
 
                 return call.get();
+
+            } catch (HttpClientErrorException.Unauthorized e) {
+
+                if (tokenRenewed) throw e;
+
+                log.warn("토스 토큰이 무효가 됨(다른 서버가 새 토큰을 받았을 수 있음) → 새로 받고 다시 시도");
+                invalidateToken();
+                tokenRenewed = true;
 
             } catch (HttpClientErrorException.TooManyRequests e) {
 
@@ -151,6 +163,17 @@ public class TossApiClient {
             }
 
         }
+
+    }
+
+    // 토큰 버리기 (다음 호출 때 새로 발급)
+    // - 방금(5초 안에) 받은 토큰이면 그대로 둠: 동시에 실패한 다른 요청이 새 토큰까지 버리지 않게
+    private synchronized void invalidateToken() {
+
+        if (Instant.now().isBefore(tokenIssuedAt.plusSeconds(5))) return;
+
+        accessToken = null;
+        tokenExpiresAt = Instant.EPOCH;
 
     }
 
@@ -179,6 +202,7 @@ public class TossApiClient {
         accessToken = (String) result.get("access_token");
         long expiresIn = ((Number) result.get("expires_in")).longValue();   // 보통 86400초 (24시간)
         tokenExpiresAt = Instant.now().plusSeconds(expiresIn);
+        tokenIssuedAt = Instant.now();
 
         log.info("토스 토큰 발급 완료 (유효 {}초)", expiresIn);
 

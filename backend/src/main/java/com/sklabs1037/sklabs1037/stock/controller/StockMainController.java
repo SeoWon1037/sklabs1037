@@ -20,6 +20,7 @@ import java.util.Map;
  *
  * API 목록
  *   GET /api/stock/dashboard?days=20&limit=30  → { success, baseDate, stocks: [...] }   시가총액 상위 + 주요 종목 + 미니 차트
+ *   GET /api/stock/list?market=ALL&page=1      → { success, stocks, total, page, hasMore } 목록 탭 (ALL·KOSPI·KOSDAQ·ETF, 30개씩)
  *   GET /api/stock/search?q=카카오             → { success, stocks: [...] }            종목 검색 (최대 20개)
  *   GET /api/stock/detail?symbol=005930   → { success, stock: {...}, candles: [...] } 종목 상세 + 일봉
  *
@@ -62,6 +63,38 @@ public class StockMainController {
 
     }
 
+    // 목록 탭 + 더보기
+    private static final int PAGE_SIZE = 30;
+    private static final java.util.Set<String> MARKETS = java.util.Set.of("ALL", "KOSPI", "KOSDAQ", "ETF");
+
+    @GetMapping("/list")
+    public ResponseEntity<Map<String, Object>> list(@RequestParam(defaultValue = "ALL") String market,
+                                                    @RequestParam(defaultValue = "1") int page) {
+
+        String safeMarket = MARKETS.contains(market) ? market : "ALL";
+        int safePage = Math.max(1, Math.min(page, 200));
+
+        try {
+
+            Map<String, Object> result = stockMainService.getPage(safeMarket, (safePage - 1) * PAGE_SIZE, PAGE_SIZE, 20);
+            int total = (int) result.get("total");
+
+            Map<String, Object> body = new HashMap<>(result);
+            body.put("success", true);
+            body.put("page", safePage);
+            body.put("hasMore", safePage * PAGE_SIZE < total);
+
+            return ResponseEntity.ok(body);
+
+        } catch (Exception e) {
+
+            log.error("종목 목록 조회 오류: {} {}", market, page, e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "종목 목록을 불러오지 못했습니다.");
+
+        }
+
+    }
+
     // 종목 검색 (2글자 미만이고 숫자도 아니면 빈 목록)
     @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> search(@RequestParam(required = false) String q) {
@@ -95,8 +128,8 @@ public class StockMainController {
     @GetMapping("/detail")
     public ResponseEntity<Map<String, Object>> detail(@RequestParam(required = false) String symbol) {
 
-        // 6자리 숫자 종목코드만 허용
-        if (symbol == null || !symbol.matches("\\d{6}")) {
+        // 6자리 종목코드만 허용 (새 종목코드는 영문이 섞임 예: 0088M0)
+        if (symbol == null || !symbol.matches("[0-9A-Z]{6}")) {
 
             return fail(HttpStatus.BAD_REQUEST, "종목코드를 확인해주세요.");
 

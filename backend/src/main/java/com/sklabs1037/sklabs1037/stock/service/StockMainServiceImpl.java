@@ -32,9 +32,39 @@ public class StockMainServiceImpl implements IStockMainService {
         listParam.setLimit(limit);
 
         List<StockMainVO> stocks = stockMainDao.selectStockSummary(listParam);
-        if (stocks.isEmpty()) return stocks;
 
-        // 2. 그 종목들의 미니 차트 데이터를 한 번에 조회 → 종목 ID별로 묶기
+        // 2. 미니 차트
+        attachPrices(stocks, days);
+
+        return stocks;
+
+    }
+
+    @Override
+    public Map<String, Object> getPage(String market, int offset, int limit, int days) {
+
+        StockMainVO param = new StockMainVO();
+        param.setMarketFilter(market);
+        param.setOffset(offset);
+        param.setLimit(limit);
+
+        List<StockMainVO> stocks = stockMainDao.selectStockPage(param);
+        attachPrices(stocks, days);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("stocks", stocks);
+        result.put("total", stockMainDao.countStockPage(param));
+
+        return result;
+
+    }
+
+    // 종목들의 최근 N거래일 종가를 한 번에 조회해서 붙이기 (미니 차트)
+    private void attachPrices(List<StockMainVO> stocks, int days) {
+
+        if (stocks.isEmpty()) return;
+
+        // 한 번에 조회 → 종목 ID별로 묶기
         StockMainVO param = new StockMainVO();
         param.setDays(days);
         param.setStockIds(stocks.stream().map(StockMainVO::getStockId).toList());
@@ -52,12 +82,10 @@ public class StockMainServiceImpl implements IStockMainService {
 
         }
 
-        // 3. 종목에 미니 차트 데이터 붙이기
+        // 종목에 미니 차트 데이터 붙이기
         for (StockMainVO s : stocks) {
             s.setPrices(pricesByStock.getOrDefault(s.getStockId(), List.of()));
         }
-
-        return stocks;
 
     }
 

@@ -15,6 +15,12 @@ public interface StockMainDao {
     // 기본 목록: 시가총액 상위 N개 + 주요 종목
     List<StockMainVO> selectStockSummary(StockMainVO vo);
 
+    // 목록 탭 (전체 / 코스피 / 코스닥 / ETF), 시가총액 순, 더보기
+    List<StockMainVO> selectStockPage(StockMainVO vo);
+
+    // 목록 탭의 전체 종목 수
+    int countStockPage(StockMainVO vo);
+
     // 종목 검색
     List<StockMainVO> selectStockSearch(StockMainVO vo);
 

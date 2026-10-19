@@ -5,7 +5,7 @@
 // - 오른쪽: 종목 헤더 + 탭 (차트·시세 / 종목정보 / 뉴스 / 토론)
 // - 주소로 바로 열기: /stock?symbol=005930&tab=board (메인 화면 💬 토론 탭에서 넘어올 때)
 // - 백엔드 API
-//   GET /api/stock/dashboard?days=20&limit=30  기본 목록 + 미니 차트
+//   GET /api/stock/list?market=ALL&page=1      목록 탭 (전체·코스피·코스닥·ETF, 시가총액 순 30개씩 + 미니 차트)
 //   GET /api/stock/search?q=카카오             종목 검색 (최대 20개)
 //   GET /api/stock/detail?symbol=005930     종목 정보 + 일봉
 //   GET /api/news?stockId=1&size=15         종목 뉴스
@@ -15,7 +15,7 @@
 // - "모의 매수" 버튼 → /mock?symbol=005930 (모의투자 화면에서 이 종목이 선택된 채로 열림)
 // - "🔔 알림" 버튼 → 종목 헤더 아래에 목표가 알림 창 (PriceAlertPanel, /api/alerts)
 // ============================================
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import StockChart from '../../components/stock/StockChart'
 import CandleChart from '../../components/stock/CandleChart'
@@ -24,6 +24,14 @@ import WatchStar from '../../components/stock/WatchStar'
 import StockBoard from '../../components/stock/StockBoard'
 import PriceAlertPanel from '../../components/alert/PriceAlertPanel'
 import './StockPage.css'
+
+// 목록 탭 (전체·코스피·코스닥은 주식만, ETF는 따로)
+const MARKET_TABS = [
+  { value: 'ALL', label: '전체' },
+  { value: 'KOSPI', label: '코스피' },
+  { value: 'KOSDAQ', label: '코스닥' },
+  { value: 'ETF', label: 'ETF' },
+]
 
 const TABS = [
   { value: 'chart', label: '차트 · 시세' },
@@ -101,6 +109,10 @@ function StockPage() {
   // ===== 종목 목록 =====
   const [stocks, setStocks] = useState([])
   const [listError, setListError] = useState('')
+  const [market, setMarket] = useState('ALL')   // 목록 탭
+  const [listInfo, setListInfo] = useState({ key: '', page: 1, total: 0, hasMore: false })
+  const [loadingMore, setLoadingMore] = useState(false)
+  const shownParam = useRef(undefined)   // 마지막으로 반영한 주소 종목
   const [selectedSymbol, setSelectedSymbol] = useState(null)
 
   // ===== 검색 =====
@@ -119,21 +131,52 @@ function StockPage() {
   const [watchMsg, setWatchMsg] = useState('')
   const [alertOpen, setAlertOpen] = useState(false)   // 목표가 알림 창
 
-  // 처음 한 번: 종목 목록
+  // 목록 탭이 바뀔 때마다: 1페이지 (시가총액 순 30개)
   useEffect(() => {
-    fetch('/api/stock/dashboard?days=20&limit=30')
+    let ignore = false
+    fetch(`/api/stock/list?market=${market}&page=1`)
       .then((res) => res.json())
       .then((data) => {
+        if (ignore) return
         if (data.success) {
           setStocks(data.stocks)
-          // 주소에 종목이 있으면 그 종목 (목록에 없는 종목도 OK), 아니면 첫 종목
-          setSelectedSymbol(paramSymbol ?? data.stocks[0]?.symbol ?? null)
+          setListInfo({ key: market, page: 1, total: data.total, hasMore: data.hasMore })
+          // 주소의 종목이 새로 바뀌었으면 그 종목 (목록에 없는 종목도 OK)
+          // 탭만 바꾼 거면 보던 종목 그대로, 처음이면 첫 종목
+          const paramChanged = shownParam.current !== paramSymbol
+          shownParam.current = paramSymbol
+          setSelectedSymbol((prev) => (paramChanged && paramSymbol) || prev || data.stocks[0]?.symbol || null)
         } else {
           setListError(data.message)
         }
       })
-      .catch(() => setListError('서버에 연결할 수 없습니다.'))
-  }, [paramSymbol])
+      .catch(() => { if (!ignore) setListError('서버에 연결할 수 없습니다.') })
+    return () => { ignore = true }
+  }, [market, paramSymbol])
+
+  // 목록 더보기 (30개씩)
+  const loadMore = () => {
+    if (loadingMore || !listInfo.hasMore) return
+    const next = listInfo.page + 1
+    setLoadingMore(true)
+    fetch(`/api/stock/list?market=${market}&page=${next}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) return
+        // 그사이 순위가 바뀌어 겹치는 종목은 빼고 이어 붙임
+        setStocks((prev) => [...prev, ...data.stocks.filter((s) => !prev.some((p) => p.stockId === s.stockId))])
+        setListInfo({ key: market, page: next, total: data.total, hasMore: data.hasMore })
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false))
+  }
+
+  const changeMarket = (value) => {
+    if (value === market) return
+    setMarket(value)
+    setStocks([])
+    setListInfo({ key: '', page: 1, total: 0, hasMore: false })
+  }
 
   // 검색어가 바뀌면 0.25초 뒤에 검색 (글자 칠 때마다 요청하지 않게)
   const trimmed = query.trim()
@@ -289,12 +332,33 @@ function StockPage() {
               maxLength={30}
             />
           </div>
+          {!searching && (
+            <div className="stock-market-tabs" role="tablist" aria-label="시장">
+              {MARKET_TABS.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={market === m.value}
+                  className={`stock-market-tab ${market === m.value ? 'stock-market-tab-active' : ''}`}
+                  onClick={() => changeMarket(m.value)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="stock-list-head">
-            <span>{searching ? '검색 결과' : '시가총액 상위'}</span>
+            <span>{searching ? '검색 결과' : '시가총액 순'}</span>
             <span className="stock-list-count">
-              {searching ? (results.key === trimmed ? results.items.length : '…') : stocks.length}
+              {searching
+                ? (results.key === trimmed ? results.items.length : '…')
+                : listInfo.key === market ? `${stocks.length.toLocaleString()} / ${listInfo.total.toLocaleString()}` : '…'}
             </span>
           </div>
+          {!searching && listInfo.key === market && stocks.length === 0 && (
+            <p className="stock-list-empty">아직 시세를 받은 종목이 없어요.<br />서버가 처음 켜지면 몇 분 동안 차례로 채워져요.</p>
+          )}
           {searching && results.key === trimmed && results.items.length === 0 && (
             <p className="stock-list-empty">"{trimmed}" 종목이 없어요.</p>
           )}
@@ -325,6 +389,13 @@ function StockPage() {
                 </button>
               </li>
             ))}
+            {!searching && listInfo.key === market && listInfo.hasMore && (
+              <li className="stock-more-item">
+                <button type="button" className="stock-more" onClick={loadMore} disabled={loadingMore}>
+                  {loadingMore ? '불러오는 중...' : '30개 더 보기'}
+                </button>
+              </li>
+            )}
           </ul>
         </aside>
 

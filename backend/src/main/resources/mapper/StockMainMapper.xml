@@ -60,6 +60,51 @@
                  ,S.ID
     </select>
 
+    <!-- 목록 탭 조건: 시세가 있는 종목만 -->
+    <sql id="pageWhere">
+         WHERE 1=1
+           AND S.USE_YN     = 'Y'
+           AND S.DEL_DAY    IS NULL
+           AND S.LAST_CLOSE IS NOT NULL
+        <choose>
+            <when test="marketFilter == 'ETF'">
+           AND S.SECURITY_TYPE = 'ETF'
+            </when>
+            <when test="marketFilter == 'KOSPI' or marketFilter == 'KOSDAQ'">
+           AND S.SECURITY_TYPE = 'STOCK'
+           AND S.MARKET        = #{marketFilter}
+            </when>
+            <otherwise>
+           AND S.SECURITY_TYPE = 'STOCK'
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!--
+        주식 종목 화면 목록 탭 (전체 / 코스피 / 코스닥 / ETF)
+        - 시가총액 큰 순 (상장 주식 수를 아직 모르면 뒤로, 그다음 거래량)
+        - 30개씩 더보기 (OFFSET)
+    -->
+    <select id="selectStockPage"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
+        SELECT  <include refid="stockColumns"/>
+          FROM T_STOCK S
+        <include refid="pageWhere"/>
+         ORDER BY MARKET_CAP DESC NULLS LAST
+                 ,S.LAST_VOLUME DESC NULLS LAST
+                 ,S.ID
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countStockPage"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO"
+            resultType="int">
+        SELECT  COUNT(*)
+          FROM T_STOCK S
+        <include refid="pageWhere"/>
+    </select>
+
     <!--
         종목 검색 (이름 일부 또는 종목코드 앞자리)
         - 이름이 똑같은 종목 → 이름이 검색어로 시작 → 주요 종목 → 시가총액 큰 순

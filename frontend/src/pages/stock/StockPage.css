@@ -63,6 +63,50 @@
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
 }
+/* 목록 탭: 전체 / 코스피 / 코스닥 / ETF */
+.stock-market-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 10px 10px 0;
+  padding: 3px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.stock-market-tab {
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.stock-market-tab-active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+/* 더보기 */
+.stock-more {
+  width: 100%;
+  height: 40px;
+  margin-top: 4px;
+  border: 1px dashed color-mix(in srgb, var(--text) 25%, transparent);
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.stock-more:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.stock-more:disabled {
+  opacity: 0.6;
+}
 .stock-list-empty {
   margin: 0;
   padding: 16px;
@@ -507,6 +551,15 @@
   .stock-item {
     grid-template-columns: auto;
     min-width: 140px;
+  }
+  /* 가로로 넘기는 목록 끝: 세로로 꽉 찬 더보기 칸 */
+  .stock-more-item {
+    display: flex;
+  }
+  .stock-more {
+    width: 110px;
+    height: auto;
+    margin-top: 0;
   }
   .stock-item-chart {
     display: none;

@@ -44,8 +44,15 @@
         GROUP BY S.ID
         ,S.SYMBOL
         ,S.NAME
+        ,S.FEATURED_YN
+        ,S.MARKET
+        ,S.SHARES_OUTSTANDING
         HAVING COUNT(P.ID) &lt; #{minRows}
-        ORDER BY S.ID
+        -- 주요 종목 → 코스피 → 상장 주식 수 많은 순 (큰 종목부터 목록에 빨리 나오게)
+        ORDER BY (S.FEATURED_YN = 'Y') DESC
+                ,(S.MARKET = 'KOSPI') DESC
+                ,S.SHARES_OUTSTANDING DESC NULLS LAST
+                ,S.ID
     </select>
 
     <!-- 일봉 저장 (같은 종목·같은 날짜가 있으면 덮어씀) -->

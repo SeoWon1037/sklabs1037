@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 시세 수집 스케줄러
- * - 앱 시작 시 (별도 스레드): 종목 목록 동기화 → 시세 이력이 부족한 종목만 initial-count일치 채움 → 상장 주식 수
+ * - 앱 시작 시 (별도 스레드): 종목 목록 동기화 → 상장 주식 수 → 시세 이력이 부족한 종목만 initial-count일치 채움 → 상장 주식 수
+ *   (이력은 주요 종목 → 코스피 → 큰 종목 순이라 목록이 위에서부터 차례로 채워짐)
  * - 평일 20:30: 종목 목록 동기화 → 전 종목(약 3,000개) 최근 daily-count일 수집 (겹치는 날짜는 UPSERT) → 상장 주식 수
  *   → 10분 남짓 걸려서 다른 스케줄 작업이 기다리지 않게 spring.task.scheduling.pool.size를 늘려 둠
  */
@@ -48,6 +49,17 @@ public class StockCollectScheduler {
 
             }
 
+            // 상장 주식 수 먼저 (호출 15번 정도) → 이력이 채워지는 종목부터 바로 시가총액 순 목록에 나옴
+            try {
+
+                stockCollectService.updateSharesOutstanding();
+
+            } catch (Exception e) {
+
+                log.warn("상장 주식 수 갱신 실패: {}", e.getMessage());
+
+            }
+
             try {
 
                 stockCollectService.collectMissingHistory(minHistory, initialCount);
@@ -58,7 +70,7 @@ public class StockCollectScheduler {
 
             }
 
-            // 상장 주식 수 (시가총액 TOP 3용)
+            // 상장 주식 수 한 번 더 (새로 받은 종목까지)
             try {
 
                 stockCollectService.updateSharesOutstanding();

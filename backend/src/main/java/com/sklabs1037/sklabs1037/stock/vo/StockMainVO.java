@@ -21,6 +21,8 @@ public class StockMainVO {
     private Integer limit;           // 목록·검색 개수
     private String query;            // 검색어
     private List<Long> stockIds;     // 미니 차트를 그릴 종목들
+    private String marketFilter;     // 목록 탭: ALL / KOSPI / KOSDAQ / ETF
+    private Integer offset;          // 목록 더보기 시작 위치
 
     // ===== 종목 =====
     private Long stockId;

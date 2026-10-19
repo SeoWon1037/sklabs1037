@@ -13,6 +13,9 @@ public interface IStockMainService {
     // 기본 목록 (시가총액 상위 limit개 + 주요 종목) + 최근 N거래일 미니 차트 데이터
     List<StockMainVO> getDashboard(int days, int limit);
 
+    // 목록 탭 (ALL / KOSPI / KOSDAQ / ETF) offset부터 limit개 + 미니 차트 → { stocks, total }
+    Map<String, Object> getPage(String market, int offset, int limit, int days);
+
     // 종목 검색 (이름 일부 / 종목코드 앞자리)
     List<StockMainVO> search(String query, int limit);
 

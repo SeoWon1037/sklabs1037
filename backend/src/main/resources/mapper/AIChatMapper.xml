@@ -9,7 +9,10 @@
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.ai.dao.AiChatDao">
 
-    <!-- [도구] find_stock: 종목명/코드로 종목 찾기 (검색어 없으면 전체) -->
+    <!--
+        [도구] find_stock: 종목명/코드로 종목 찾기 (검색어 없으면 주요 종목)
+        - 전 종목(약 3,000개)이라 최대 20개, 이름이 똑같은 종목 → 주요 종목 → 시가총액 큰 순
+    -->
     <select id="selectStocks"
             parameterType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO"
             resultType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO">
@@ -20,11 +23,19 @@
         FROM T_STOCK
         WHERE 1=1
         AND DEL_DAY IS NULL
+        AND USE_YN = 'Y'
         <if test="query != null and query != ''">
             AND ( NAME ILIKE '%' || #{query} || '%'
             OR SYMBOL = #{query} )
         </if>
-        ORDER BY ID
+        <if test="query == null or query == ''">
+            AND FEATURED_YN = 'Y'
+        </if>
+        ORDER BY (UPPER(NAME) = UPPER(COALESCE(#{query}, ''))) DESC
+        ,(FEATURED_YN = 'Y') DESC
+        ,LAST_CLOSE * SHARES_OUTSTANDING DESC NULLS LAST
+        ,ID
+        LIMIT 20
     </select>
 
     <!-- [도구] get_price_history: 최근 N일 일봉 (최신 날짜부터) -->
@@ -97,7 +108,11 @@
     </update>
 
 
-    <!-- [도구] get_return_ranking: 전 종목 N거래일 수익률 순위 (계산은 SQL이 정확하게) -->
+    <!--
+        [도구] get_return_ranking: N거래일 수익률 순위 (계산은 SQL이 정확하게)
+        - 전 종목이 너무 많아서 주식(ETF 제외) 중 상위 15 + 하위 15만
+        - 최근 날짜만 읽게 기간을 잘라서 빠르게
+    -->
     <select id="selectReturnRanking"
             parameterType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO"
             resultType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO">
@@ -107,7 +122,10 @@
         ,P.CLOSE_PRICE
         ,ROW_NUMBER() OVER (PARTITION BY P.STOCK_ID ORDER BY P.TRADE_DATE DESC) AS RN
         FROM T_STOCK_PRICE P
-        )
+        WHERE 1=1
+        AND P.TRADE_DATE <![CDATA[>=]]> CURRENT_DATE - (#{days} * 2 + 14)
+        ),
+        RESULT AS (
         SELECT  S.SYMBOL
         ,S.NAME
         ,B.TRADE_DATE  AS START_DATE
@@ -122,6 +140,14 @@
         WHERE 1=1
         AND E.RN = 1
         AND S.DEL_DAY IS NULL
+        AND S.SECURITY_TYPE = 'STOCK'
+        )
+        SELECT  *
+        FROM (
+        (SELECT * FROM RESULT ORDER BY RETURN_RATE DESC LIMIT 15)
+        UNION
+        (SELECT * FROM RESULT ORDER BY RETURN_RATE ASC LIMIT 15)
+        ) X
         ORDER BY RETURN_RATE DESC
     </select>
 

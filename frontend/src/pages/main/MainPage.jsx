@@ -94,7 +94,7 @@ function MainPage() {
   const [baseDate, setBaseDate] = useState(null)
   const [user, setUser] = useState(null)
   const [stockTab, setStockTab] = useState('ALL')   // 종목 카드 탭: 'ALL' | 'WATCH'
-  const [watchIds, setWatchIds] = useState([])      // 관심 종목 ID
+  const [watchStocks, setWatchStocks] = useState([])   // 관심 종목 (시세 포함, 전 종목 중 어떤 종목이든)
 
   // ===== 지금 토론 중 (오른쪽 아래) =====
   const [hotPosts, setHotPosts] = useState(null)   // null = 불러오는 중
@@ -141,7 +141,7 @@ function MainPage() {
         if (!data.loggedIn) return
         return fetch('/api/watchlist')
           .then((res) => res.json())
-          .then((w) => w.success && setWatchIds(w.stocks.map((x) => x.stockId)))
+          .then((w) => w.success && setWatchStocks(w.stocks))
       })
       .catch(() => setUser(null))
 
@@ -210,7 +210,7 @@ function MainPage() {
   const capTop = [...stocks]
     .sort((a, b) => (Number(b.marketCap) || 0) - (Number(a.marketCap) || 0))
     .slice(0, MARKET_CAP_TOP)
-  const quoteStocks = stockTab === 'WATCH' ? stocks.filter((s) => watchIds.includes(s.stockId)) : capTop
+  const quoteStocks = stockTab === 'WATCH' ? watchStocks : capTop
 
   return (
     <main className="home">

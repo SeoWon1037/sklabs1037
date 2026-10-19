@@ -7,11 +7,13 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * 토스증권 Open API 클라이언트
@@ -23,7 +25,11 @@ import java.util.Map;
  *   POST /oauth2/token     토큰 발급 (client_credentials)
  *   GET  /api/v1/prices    현재가 (symbols=005930,000660)
  *   GET  /api/v1/candles   일봉   (symbol=005930&interval=1d&count=100, 최신 날짜부터)
- *   GET  /api/v1/stocks    종목 정보 (symbols=005930,000660 → sharesOutstanding 상장 주식 수 등)
+ *   GET  /api/v1/stocks    종목 정보 (symbols=최대 200개 → sharesOutstanding 상장 주식 수 등)
+ *   GET  /api/v1/stocks/all 시장 전체 종목 목록 (market=KOSPI / KOSDAQ → symbol, name, securityType ...)
+ *
+ * - 현재가(prices)와 종목 정보(stocks)는 한 번에 최대 200종목
+ * - 호출이 너무 많아 429(Too Many Requests)가 오면 1초 → 2초 → 4초 쉬고 다시 시도
  */
 @Slf4j
 @Component
@@ -55,15 +61,18 @@ public class TossApiClient {
 
     }
 
+    // 한 번에 조회할 수 있는 최대 종목 수 (prices, stocks)
+    public static final int MAX_SYMBOLS = 200;
+
     // 일봉 조회 → candles 목록 (각 항목: timestamp, openPrice, highPrice, lowPrice, closePrice, volume / 값은 전부 문자)
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getDailyCandles(String symbol, int count) {
 
-        Map<String, Object> body = restClient.get()
+        Map<String, Object> body = withRetry(() -> restClient.get()
                 .uri(baseUrl + "/api/v1/candles?symbol={symbol}&interval=1d&count={count}", symbol, count)
                 .header("Authorization", "Bearer " + getAccessToken())
                 .retrieve()
-                .body(MAP_TYPE);
+                .body(MAP_TYPE));
 
         Map<String, Object> result = (Map<String, Object>) body.get("result");
 
@@ -75,11 +84,11 @@ public class TossApiClient {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getPrices(String symbols) {
 
-        Map<String, Object> body = restClient.get()
+        Map<String, Object> body = withRetry(() -> restClient.get()
                 .uri(baseUrl + "/api/v1/prices?symbols={symbols}", symbols)
                 .header("Authorization", "Bearer " + getAccessToken())
                 .retrieve()
-                .body(MAP_TYPE);
+                .body(MAP_TYPE));
 
         return (List<Map<String, Object>>) body.get("result");
 
@@ -89,13 +98,59 @@ public class TossApiClient {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getStocks(String symbols) {
 
-        Map<String, Object> body = restClient.get()
+        Map<String, Object> body = withRetry(() -> restClient.get()
                 .uri(baseUrl + "/api/v1/stocks?symbols={symbols}", symbols)
                 .header("Authorization", "Bearer " + getAccessToken())
                 .retrieve()
-                .body(MAP_TYPE);
+                .body(MAP_TYPE));
 
         return (List<Map<String, Object>>) body.get("result");
+
+    }
+
+    // 시장 전체 종목 목록 (상장 중인 종목만) → 목록 (각 항목: symbol, name, securityType, isCommonShare, isinCode)
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> listStocks(String market) {
+
+        Map<String, Object> body = withRetry(() -> restClient.get()
+                .uri(baseUrl + "/api/v1/stocks/all?market={market}&status=ACTIVE", market)
+                .header("Authorization", "Bearer " + getAccessToken())
+                .retrieve()
+                .body(MAP_TYPE));
+
+        return (List<Map<String, Object>>) body.get("result");
+
+    }
+
+    // 429(호출이 너무 많음)이면 1초 → 2초 → 4초 쉬고 다시 시도, 그래도 안 되면 그대로 실패
+    private <T> T withRetry(Supplier<T> call) {
+
+        long waitMs = 1000;
+
+        for (int attempt = 1; ; attempt++) {
+
+            try {
+
+                return call.get();
+
+            } catch (HttpClientErrorException.TooManyRequests e) {
+
+                if (attempt >= 4) throw e;
+
+                log.warn("토스 API 호출 제한(429) → {}ms 쉬고 다시 시도 ({}번째)", waitMs, attempt);
+
+                try {
+                    Thread.sleep(waitMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+
+                waitMs *= 2;
+
+            }
+
+        }
 
     }
 

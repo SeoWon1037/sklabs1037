@@ -21,7 +21,7 @@ import java.util.*;
  *   1. 사용자가 "삼성전자 220,000원 이상" 같은 알림을 걸어둠 (ACTIVE)
  *   2. 정규장 1분마다 PriceAlertScheduler → checkAndNotify()
  *      - 켜진 알림이 없으면 토스도 호출하지 않음
- *      - 현재가는 모의투자와 같은 MockPriceService (전 종목 1번 호출, 10초 캐시), 실시간 가격일 때만 확인
+ *      - 현재가는 모의투자와 같은 MockPriceService (알림 걸린 종목만 200개씩 묶어서, 10초 캐시), 실시간 가격일 때만 확인
  *   3. 조건을 넘으면 먼저 SENT로 바꾸고(markSent = 1일 때만) 메일 발송
  *      → 서버가 두 대여도, 확인이 겹쳐도 같은 알림 메일은 1번만
  *      → 메일 발송이 실패하면 다시 ACTIVE로 (다음 확인 때 재시도)
@@ -59,10 +59,11 @@ public class PriceAlertServiceImpl implements IPriceAlertService {
         param.setUserId(userId);
         param.setStockId(stockId);
 
-        Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
+        List<PriceAlertVO> alerts = priceAlertDao.selectMyAlerts(param);
+        Map<Long, MockTradeVO> prices = mockPriceService.getPrices(alerts.stream().map(PriceAlertVO::getStockId).toList());
         List<Map<String, Object>> list = new ArrayList<>();
 
-        for (PriceAlertVO a : priceAlertDao.selectMyAlerts(param)) {
+        for (PriceAlertVO a : alerts) {
 
             MockTradeVO p = prices.get(a.getStockId());
 
@@ -94,7 +95,7 @@ public class PriceAlertServiceImpl implements IPriceAlertService {
         if (targetPrice == null || targetPrice.signum() <= 0) throw new IllegalArgumentException("목표가를 입력해주세요.");
 
         // 이미 조건을 넘은 가격이면 걸자마자 메일이 가니까 막음
-        MockTradeVO stock = mockPriceService.getPrices().get(stockId);
+        MockTradeVO stock = mockPriceService.getPrice(stockId);
 
         if (stock != null) {
 
@@ -147,7 +148,7 @@ public class PriceAlertServiceImpl implements IPriceAlertService {
         if (!"SENT".equals(alert.getStatus())) throw new IllegalArgumentException("이미 켜져 있는 알림이에요.");
 
         // 지금 가격이 이미 조건을 넘었으면 다시 켜자마자 또 메일이 감 → 막음
-        MockTradeVO stock = mockPriceService.getPrices().get(alert.getStockId());
+        MockTradeVO stock = mockPriceService.getPrice(alert.getStockId());
 
         if (stock != null && crosses(alert.getCondition(), stock.getPrice(), alert.getTargetPrice())) {
             throw new IllegalArgumentException("지금 가격(" + won(stock.getPrice()) + "원)이 이미 조건을 넘었어요. 새 목표가로 알림을 만들어주세요.");
@@ -167,7 +168,7 @@ public class PriceAlertServiceImpl implements IPriceAlertService {
         List<PriceAlertVO> alerts = priceAlertDao.selectActiveAlerts();
         if (alerts.isEmpty()) return 0;
 
-        Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
+        Map<Long, MockTradeVO> prices = mockPriceService.getPrices(alerts.stream().map(PriceAlertVO::getStockId).toList());
         int sent = 0;
 
         for (PriceAlertVO a : alerts) {

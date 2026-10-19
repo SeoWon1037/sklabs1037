@@ -21,6 +21,7 @@ import java.util.Map;
  * API 목록
  *   GET  /api/mock/account                         내 계좌 + 보유 종목 + 미체결 주문 + 주문 가능 종목
  *                                                  → { success, loggedIn, account, holdings, pendingOrders, stocks, market }
+ *   GET  /api/mock/quote?symbol=035720             종목 하나의 현재가 (주문 칸, 누구나) → { success, stock }
  *   GET  /api/mock/trades?page=1                   내 거래 내역 (20개씩)              → { success, trades, total, page, size }
  *   POST /api/mock/order { stockId, side, quantity, orderType, limitPrice }
  *                                                  주문 (MARKET 바로 체결 / LIMIT 대기) → { success, trade }
@@ -71,6 +72,32 @@ public class MockTradeController {
 
             log.error("모의투자 계좌 조회 오류", e);
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "계좌 정보를 불러오지 못했습니다.");
+
+        }
+
+    }
+
+    // 종목 하나의 현재가 (주문 칸에서 검색해 고른 종목)
+    @GetMapping("/quote")
+    public ResponseEntity<Map<String, Object>> quote(@RequestParam(required = false) String symbol) {
+
+        if (symbol == null || symbol.isBlank() || symbol.length() > 12) return fail(HttpStatus.BAD_REQUEST, "종목코드를 확인해주세요.");
+
+        try {
+
+            Map<String, Object> stock = mockTradeService.getQuote(symbol.trim());
+            if (stock == null) return fail(HttpStatus.NOT_FOUND, "시세가 아직 없는 종목이에요. 주식 종목 화면에서 한 번 열어주세요.");
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", true);
+            body.put("stock", stock);
+
+            return ResponseEntity.ok(body);
+
+        } catch (Exception e) {
+
+            log.error("모의투자 현재가 조회 오류: {}", symbol, e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "현재가를 불러오지 못했습니다.");
 
         }
 

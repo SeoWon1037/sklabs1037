@@ -26,4 +26,10 @@ public interface StockCollectDao {
 
     // 상장 주식 수 저장
     int updateSharesOutstanding(StockCollectVO vo);
+
+    // 종목 목록 저장 (종목코드가 있으면 이름·시장·종류 갱신, 없으면 추가)
+    int upsertStockMaster(StockCollectVO vo);
+
+    // 최신 종가 · 전일 종가 · 거래량을 T_STOCK에 복사 (목록·시가총액을 빠르게)
+    int updateLatestPrice(Long stockId);
 }

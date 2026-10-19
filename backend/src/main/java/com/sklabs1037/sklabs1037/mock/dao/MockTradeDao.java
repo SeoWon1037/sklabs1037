@@ -14,8 +14,14 @@ import java.util.List;
 @Mapper
 public interface MockTradeDao {
 
-    // 종목 + 최근 종가
-    List<MockTradeVO> selectStocks();
+    // 종목 + 최근 종가 (필요한 종목만)
+    List<MockTradeVO> selectStocksByIds(List<Long> stockIds);
+
+    // 종목코드 → 종목 번호 (없으면 null)
+    Long selectStockIdBySymbol(String symbol);
+
+    // 주요 종목 번호들
+    List<Long> selectFeaturedStockIds();
 
     // ===== 계좌 =====
     int insertAccount(MockTradeVO vo);

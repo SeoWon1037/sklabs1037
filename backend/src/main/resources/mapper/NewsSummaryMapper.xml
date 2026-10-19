@@ -8,12 +8,15 @@
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.news.dao.NewsSummaryDao">
 
-    <!-- 요약 대상 종목 목록 -->
+    <!-- 요약 대상 종목 목록: 주요 종목만 (종목마다 Claude를 호출해서, 전 종목이면 비용 폭증) -->
     <select id="selectTargetStocks"
             resultType="com.sklabs1037.sklabs1037.news.vo.NewsSummaryVO">
         SELECT  S.ID    AS STOCK_ID
         ,S.NAME  AS STOCK_NAME
         FROM T_STOCK S
+        WHERE 1=1
+        AND S.FEATURED_YN = 'Y'
+        AND S.DEL_DAY IS NULL
         ORDER BY S.ID
     </select>
 

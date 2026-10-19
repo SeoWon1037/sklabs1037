@@ -77,6 +77,62 @@
         ,UPT_DAY     = NOW()
     </insert>
 
+    <!--
+        종목 목록 저장 (토스 /api/v1/stocks/all)
+        - 종목코드(SYMBOL)가 같으면 이름·시장·종류만 갱신 (주요 종목 표시 FEATURED_YN은 그대로)
+        - 새 종목은 주요 종목 아님(N)으로 추가
+    -->
+    <insert id="upsertStockMaster"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockCollectVO">
+        INSERT INTO T_STOCK (
+               SYMBOL
+              ,NAME
+              ,MARKET
+              ,SECURITY_TYPE
+              ,USE_YN
+        ) VALUES (
+               #{symbol}
+              ,#{name}
+              ,#{market}
+              ,#{securityType}
+              ,'Y'
+        )
+        ON CONFLICT (SYMBOL) DO UPDATE
+           SET NAME          = EXCLUDED.NAME
+              ,MARKET        = EXCLUDED.MARKET
+              ,SECURITY_TYPE = EXCLUDED.SECURITY_TYPE
+              ,UPT_DAY       = NOW()
+    </insert>
+
+    <!-- 최신 종가 · 전일 종가 · 거래량을 T_STOCK에 복사 (종목 하나 수집할 때마다) -->
+    <update id="updateLatestPrice">
+        UPDATE T_STOCK S
+           SET LAST_TRADE_DATE = L.TRADE_DATE
+              ,LAST_CLOSE      = L.CLOSE_PRICE
+              ,PREV_CLOSE      = L.PREV_CLOSE
+              ,LAST_VOLUME     = L.VOLUME
+          FROM (
+                SELECT  MAX(CASE WHEN X.RN = 1 THEN X.TRADE_DATE  END) AS TRADE_DATE
+                       ,MAX(CASE WHEN X.RN = 1 THEN X.CLOSE_PRICE END) AS CLOSE_PRICE
+                       ,MAX(CASE WHEN X.RN = 2 THEN X.CLOSE_PRICE END) AS PREV_CLOSE
+                       ,MAX(CASE WHEN X.RN = 1 THEN X.VOLUME      END) AS VOLUME
+                  FROM (
+                        SELECT  P.TRADE_DATE
+                               ,P.CLOSE_PRICE
+                               ,P.VOLUME
+                               ,ROW_NUMBER() OVER (ORDER BY P.TRADE_DATE DESC) AS RN
+                          FROM T_STOCK_PRICE P
+                         WHERE 1=1
+                           AND P.STOCK_ID = #{stockId}
+                         ORDER BY P.TRADE_DATE DESC
+                         LIMIT 2
+                  ) X
+          ) L
+         WHERE 1=1
+           AND S.ID = #{stockId}
+           AND L.TRADE_DATE IS NOT NULL
+    </update>
+
     <!-- 상장 주식 수 저장 (시가총액 = 상장 주식 수 × 종가) -->
     <update id="updateSharesOutstanding"
             parameterType="com.sklabs1037.sklabs1037.stock.vo.StockCollectVO">

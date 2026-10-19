@@ -54,7 +54,7 @@ public class AiChatServiceImpl implements IAiChatService {
               종목 비중이 한쪽에 몰렸는지, 수익/손실 종목, 현금 비중을 짚어주고 필요하면 다른 도구로 해당 종목 흐름·뉴스를 확인해.
               모의투자는 가상 자금 1,000만 원으로 하는 연습 계좌라는 점을 기억해.
             - 근거는 가장 중요한 3~4개만 골라 짧게 요약해. 비슷한 기사는 하나로 묶어.
-            - 지원 종목은 DB에 있는 종목뿐이야. 없는 종목이면 지원하지 않는다고 말해.
+            - 지원 종목은 코스피·코스닥 상장 주식과 ETF야. find_stock으로 찾아도 없으면 지원하지 않는다고 말해.
             - 시세 데이터의 기준 날짜를 함께 알려줘.
             - 투자 권유(사라/팔라)는 하지 말고, 데이터 기반 설명만 해. 답변 끝에 "투자 판단은 본인 책임입니다."를 붙여.
             - 한국어로 간결하게. 마크다운 표, 제목(#)은 쓰지 말고 짧은 문단과 "-" 목록만 사용해. 강조가 꼭 필요할 때만 **굵게**를 써.
@@ -63,7 +63,7 @@ public class AiChatServiceImpl implements IAiChatService {
     // Claude에게 알려줄 도구 목록 (이름, 설명, 입력 형식)
     private static final List<Map<String, Object>> TOOLS = List.of(
             tool("find_stock",
-                    "종목명 또는 6자리 종목코드로 지원 종목을 찾는다. query를 빈 문자열로 주면 지원 종목 전체 목록을 준다.",
+                    "종목명 또는 6자리 종목코드로 코스피·코스닥 종목(ETF 포함 약 3,000개)을 찾는다. 최대 20개. query를 빈 문자열로 주면 주요 종목 목록을 준다.",
                     Map.of("query", Map.of("type", "string", "description", "종목명(예: 삼성전자) 또는 종목코드(예: 005930)")),
                     List.of("query")),
             tool("get_current_price",
@@ -76,7 +76,7 @@ public class AiChatServiceImpl implements IAiChatService {
                             "days", Map.of("type", "integer", "description", "조회할 거래일 수 (1~100)")),
                     List.of("symbol", "days")),
             tool("get_return_ranking",
-                    "지원하는 전 종목의 최근 N거래일 수익률(%)을 계산해 높은 순으로 준다. 시작일/종료일 종가 포함. 여러 종목 비교, 순위 질문에 사용.",
+                    "코스피·코스닥 주식(ETF 제외)의 최근 N거래일 수익률(%) 상위 15개와 하위 15개를 높은 순으로 준다. 시작일/종료일 종가 포함. 순위 질문에 사용.",
                     Map.of("days", Map.of("type", "integer", "description", "수익률 기간 (거래일 수, 1~99)")),
                     List.of("days")),
             tool("search_stock_docs",

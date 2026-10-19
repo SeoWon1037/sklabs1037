@@ -69,15 +69,23 @@ public class MockTradeServiceImpl implements IMockTradeService {
 
         ensureAccount(userId);
 
-        Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
         MockTradeVO account = mockTradeDao.selectAccount(userId);
+        List<MockTradeVO> pendingList = mockTradeDao.selectPendingOrders(userId);
+        List<MockTradeVO> holdingList = mockTradeDao.selectHoldings(userId);
+        List<Long> featuredIds = mockTradeDao.selectFeaturedStockIds();
+
+        // 현재가는 이 화면에 필요한 종목만 (보유 + 미체결 + 주요 종목)
+        Set<Long> ids = new LinkedHashSet<>(featuredIds);
+        pendingList.forEach(o -> ids.add(o.getStockId()));
+        holdingList.forEach(h -> ids.add(h.getStockId()));
+        Map<Long, MockTradeVO> prices = mockPriceService.getPrices(ids);
 
         // 1. 미체결 주문 (종목별 대기 중인 매도 수량도 같이 계산)
         List<Map<String, Object>> pendingOrders = new ArrayList<>();
         Map<Long, Integer> pendingSell = new HashMap<>();
         BigDecimal pendingCash = BigDecimal.ZERO;
 
-        for (MockTradeVO o : mockTradeDao.selectPendingOrders(userId)) {
+        for (MockTradeVO o : pendingList) {
 
             MockTradeVO p = prices.get(o.getStockId());
 
@@ -105,7 +113,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
         BigDecimal stockValue = BigDecimal.ZERO;
         BigDecimal buyTotal = BigDecimal.ZERO;
 
-        for (MockTradeVO h : mockTradeDao.selectHoldings(userId)) {
+        for (MockTradeVO h : holdingList) {
 
             MockTradeVO p = prices.get(h.getStockId());
             BigDecimal price = (p == null) ? h.getAvgPrice() : p.getPrice();   // 가격을 못 구하면 평균 단가로
@@ -166,7 +174,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
         result.put("account", summary);
         result.put("holdings", holdings);
         result.put("pendingOrders", pendingOrders);
-        result.put("stocks", stockList(prices));
+        result.put("stocks", stockList(featuredIds, prices));   // 주문 칸 빠른 선택 (주요 종목)
         result.put("market", market);
 
         return result;
@@ -232,8 +240,8 @@ public class MockTradeServiceImpl implements IMockTradeService {
         if (quantity < 1) throw new IllegalArgumentException("수량은 1주 이상 입력해주세요.");
         if (quantity > MAX_ORDER_QUANTITY) throw new IllegalArgumentException("한 번에 " + won(MAX_ORDER_QUANTITY) + "주까지 주문할 수 있어요.");
 
-        MockTradeVO stock = mockPriceService.getPrices().get(stockId);
-        if (stock == null) throw new IllegalArgumentException("주문할 수 없는 종목입니다.");
+        MockTradeVO stock = mockPriceService.getPrice(stockId);
+        if (stock == null) throw new IllegalArgumentException("주문할 수 없는 종목입니다. (시세가 아직 없어요)");
 
         // 2. 계좌 잠금 (이 트랜잭션이 끝날 때까지 같은 계좌의 다른 주문·체결은 대기)
         ensureAccount(userId);
@@ -390,7 +398,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
         List<MockTradeVO> orders = mockTradeDao.selectMatchableOrders(MockMarketHours.now().toLocalDate());
         if (orders.isEmpty()) return List.of();   // 대기 주문이 없으면 토스도 호출하지 않음
 
-        Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
+        Map<Long, MockTradeVO> prices = mockPriceService.getPrices(orders.stream().map(MockTradeVO::getStockId).toList());
         List<Long> ids = new ArrayList<>();
 
         for (MockTradeVO o : orders) {
@@ -420,7 +428,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
         MockTradeVO order = mockTradeDao.selectOrderForUpdate(orderId);
         if (order == null || !"PENDING".equals(order.getStatus())) return false;
 
-        MockTradeVO stock = mockPriceService.getPrices().get(order.getStockId());
+        MockTradeVO stock = mockPriceService.getPrice(order.getStockId());
         if (stock == null || !"LIVE".equals(stock.getPriceSource())) return false;
         if (!crosses(order.getSide(), stock.getPrice(), order.getLimitPrice())) return false;
 
@@ -644,12 +652,13 @@ public class MockTradeServiceImpl implements IMockTradeService {
     // - 랭킹(전체·이번 주)과 장 마감 기록에서 같이 씀
     private List<MockTradeVO> accountTotals() {
 
-        Map<Long, MockTradeVO> prices = mockPriceService.getPrices();
+        List<MockTradeVO> holdings = mockTradeDao.selectRankingHoldings();
+        Map<Long, MockTradeVO> prices = mockPriceService.getPrices(holdings.stream().map(MockTradeVO::getStockId).toList());
 
         // 회원별 주식 평가금액
         Map<Long, BigDecimal> stockValues = new HashMap<>();
 
-        for (MockTradeVO h : mockTradeDao.selectRankingHoldings()) {
+        for (MockTradeVO h : holdings) {
 
             MockTradeVO p = prices.get(h.getStockId());
             if (p == null) continue;
@@ -813,24 +822,45 @@ public class MockTradeServiceImpl implements IMockTradeService {
     }
 
     // 주문 화면 종목 목록
-    private List<Map<String, Object>> stockList(Map<Long, MockTradeVO> prices) {
+    private List<Map<String, Object>> stockList(List<Long> stockIds, Map<Long, MockTradeVO> prices) {
 
         List<Map<String, Object>> list = new ArrayList<>();
 
-        for (MockTradeVO s : prices.values()) {
+        for (Long id : stockIds) {
 
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("stockId", s.getStockId());
-            row.put("symbol", s.getSymbol());
-            row.put("name", s.getName());
-            row.put("price", s.getPrice());
-            row.put("priceSource", s.getPriceSource());
-            row.put("priceTime", s.getPriceTime());
-            list.add(row);
+            MockTradeVO s = prices.get(id);
+            if (s == null) continue;
+
+            list.add(quoteRow(s));
 
         }
 
         return list;
+
+    }
+
+    // 종목 하나의 현재가 정보 (주문 칸)
+    private Map<String, Object> quoteRow(MockTradeVO s) {
+
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("stockId", s.getStockId());
+        row.put("symbol", s.getSymbol());
+        row.put("name", s.getName());
+        row.put("price", s.getPrice());
+        row.put("priceSource", s.getPriceSource());
+        row.put("priceTime", s.getPriceTime());
+
+        return row;
+
+    }
+
+    @Override
+    public Map<String, Object> getQuote(String symbol) {
+
+        Long stockId = (symbol == null) ? null : mockTradeDao.selectStockIdBySymbol(symbol);
+        MockTradeVO s = mockPriceService.getPrice(stockId);
+
+        return (s == null) ? null : quoteRow(s);
 
     }
 

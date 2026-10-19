@@ -3,11 +3,14 @@
 // - 가상 자금 1,000만 원으로 매수/매도 → 보유 종목, 수익률, 랭킹
 //   · 시장가: 지금 가격으로 바로 체결
 //   · 지정가: 정해둔 가격이 되면 체결 (정규장 1분마다 확인, 그 거래일 장 마감까지 안 되면 자동 취소)
-// - 주소로 종목 골라서 열기: /mock?symbol=005930 (종목 화면 "모의 매수" 버튼)
+// - 주문 종목: 주요 종목 칩 + 🔍 검색 (코스피·코스닥 전 종목, ETF 포함)
+// - 주소로 종목 골라서 열기: /mock?symbol=005930 (종목 화면 "모의 매수" 버튼, 어떤 종목이든)
 // - PC: 요약 카드 / [수익률 추이 + 보유 종목 + 거래 내역 | 주문 + 미체결 주문 + 수익률 랭킹]
 // - 휴대폰: 요약 → 주문 → 미체결 주문 → 수익률 추이 → 보유 종목 → 거래 내역 → 랭킹 (한 줄씩)
 // - 백엔드 API
-//   GET  /api/mock/account                          내 계좌 + 보유 종목 + 주문 가능 종목
+//   GET  /api/mock/account                          내 계좌 + 보유 종목 + 주요 종목 현재가
+//   GET  /api/mock/quote?symbol=035720              검색으로 고른 종목의 현재가
+//   GET  /api/stock/search?q=카카오                  종목 검색
 //   GET  /api/mock/trades?page=1                    내 거래 내역 (20개씩)
 //   POST /api/mock/order { stockId, side, quantity, orderType, limitPrice }   주문
 //   POST /api/mock/orders/{orderId}/cancel          지정가 주문 취소
@@ -98,7 +101,10 @@ function MockTradePage() {
   // 주문 입력
   const [side, setSide] = useState('BUY')
   const [orderType, setOrderType] = useState('MARKET')   // MARKET | LIMIT
-  const [stockId, setStockId] = useState(null)
+  const [pickSymbol, setPickSymbol] = useState(null)   // 직접 고른 종목코드
+  const [quote, setQuote] = useState({ key: '', stock: null, error: '' })   // 주요 종목이 아닐 때 현재가
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState({ key: '', items: [] })
   const [quantity, setQuantity] = useState('')
   const [limitPrice, setLimitPrice] = useState('')
   const [ordering, setOrdering] = useState(false)
@@ -173,12 +179,48 @@ function MockTradePage() {
   const pendingOrders = useMemo(() => data?.pendingOrders ?? [], [data])
   const market = data?.market
 
-  // 선택 종목: 직접 고른 것 → 주소의 종목 → 첫 번째 종목
-  const selectedId = stockId
-    ?? stocks.find((s) => s.symbol === paramSymbol)?.stockId
-    ?? stocks[0]?.stockId
-  const selected = stocks.find((s) => s.stockId === selectedId)
-  const holding = holdings.find((h) => h.stockId === selectedId)
+  // 선택 종목: 직접 고른 것 → 주소의 종목 → 첫 번째 주요 종목
+  const selectedSymbol = pickSymbol ?? paramSymbol ?? stocks[0]?.symbol ?? null
+  const listed = stocks.find((s) => s.symbol === selectedSymbol)
+  const inList = Boolean(listed)
+  const selected = listed ?? (quote.key === selectedSymbol ? quote.stock : null)
+  const quoteError = !inList && quote.key === selectedSymbol ? quote.error : ''
+  const holding = holdings.find((h) => h.symbol === selectedSymbol)
+
+  // 주요 종목이 아니면 그 종목 현재가를 따로 (계좌 새로고침 때마다 같이 = 30초)
+  useEffect(() => {
+    if (!data || !selectedSymbol || inList) return
+    let ignore = false
+    fetch(`/api/mock/quote?symbol=${encodeURIComponent(selectedSymbol)}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (ignore) return
+        if (!json.success) {
+          setQuote({ key: selectedSymbol, stock: null, error: json.message || '시세를 불러오지 못했어요.' })
+          return
+        }
+        setQuote({ key: selectedSymbol, stock: json.stock, error: '' })
+        // 지정가 칸이 비어 있으면 현재가로 채워둠
+        setLimitPrice((prev) => prev || String(Math.round(Number(json.stock.price))))
+      })
+      .catch(() => { if (!ignore) setQuote({ key: selectedSymbol, stock: null, error: '시세를 불러오지 못했어요.' }) })
+    return () => { ignore = true }
+  }, [data, selectedSymbol, inList])
+
+  // 종목 검색 (0.25초 뒤에)
+  const trimmed = query.trim()
+  useEffect(() => {
+    if (!trimmed) return
+    let ignore = false
+    const timer = setTimeout(() => {
+      fetch(`/api/stock/search?q=${encodeURIComponent(trimmed)}`)
+        .then((res) => res.json())
+        .then((json) => { if (!ignore) setResults({ key: trimmed, items: json.success ? json.stocks : [] }) })
+        .catch(() => { if (!ignore) setResults({ key: trimmed, items: [] }) })
+    }, 250)
+    return () => { ignore = true; clearTimeout(timer) }
+  }, [trimmed])
+  const searching = trimmed.length > 0
 
   const price = Number(selected?.price ?? 0)
   const isLimit = orderType === 'LIMIT'
@@ -190,12 +232,13 @@ function MockTradePage() {
     ? (orderPrice > 0 ? Math.floor(cash / orderPrice) : 0)
     : sellable
 
-  // 종목 고르기 (지정가는 그 종목 현재가로 다시 맞춤)
-  const selectStock = (id) => {
-    const s = stocks.find((x) => x.stockId === id)
-    setStockId(id)
+  // 종목 고르기 (지정가는 그 종목 현재가로 다시 맞춤, 모르는 가격이면 시세 받은 뒤 채움)
+  const selectStock = (symbol) => {
+    const s = stocks.find((x) => x.symbol === symbol)
+    setPickSymbol(symbol)
     setQuantity('')
     setLimitPrice(s ? String(Math.round(Number(s.price))) : '')
+    setQuery('')
     setOrderMsg(null)
   }
 
@@ -493,8 +536,8 @@ function MockTradePage() {
                   {holdings.map((h) => (
                     <tr
                       key={h.stockId}
-                      className={h.stockId === selectedId ? 'mock-row-active' : ''}
-                      onClick={() => selectStock(h.stockId)}
+                      className={h.symbol === selectedSymbol ? 'mock-row-active' : ''}
+                      onClick={() => selectStock(h.symbol)}
                       title="눌러서 주문 칸에 이 종목 선택"
                     >
                       <td className="mock-cell-name">
@@ -609,21 +652,60 @@ function MockTradePage() {
               ))}
             </div>
 
-            <label className="mock-field">
-              <span>종목</span>
-              <select
-                value={selectedId ?? ''}
-                onChange={(e) => selectStock(Number(e.target.value))}
-              >
+            {/* 종목: 검색 + 주요 종목 칩 */}
+            <div className="mock-field">
+              <span className="mock-field-row">
+                종목
+                {selected && <span className="mock-picked">{selected.name} <small>{selected.symbol}</small></span>}
+              </span>
+              <div className="mock-search">
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setQuery('')
+                    if (e.key === 'Enter' && results.key === trimmed && results.items[0]) selectStock(results.items[0].symbol)
+                  }}
+                  placeholder="🔍 종목명 · 종목코드 검색 (전 종목)"
+                  aria-label="주문할 종목 검색"
+                  maxLength={30}
+                />
+                {searching && (
+                  <ul className="mock-search-results">
+                    {results.key !== trimmed && <li className="mock-search-empty">찾는 중...</li>}
+                    {results.key === trimmed && results.items.length === 0 && (
+                      <li className="mock-search-empty">"{trimmed}" 종목이 없어요.</li>
+                    )}
+                    {results.key === trimmed && results.items.map((s) => (
+                      <li key={s.stockId}>
+                        <button type="button" onClick={() => selectStock(s.symbol)}>
+                          <span>{s.name}{s.securityType === 'ETF' && <em>ETF</em>}</span>
+                          <small>{s.symbol}</small>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="mock-chips" aria-label="주요 종목">
                 {stocks.map((s) => (
-                  <option key={s.stockId} value={s.stockId}>{s.name} ({s.symbol})</option>
+                  <button
+                    key={s.stockId}
+                    type="button"
+                    className={`mock-chip ${s.symbol === selectedSymbol ? 'mock-chip-active' : ''}`}
+                    onClick={() => selectStock(s.symbol)}
+                  >
+                    {s.name}
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+            </div>
 
             <div className="mock-price-box">
-              <span className="mock-label">{priceLabel(selected)}</span>
-              <strong>{won(selected?.price)}원</strong>
+              <span className="mock-label">{quoteError ? '시세 없음' : selected ? priceLabel(selected) : '시세를 불러오는 중...'}</span>
+              <strong>{quoteError ? '-' : `${won(selected?.price)}원`}</strong>
+              {quoteError && <span className="mock-badge">{quoteError}</span>}
               {selected?.priceSource === 'CLOSE' && (
                 <span className="mock-badge">
                   {isLimit ? '실시간 시세를 못 받는 동안은 지정가 주문이 체결되지 않아요' : '실시간 시세를 못 받아 최근 종가로 체결돼요'}

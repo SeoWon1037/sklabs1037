@@ -12,8 +12,11 @@ import java.util.List;
 @Mapper
 public interface StockMainDao {
 
-    // 종목별 최신 종가 + 전일 대비
-    List<StockMainVO> selectStockSummary();
+    // 기본 목록: 시가총액 상위 N개 + 주요 종목
+    List<StockMainVO> selectStockSummary(StockMainVO vo);
+
+    // 종목 검색
+    List<StockMainVO> selectStockSearch(StockMainVO vo);
 
     // 종목별 최근 N거래일 종가 (미니 차트용)
     List<StockMainVO> selectRecentPrices(StockMainVO vo);

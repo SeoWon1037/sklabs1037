@@ -10,28 +10,44 @@
 <mapper namespace="com.sklabs1037.sklabs1037.mock.dao.MockTradeDao">
 
     <!-- ============================================
-         종목 + 최근 종가 (주문 목록, 토스 현재가를 못 받을 때 대신 쓰는 가격)
+         종목 + 최근 종가 (토스 현재가를 못 받을 때 대신 쓰는 가격)
+         - 전 종목이 아니라 필요한 종목만 (T_STOCK에 복사해 둔 최신 종가)
          ============================================ -->
-    <select id="selectStocks"
+    <select id="selectStocksByIds"
             resultType="com.sklabs1037.sklabs1037.mock.vo.MockTradeVO">
-        SELECT  S.ID          AS STOCK_ID
+        SELECT  S.ID              AS STOCK_ID
                ,S.SYMBOL
                ,S.NAME
-               ,L.TRADE_DATE
-               ,L.CLOSE_PRICE
+               ,S.LAST_TRADE_DATE AS TRADE_DATE
+               ,S.LAST_CLOSE      AS CLOSE_PRICE
           FROM T_STOCK S
-          LEFT JOIN LATERAL (
-                SELECT  P.TRADE_DATE
-                       ,P.CLOSE_PRICE
-                  FROM T_STOCK_PRICE P
-                 WHERE 1=1
-                   AND P.STOCK_ID = S.ID
-                 ORDER BY P.TRADE_DATE DESC
-                 LIMIT 1
-          ) L ON TRUE
          WHERE 1=1
            AND S.USE_YN  = 'Y'
            AND S.DEL_DAY IS NULL
+           AND S.ID IN
+           <foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
+    <!-- 종목코드로 종목 1개 (주문 칸에서 검색해 고른 종목) -->
+    <select id="selectStockIdBySymbol"
+            resultType="java.lang.Long">
+        SELECT  S.ID
+          FROM T_STOCK S
+         WHERE 1=1
+           AND S.SYMBOL  = #{symbol}
+           AND S.USE_YN  = 'Y'
+           AND S.DEL_DAY IS NULL
+    </select>
+
+    <!-- 주요 종목 (주문 칸 빠른 선택) -->
+    <select id="selectFeaturedStockIds"
+            resultType="java.lang.Long">
+        SELECT  S.ID
+          FROM T_STOCK S
+         WHERE 1=1
+           AND S.FEATURED_YN = 'Y'
+           AND S.USE_YN      = 'Y'
+           AND S.DEL_DAY     IS NULL
          ORDER BY S.ID
     </select>
 

@@ -5,6 +5,7 @@ import com.sklabs1037.sklabs1037.stock.dao.StockCollectDao;
 import com.sklabs1037.sklabs1037.stock.vo.StockCollectVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -12,21 +13,32 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 시세 수집 Service 구현 (데이터 파이프라인)
  *
- *   Extract   : 토스증권 API 일봉 조회
+ *   0. 종목 목록 : 토스 /api/v1/stocks/all → 코스피·코스닥 주식(보통주·우선주) + ETF 약 3,000개를 T_STOCK에 UPSERT
+ *   Extract   : 토스증권 API 일봉 조회 (한 번에 한 종목)
  *   Transform : 문자열 가격 → BigDecimal, ISO 시간 → 날짜
- *   Load      : T_STOCK_PRICE UPSERT (다시 받아도 중복 없음)
- *   + 상장 주식 수(T_STOCK.SHARES_OUTSTANDING)도 같이 갱신 → 메인 화면 시가총액 TOP 3 계산용
+ *   Load      : T_STOCK_PRICE UPSERT (다시 받아도 중복 없음) + T_STOCK 최신 종가 복사
+ *   + 상장 주식 수(T_STOCK.SHARES_OUTSTANDING)도 200개씩 묶어서 갱신 → 시가총액 계산용
  *
  * - 종목 하나가 실패해도 나머지는 계속 수집 (종목별 try/catch)
  * - 일부러 @Transactional을 쓰지 않음 (한 종목 실패로 전체가 롤백되지 않게)
+ * - 종목 사이에 stock.collect.delay-ms만큼 쉬어서 토스 호출 제한에 덜 걸리게 (걸리면 TossApiClient가 쉬고 재시도)
+ *   → 3,000종목이면 10분 남짓
  */
 @Slf4j
 @Service
 public class StockCollectServiceImpl implements IStockCollectService {
+
+    // 받을 시장 / 종목 종류 (토스 securityType)
+    private static final List<String> MARKETS = List.of("KOSPI", "KOSDAQ");
+    private static final Set<String> SECURITY_TYPES = Set.of("STOCK", "ETF");
+
+    // 진행 상황 로그 간격 (종목 수)
+    private static final int PROGRESS_EVERY = 300;
 
     @Autowired
     private TossApiClient tossApiClient;
@@ -34,12 +46,69 @@ public class StockCollectServiceImpl implements IStockCollectService {
     @Autowired
     private StockCollectDao stockCollectDao;
 
+    // 종목 사이 쉬는 시간 (밀리초)
+    @Value("${stock.collect.delay-ms:150}")
+    private long delayMs;
+
+    // 처음 보는 종목을 열었을 때 받아올 일수
+    @Value("${stock.collect.initial-count:200}")
+    private int initialCount;
+
+    // ============================================
+    // 0. 종목 목록 동기화
+    // ============================================
+    @Override
+    public int syncStockMaster() {
+
+        if (!tossApiClient.isConfigured()) return 0;
+
+        int saved = 0;
+
+        for (String market : MARKETS) {
+
+            for (Map<String, Object> row : tossApiClient.listStocks(market)) {
+
+                String type = String.valueOf(row.get("securityType"));
+                if (!SECURITY_TYPES.contains(type)) continue;   // 리츠·ETN·워런트 등은 제외
+
+                String symbol = String.valueOf(row.get("symbol"));
+                String name = String.valueOf(row.get("name"));
+                if (symbol.isBlank() || "null".equals(symbol) || name.isBlank()) continue;
+
+                StockCollectVO vo = new StockCollectVO();
+                vo.setSymbol(symbol);
+                vo.setName(name);
+                vo.setMarket(market);
+                vo.setSecurityType(type);
+
+                saved += stockCollectDao.upsertStockMaster(vo);
+
+            }
+
+        }
+
+        log.info("종목 목록 동기화: {}종목", saved);
+
+        return saved;
+
+    }
+
+    // ============================================
+    // 1. 정기 수집 (평일 20:30)
+    // ============================================
     @Override
     public int collectAll(int count) {
 
         if (!tossApiClient.isConfigured()) {
             log.warn("토스 API 키가 없어 시세 수집을 건너뜀");
             return 0;
+        }
+
+        // 새로 상장한 종목도 같이 받게 목록부터 (실패해도 기존 종목은 수집)
+        try {
+            syncStockMaster();
+        } catch (Exception e) {
+            log.warn("종목 목록 동기화 실패: {}", e.getMessage());
         }
 
         int saved = collectStocks(stockCollectDao.selectTargetStocks(), count);
@@ -56,52 +125,15 @@ public class StockCollectServiceImpl implements IStockCollectService {
     }
 
     @Override
-    public int updateSharesOutstanding() {
-
-        if (!tossApiClient.isConfigured()) return 0;
-
-        List<StockCollectVO> stocks = stockCollectDao.selectTargetStocks();
-        if (stocks.isEmpty()) return 0;
-
-        // 1. 전 종목 한 번에 조회 → 종목코드별 상장 주식 수
-        String symbols = String.join(",", stocks.stream().map(StockCollectVO::getSymbol).toList());
-        Map<String, Long> shares = new HashMap<>();
-
-        for (Map<String, Object> row : tossApiClient.getStocks(symbols)) {
-
-            Object value = row.get("sharesOutstanding");
-            if (value == null) continue;
-
-            shares.put(String.valueOf(row.get("symbol")), new BigDecimal(String.valueOf(value)).longValue());
-
-        }
-
-        // 2. 저장
-        int updated = 0;
-
-        for (StockCollectVO stock : stocks) {
-
-            Long n = shares.get(stock.getSymbol());
-            if (n == null || n <= 0) continue;
-
-            stock.setSharesOutstanding(n);
-            updated += stockCollectDao.updateSharesOutstanding(stock);
-
-        }
-
-        log.info("상장 주식 수 갱신: {}종목", updated);
-
-        return updated;
-
-    }
-
-    @Override
     public boolean isEmpty() {
 
         return stockCollectDao.countPrices() == 0;
 
     }
 
+    // ============================================
+    // 2. 이력 보충 (서버 시작 시, 새 종목)
+    // ============================================
     @Override
     public int collectMissingHistory(int minRows, int count) {
 
@@ -123,28 +155,123 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
     }
 
-    // 여러 종목 수집
-    private int collectStocks(List<StockCollectVO> stocks, int count) {
+    // ============================================
+    // 3. 한 종목 바로 받기 (아직 시세가 없는 종목을 화면에서 열었을 때)
+    // ============================================
+    @Override
+    public int collectHistoryNow(Long stockId, String symbol) {
 
-        int saved = 0;
+        if (!tossApiClient.isConfigured()) return 0;
 
-        for (StockCollectVO stock : stocks) {
+        StockCollectVO stock = new StockCollectVO();
+        stock.setStockId(stockId);
+        stock.setSymbol(symbol);
+
+        int n = collectOne(stock, initialCount);
+        stockCollectDao.updateLatestPrice(stockId);
+
+        log.info("시세 즉시 수집: {} → {}건", symbol, n);
+
+        return n;
+
+    }
+
+    // ============================================
+    // 4. 상장 주식 수 (200종목씩 묶어서)
+    // ============================================
+    @Override
+    public int updateSharesOutstanding() {
+
+        if (!tossApiClient.isConfigured()) return 0;
+
+        List<StockCollectVO> stocks = stockCollectDao.selectTargetStocks();
+        int updated = 0;
+
+        for (int from = 0; from < stocks.size(); from += TossApiClient.MAX_SYMBOLS) {
+
+            List<StockCollectVO> chunk = stocks.subList(from, Math.min(from + TossApiClient.MAX_SYMBOLS, stocks.size()));
+
+            // 1. 200종목 한 번에 조회 → 종목코드별 상장 주식 수
+            String symbols = String.join(",", chunk.stream().map(StockCollectVO::getSymbol).toList());
+            Map<String, Long> shares = new HashMap<>();
 
             try {
 
-                int n = collectOne(stock, count);
-                saved += n;
-                log.info("시세 수집: {} {} → {}건", stock.getSymbol(), stock.getName(), n);
+                for (Map<String, Object> row : tossApiClient.getStocks(symbols)) {
+
+                    Object value = row.get("sharesOutstanding");
+                    if (value == null) continue;
+
+                    shares.put(String.valueOf(row.get("symbol")), new BigDecimal(String.valueOf(value)).longValue());
+
+                }
 
             } catch (Exception e) {
 
-                log.error("시세 수집 실패: {} {}", stock.getSymbol(), stock.getName(), e);
+                log.warn("상장 주식 수 조회 실패 ({}~{}번째): {}", from, from + chunk.size(), e.getMessage());
+                continue;
 
             }
 
+            // 2. 저장
+            for (StockCollectVO stock : chunk) {
+
+                Long n = shares.get(stock.getSymbol());
+                if (n == null || n <= 0) continue;
+
+                stock.setSharesOutstanding(n);
+                updated += stockCollectDao.updateSharesOutstanding(stock);
+
+            }
+
+            pause();
+
         }
 
-        log.info("시세 수집 완료: 종목 {}개, 저장 {}건", stocks.size(), saved);
+        log.info("상장 주식 수 갱신: {}종목", updated);
+
+        return updated;
+
+    }
+
+    // ============================================
+    // 공통
+    // ============================================
+
+    // 여러 종목 수집 (종목 사이에 쉬면서)
+    private int collectStocks(List<StockCollectVO> stocks, int count) {
+
+        int saved = 0;
+        int failed = 0;
+
+        for (int i = 0; i < stocks.size(); i++) {
+
+            StockCollectVO stock = stocks.get(i);
+
+            try {
+
+                saved += collectOne(stock, count);
+                stockCollectDao.updateLatestPrice(stock.getStockId());
+
+            } catch (Exception e) {
+
+                failed++;
+
+                // 실패가 많으면 로그가 넘치니 처음 몇 개만 자세히
+                if (failed <= 5) log.error("시세 수집 실패: {} {}", stock.getSymbol(), stock.getName(), e);
+                else log.warn("시세 수집 실패: {} {} ({})", stock.getSymbol(), stock.getName(), e.getMessage());
+
+            }
+
+            if ((i + 1) % PROGRESS_EVERY == 0) {
+                log.info("시세 수집 진행: {}/{}종목", i + 1, stocks.size());
+            }
+
+            pause();
+
+        }
+
+        log.info("시세 수집 완료: 종목 {}개, 저장 {}건, 실패 {}종목", stocks.size(), saved, failed);
 
         return saved;
 
@@ -154,6 +281,8 @@ public class StockCollectServiceImpl implements IStockCollectService {
     private int collectOne(StockCollectVO stock, int count) {
 
         List<Map<String, Object>> candles = tossApiClient.getDailyCandles(stock.getSymbol(), count);
+        if (candles == null) return 0;
+
         int saved = 0;
 
         for (Map<String, Object> c : candles) {
@@ -165,7 +294,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
             vo.setHighPrice(toDecimal(c.get("highPrice")));
             vo.setLowPrice(toDecimal(c.get("lowPrice")));
             vo.setClosePrice(toDecimal(c.get("closePrice")));
-            vo.setVolume(toDecimal(c.get("volume")).longValue());
+            vo.setVolume(c.get("volume") == null ? 0L : toDecimal(c.get("volume")).longValue());
 
             stockCollectDao.upsertStockPrice(vo);
             saved++;
@@ -173,6 +302,19 @@ public class StockCollectServiceImpl implements IStockCollectService {
         }
 
         return saved;
+
+    }
+
+    // 토스 호출 사이 쉬기
+    private void pause() {
+
+        if (delayMs <= 0) return;
+
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
 
     }
 

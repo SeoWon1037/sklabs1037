@@ -19,7 +19,8 @@ import java.util.Map;
  * 주식 종목 화면 Controller
  *
  * API 목록
- *   GET /api/stock/dashboard?days=100     → { success, baseDate, stocks: [...] }   종목 목록 + 미니 차트
+ *   GET /api/stock/dashboard?days=20&limit=30  → { success, baseDate, stocks: [...] }   시가총액 상위 + 주요 종목 + 미니 차트
+ *   GET /api/stock/search?q=카카오             → { success, stocks: [...] }            종목 검색 (최대 20개)
  *   GET /api/stock/detail?symbol=005930   → { success, stock: {...}, candles: [...] } 종목 상세 + 일봉
  *
  * - 로그인 없이 볼 수 있는 공개 API (DB 조회만 하고 외부 유료 API는 쓰지 않음)
@@ -34,14 +35,16 @@ public class StockMainController {
 
     // 종목 목록 + 미니 차트
     @GetMapping("/dashboard")
-    public ResponseEntity<Map<String, Object>> dashboard(@RequestParam(defaultValue = "100") int days) {
+    public ResponseEntity<Map<String, Object>> dashboard(@RequestParam(defaultValue = "100") int days,
+                                                         @RequestParam(defaultValue = "30") int limit) {
 
-        // 5~100거래일로 제한
+        // 5~100거래일, 목록은 1~100개로 제한
         int safeDays = Math.max(5, Math.min(days, 100));
+        int safeLimit = Math.max(1, Math.min(limit, 100));
 
         try {
 
-            List<StockMainVO> stocks = stockMainService.getDashboard(safeDays);
+            List<StockMainVO> stocks = stockMainService.getDashboard(safeDays, safeLimit);
 
             Map<String, Object> body = new HashMap<>();
             body.put("success", true);
@@ -54,6 +57,35 @@ public class StockMainController {
 
             log.error("대시보드 조회 오류", e);
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "시세 정보를 불러오지 못했습니다.");
+
+        }
+
+    }
+
+    // 종목 검색 (2글자 미만이고 숫자도 아니면 빈 목록)
+    @GetMapping("/search")
+    public ResponseEntity<Map<String, Object>> search(@RequestParam(required = false) String q) {
+
+        String query = (q == null) ? "" : q.trim();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", true);
+
+        if (query.isEmpty() || query.length() > 30) {
+            body.put("stocks", List.of());
+            return ResponseEntity.ok(body);
+        }
+
+        try {
+
+            body.put("stocks", stockMainService.search(query, 20));
+
+            return ResponseEntity.ok(body);
+
+        } catch (Exception e) {
+
+            log.error("종목 검색 오류: {}", query, e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "검색하지 못했습니다.");
 
         }
 

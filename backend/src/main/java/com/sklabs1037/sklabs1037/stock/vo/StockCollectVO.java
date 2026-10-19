@@ -19,6 +19,8 @@ public class StockCollectVO {
     private String symbol;           // 종목코드 (005930)
     private String name;             // 종목명
     private Long sharesOutstanding;  // 상장 주식 수 (시가총액 계산용)
+    private String market;           // KOSPI / KOSDAQ
+    private String securityType;     // STOCK / ETF
 
     // ===== T_STOCK_PRICE =====
     private LocalDate tradeDate;     // 거래일

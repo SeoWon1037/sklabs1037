@@ -44,6 +44,32 @@
   background: color-mix(in srgb, var(--text) 3%, transparent);
   overflow: hidden;
 }
+/* 검색창 */
+.stock-search {
+  padding: 10px 10px 0;
+}
+.stock-search input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.stock-search input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.stock-list-empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  text-align: center;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
 .stock-list-head {
   display: flex;
   align-items: center;

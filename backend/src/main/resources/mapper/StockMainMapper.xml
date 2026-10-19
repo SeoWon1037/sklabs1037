@@ -8,60 +8,106 @@
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.stock.dao.StockMainDao">
 
-    <!-- 종목별 최신 종가 + 전일 대비 (최신일=1, 전일=2 번호를 매겨서 비교) + 시가총액 -->
+    <!-- 목록·검색 공통 칸: T_STOCK에 복사해 둔 최신 종가로 (시세 테이블을 뒤지지 않음) -->
+    <sql id="stockColumns">
+        S.ID                                                          AS STOCK_ID
+       ,S.SYMBOL
+       ,S.NAME
+       ,S.MARKET
+       ,S.SECURITY_TYPE
+       ,(S.FEATURED_YN = 'Y')                                         AS FEATURED
+       ,S.LAST_TRADE_DATE                                             AS TRADE_DATE
+       ,S.LAST_CLOSE                                                  AS CLOSE_PRICE
+       ,S.LAST_VOLUME                                                 AS VOLUME
+       ,S.PREV_CLOSE
+       ,S.LAST_CLOSE - S.PREV_CLOSE                                   AS CHANGE_AMOUNT
+       ,ROUND((S.LAST_CLOSE - S.PREV_CLOSE) / NULLIF(S.PREV_CLOSE, 0) * 100, 2) AS CHANGE_RATE
+       ,S.SHARES_OUTSTANDING
+       ,S.LAST_CLOSE * S.SHARES_OUTSTANDING                           AS MARKET_CAP
+    </sql>
+
+    <!--
+        주식 종목 화면 기본 목록 + 메인 시가총액 TOP 3
+        - 시가총액 상위 N개 (주식만, ETF 제외) + 주요 종목(FEATURED_YN = 'Y')
+        - 시가총액 큰 순
+    -->
     <select id="selectStockSummary"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO"
             resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
-        WITH RANKED AS (
-        SELECT  P.STOCK_ID
-        ,P.TRADE_DATE
-        ,P.CLOSE_PRICE
-        ,P.VOLUME
-        ,ROW_NUMBER() OVER (PARTITION BY P.STOCK_ID ORDER BY P.TRADE_DATE DESC) AS RN
-        FROM T_STOCK_PRICE P
+        WITH TOP_CAP AS (
+            SELECT  T.ID
+              FROM T_STOCK T
+             WHERE 1=1
+               AND T.USE_YN         = 'Y'
+               AND T.DEL_DAY        IS NULL
+               AND T.SECURITY_TYPE  = 'STOCK'
+               AND T.LAST_CLOSE     IS NOT NULL
+               AND T.SHARES_OUTSTANDING IS NOT NULL
+             ORDER BY T.LAST_CLOSE * T.SHARES_OUTSTANDING DESC
+             LIMIT #{limit}
         )
-        SELECT  S.ID          AS STOCK_ID
-        ,S.SYMBOL
-        ,S.NAME
-        ,S.MARKET
-        ,L.TRADE_DATE
-        ,L.CLOSE_PRICE
-        ,L.VOLUME
-        ,B.CLOSE_PRICE AS PREV_CLOSE
-        ,L.CLOSE_PRICE - B.CLOSE_PRICE AS CHANGE_AMOUNT
-        ,ROUND((L.CLOSE_PRICE - B.CLOSE_PRICE) / B.CLOSE_PRICE * 100, 2) AS CHANGE_RATE
-        ,S.SHARES_OUTSTANDING
-        ,L.CLOSE_PRICE * S.SHARES_OUTSTANDING AS MARKET_CAP
-        FROM T_STOCK S
-        JOIN RANKED L      ON L.STOCK_ID = S.ID
-        AND L.RN       = 1
-        LEFT JOIN RANKED B ON B.STOCK_ID = S.ID
-        AND B.RN       = 2
-        WHERE 1=1
-        AND S.USE_YN = 'Y'
-        AND S.DEL_DAY IS NULL
-        ORDER BY S.ID
+        SELECT  <include refid="stockColumns"/>
+          FROM T_STOCK S
+         WHERE 1=1
+           AND S.USE_YN     = 'Y'
+           AND S.DEL_DAY    IS NULL
+           AND S.LAST_CLOSE IS NOT NULL
+           AND (
+                S.FEATURED_YN = 'Y'
+                OR S.ID IN (SELECT ID FROM TOP_CAP)
+           )
+         ORDER BY MARKET_CAP DESC NULLS LAST
+                 ,S.ID
     </select>
 
-    <!-- 미니 차트용: 종목별 최근 N거래일 종가 (오래된 날짜부터) -->
+    <!--
+        종목 검색 (이름 일부 또는 종목코드 앞자리)
+        - 이름이 똑같은 종목 → 이름이 검색어로 시작 → 주요 종목 → 시가총액 큰 순
+    -->
+    <select id="selectStockSearch"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
+        SELECT  <include refid="stockColumns"/>
+          FROM T_STOCK S
+         WHERE 1=1
+           AND S.USE_YN  = 'Y'
+           AND S.DEL_DAY IS NULL
+           AND (
+                S.NAME   ILIKE '%' || #{query} || '%'
+                OR S.SYMBOL LIKE #{query} || '%'
+           )
+         ORDER BY (UPPER(S.NAME) = UPPER(#{query})) DESC
+                 ,(S.NAME ILIKE #{query} || '%') DESC
+                 ,(S.FEATURED_YN = 'Y') DESC
+                 ,MARKET_CAP DESC NULLS LAST
+                 ,S.NAME
+         LIMIT #{limit}
+    </select>
+
+    <!-- 미니 차트용: 정해진 종목들의 최근 N거래일 종가 (오래된 날짜부터) -->
     <select id="selectRecentPrices"
             parameterType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO"
             resultType="com.sklabs1037.sklabs1037.stock.vo.StockMainVO">
         SELECT  R.STOCK_ID
-        ,R.TRADE_DATE
-        ,R.CLOSE_PRICE
-        ,R.VOLUME
-        FROM (
-        SELECT  P.STOCK_ID
-        ,P.TRADE_DATE
-        ,P.CLOSE_PRICE
-        ,P.VOLUME
-        ,ROW_NUMBER() OVER (PARTITION BY P.STOCK_ID ORDER BY P.TRADE_DATE DESC) AS RN
-        FROM T_STOCK_PRICE P
-        ) R
-        WHERE 1=1
-        AND R.RN &lt;= #{days}
-        ORDER BY R.STOCK_ID
-        ,R.TRADE_DATE
+               ,R.TRADE_DATE
+               ,R.CLOSE_PRICE
+               ,R.VOLUME
+          FROM (
+                SELECT  P.STOCK_ID
+                       ,P.TRADE_DATE
+                       ,P.CLOSE_PRICE
+                       ,P.VOLUME
+                       ,ROW_NUMBER() OVER (PARTITION BY P.STOCK_ID ORDER BY P.TRADE_DATE DESC) AS RN
+                  FROM T_STOCK_PRICE P
+                 WHERE 1=1
+                   AND P.STOCK_ID IN
+                   <foreach collection="stockIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+                   AND P.TRADE_DATE <![CDATA[>=]]> CURRENT_DATE - (#{days} * 2 + 14)
+          ) R
+         WHERE 1=1
+           AND R.RN <![CDATA[<=]]> #{days}
+         ORDER BY R.STOCK_ID
+                 ,R.TRADE_DATE
     </select>
 
     <!-- 종목 상세: 종목 정보 + 사업 개요 문서 -->

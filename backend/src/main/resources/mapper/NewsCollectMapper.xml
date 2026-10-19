@@ -8,7 +8,10 @@
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.news.dao.NewsCollectDao">
 
-    <!-- 종목 뉴스 수집 대상 -->
+    <!--
+        종목 뉴스 수집 대상: 주요 종목만
+        (전 종목 약 3,000개를 30분마다 검색하면 구글 뉴스 차단 위험)
+    -->
     <select id="selectTargetStocks"
             resultType="com.sklabs1037.sklabs1037.news.vo.NewsCollectVO">
         SELECT  ID AS STOCK_ID
@@ -16,6 +19,7 @@
         FROM T_STOCK
         WHERE 1=1
         AND USE_YN = 'Y'
+        AND FEATURED_YN = 'Y'
         AND DEL_DAY IS NULL
         ORDER BY ID
     </select>

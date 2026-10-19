@@ -11,8 +11,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * 시세 수집 스케줄러
- * - 앱 시작 시: 시세 이력이 부족한 종목(처음 실행, 새로 추가한 종목)만 initial-count일치 채움 + 상장 주식 수 갱신
- * - 평일 20:30: 전 종목 최근 daily-count일 수집 (겹치는 날짜는 UPSERT) + 상장 주식 수 갱신
+ * - 앱 시작 시 (별도 스레드): 종목 목록 동기화 → 시세 이력이 부족한 종목만 initial-count일치 채움 → 상장 주식 수
+ * - 평일 20:30: 종목 목록 동기화 → 전 종목(약 3,000개) 최근 daily-count일 수집 (겹치는 날짜는 UPSERT) → 상장 주식 수
+ *   → 10분 남짓 걸려서 다른 스케줄 작업이 기다리지 않게 spring.task.scheduling.pool.size를 늘려 둠
  */
 @Slf4j
 @Component
@@ -30,30 +31,48 @@ public class StockCollectScheduler {
     @Value("${stock.collect.min-history}")
     private int minHistory;
 
-    // 앱 시작 직후: 이력 부족한 종목 보충
+    // 앱 시작 직후: 종목 목록 동기화 → 이력 부족한 종목 보충 → 상장 주식 수
+    // - 처음 한 번은 3,000종목 이력을 받느라 10분 넘게 걸려서, 서버 시작을 막지 않게 별도 스레드에서
     @EventListener(ApplicationReadyEvent.class)
     public void initialLoad() {
 
-        try {
+        Thread worker = new Thread(() -> {
 
-            stockCollectService.collectMissingHistory(minHistory, initialCount);
+            try {
 
-        } catch (Exception e) {
+                stockCollectService.syncStockMaster();
 
-            log.error("시세 이력 보충 실패", e);
+            } catch (Exception e) {
 
-        }
+                log.warn("종목 목록 동기화 실패: {}", e.getMessage());
 
-        // 상장 주식 수 (시가총액 TOP 3용)
-        try {
+            }
 
-            stockCollectService.updateSharesOutstanding();
+            try {
 
-        } catch (Exception e) {
+                stockCollectService.collectMissingHistory(minHistory, initialCount);
 
-            log.warn("상장 주식 수 갱신 실패: {}", e.getMessage());
+            } catch (Exception e) {
 
-        }
+                log.error("시세 이력 보충 실패", e);
+
+            }
+
+            // 상장 주식 수 (시가총액 TOP 3용)
+            try {
+
+                stockCollectService.updateSharesOutstanding();
+
+            } catch (Exception e) {
+
+                log.warn("상장 주식 수 갱신 실패: {}", e.getMessage());
+
+            }
+
+        }, "stock-initial-load");
+
+        worker.setDaemon(true);
+        worker.start();
 
     }
 

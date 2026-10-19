@@ -18,12 +18,17 @@ public class StockMainVO {
 
     // ===== 조회 조건 =====
     private Integer days;            // 차트용 최근 거래일 수
+    private Integer limit;           // 목록·검색 개수
+    private String query;            // 검색어
+    private List<Long> stockIds;     // 미니 차트를 그릴 종목들
 
     // ===== 종목 =====
     private Long stockId;
     private String symbol;
     private String name;
     private String market;
+    private String securityType;     // STOCK / ETF
+    private Boolean featured;        // 주요 종목
 
     // ===== 시세 =====
     private LocalDate tradeDate;     // 거래일

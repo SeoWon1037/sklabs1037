@@ -152,6 +152,117 @@
     </select>
 
 
+    <!--
+        [도구] screen_stocks: 조건 검색 (스크리너)
+        - AI는 조건 값만 고르고 SQL은 여기 고정 → 정렬도 정해진 값만 (choose)
+        - 최근 (기간 + 1)거래일만 읽음 (연속 상승·하락은 최대 20일까지 봄)
+        - 기준일: 종목 대부분이 가진 최신 거래일 (장중에 미리 받은 몇 종목의 오늘 일봉 때문에 기준이 흔들리지 않게)
+    -->
+    <select id="selectScreen"
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiScreenVO"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiScreenVO">
+        WITH RANKED AS (
+            SELECT  P.STOCK_ID
+                   ,P.TRADE_DATE
+                   ,P.CLOSE_PRICE
+                   ,P.VOLUME
+                   ,ROW_NUMBER() OVER (PARTITION BY P.STOCK_ID ORDER BY P.TRADE_DATE DESC) AS RN
+                   ,P.CLOSE_PRICE - LEAD(P.CLOSE_PRICE) OVER (PARTITION BY P.STOCK_ID ORDER BY P.TRADE_DATE DESC) AS DIFF
+              FROM T_STOCK_PRICE P
+             WHERE 1=1
+               AND P.TRADE_DATE <![CDATA[>=]]> CURRENT_DATE - (GREATEST(#{days}, 21) * 2 + 14)
+        ),
+        AGG AS (
+            SELECT  R.STOCK_ID
+                   ,MAX(CASE WHEN R.RN = 1 THEN R.TRADE_DATE END)                     AS END_DATE
+                   ,MAX(CASE WHEN R.RN = 1 THEN R.CLOSE_PRICE END)                    AS END_PRICE
+                   ,MAX(CASE WHEN R.RN = 2 THEN R.CLOSE_PRICE END)                    AS PREV_PRICE
+                   ,MAX(CASE WHEN R.RN = #{days} + 1 THEN R.TRADE_DATE END)           AS START_DATE
+                   ,MAX(CASE WHEN R.RN = #{days} + 1 THEN R.CLOSE_PRICE END)          AS START_PRICE
+                   ,MAX(CASE WHEN R.RN = 1 THEN R.VOLUME END)                         AS LAST_VOLUME
+                   ,AVG(CASE WHEN R.RN BETWEEN 2 AND #{days} + 1 THEN R.VOLUME END)   AS AVG_VOLUME
+                   ,MAX(CASE WHEN R.RN <![CDATA[<=]]> #{days} + 1 THEN R.CLOSE_PRICE END) AS PERIOD_HIGH
+                   ,COALESCE(MIN(CASE WHEN R.DIFF IS NULL OR R.DIFF <![CDATA[<=]]> 0 THEN R.RN END), MAX(R.RN) + 1) - 1 AS UP_STREAK
+                   ,COALESCE(MIN(CASE WHEN R.DIFF IS NULL OR R.DIFF <![CDATA[>=]]> 0 THEN R.RN END), MAX(R.RN) + 1) - 1 AS DOWN_STREAK
+              FROM RANKED R
+             WHERE 1=1
+               AND R.RN <![CDATA[<=]]> GREATEST(#{days} + 1, 21)
+             GROUP BY R.STOCK_ID
+        ),
+        BASE AS (
+            SELECT  MODE() WITHIN GROUP (ORDER BY A.END_DATE) AS BASE_DATE
+              FROM AGG A
+        ),
+        RESULT AS (
+            SELECT  S.SYMBOL
+                   ,S.NAME
+                   ,S.MARKET                                                              AS STOCK_MARKET
+                   ,S.SECURITY_TYPE
+                   ,A.START_DATE
+                   ,A.END_DATE
+                   ,A.END_PRICE                                                           AS CLOSE_PRICE
+                   ,ROUND((A.END_PRICE - A.START_PRICE) / NULLIF(A.START_PRICE, 0) * 100, 2) AS RETURN_RATE
+                   ,ROUND((A.END_PRICE - A.PREV_PRICE) / NULLIF(A.PREV_PRICE, 0) * 100, 2)   AS CHANGE_RATE
+                   ,ROUND(A.END_PRICE * S.SHARES_OUTSTANDING / 100000000)                AS MARKET_CAP_EOK
+                   ,A.UP_STREAK
+                   ,A.DOWN_STREAK
+                   ,ROUND(A.LAST_VOLUME / NULLIF(A.AVG_VOLUME, 0), 2)                    AS VOLUME_RATIO
+                   ,ROUND((A.END_PRICE - A.PERIOD_HIGH) / NULLIF(A.PERIOD_HIGH, 0) * 100, 2) AS FROM_HIGH
+              FROM AGG A
+              JOIN T_STOCK S ON S.ID = A.STOCK_ID
+             CROSS JOIN BASE B
+             WHERE 1=1
+               AND S.USE_YN  = 'Y'
+               AND S.DEL_DAY IS NULL
+               AND A.END_DATE <![CDATA[>=]]> B.BASE_DATE
+               AND A.START_PRICE IS NOT NULL
+            <choose>
+                <when test="market == 'KOSPI' or market == 'KOSDAQ'">
+               AND S.SECURITY_TYPE = 'STOCK'
+               AND S.MARKET        = #{market}
+                </when>
+                <when test="market == 'ETF'">
+               AND S.SECURITY_TYPE = 'ETF'
+                </when>
+                <when test="market == 'ALL'">
+                </when>
+                <otherwise>
+               AND S.SECURITY_TYPE = 'STOCK'
+                </otherwise>
+            </choose>
+        )
+        SELECT  X.*
+               ,COUNT(*) OVER () AS MATCH_COUNT
+          FROM RESULT X
+         WHERE 1=1
+        <if test="minReturn != null">      AND X.RETURN_RATE    <![CDATA[>=]]> #{minReturn}</if>
+        <if test="maxReturn != null">      AND X.RETURN_RATE    <![CDATA[<=]]> #{maxReturn}</if>
+        <if test="minChange != null">      AND X.CHANGE_RATE    <![CDATA[>=]]> #{minChange}</if>
+        <if test="maxChange != null">      AND X.CHANGE_RATE    <![CDATA[<=]]> #{maxChange}</if>
+        <if test="minCapEok != null">      AND X.MARKET_CAP_EOK <![CDATA[>=]]> #{minCapEok}</if>
+        <if test="maxCapEok != null">      AND X.MARKET_CAP_EOK <![CDATA[<=]]> #{maxCapEok}</if>
+        <if test="minPrice != null">       AND X.CLOSE_PRICE    <![CDATA[>=]]> #{minPrice}</if>
+        <if test="maxPrice != null">       AND X.CLOSE_PRICE    <![CDATA[<=]]> #{maxPrice}</if>
+        <if test="minUpStreak != null">    AND X.UP_STREAK      <![CDATA[>=]]> #{minUpStreak}</if>
+        <if test="minDownStreak != null">  AND X.DOWN_STREAK    <![CDATA[>=]]> #{minDownStreak}</if>
+        <if test="minVolumeRatio != null"> AND X.VOLUME_RATIO   <![CDATA[>=]]> #{minVolumeRatio}</if>
+        <if test="maxFromHigh != null">    AND X.FROM_HIGH      <![CDATA[>=]]> 0 - #{maxFromHigh}</if>
+         ORDER BY
+        <choose>
+            <when test="sort == 'return_asc'">       X.RETURN_RATE ASC</when>
+            <when test="sort == 'change_desc'">      X.CHANGE_RATE DESC</when>
+            <when test="sort == 'change_asc'">       X.CHANGE_RATE ASC</when>
+            <when test="sort == 'market_cap_desc'">  X.MARKET_CAP_EOK DESC NULLS LAST</when>
+            <when test="sort == 'volume_ratio_desc'"> X.VOLUME_RATIO DESC NULLS LAST</when>
+            <when test="sort == 'up_streak_desc'">   X.UP_STREAK DESC, X.RETURN_RATE DESC</when>
+            <when test="sort == 'down_streak_desc'"> X.DOWN_STREAK DESC, X.RETURN_RATE ASC</when>
+            <otherwise>                              X.RETURN_RATE DESC</otherwise>
+        </choose>
+                 ,X.SYMBOL
+         LIMIT #{limit}
+    </select>
+
+
     <!-- [도구] search_news: 최근 N일 뉴스를 키워드로 검색 (RAG, 같은 제목은 1건만) -->
     <select id="searchNews"
             parameterType="com.sklabs1037.sklabs1037.ai.vo.AiStockVO"

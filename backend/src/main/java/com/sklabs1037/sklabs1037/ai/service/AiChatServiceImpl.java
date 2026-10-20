@@ -4,6 +4,7 @@ import com.sklabs1037.sklabs1037.client.ClaudeApiClient;
 import com.sklabs1037.sklabs1037.client.TossApiClient;
 import com.sklabs1037.sklabs1037.ai.dao.AiChatDao;
 import com.sklabs1037.sklabs1037.ai.vo.AiChatVO;
+import com.sklabs1037.sklabs1037.ai.vo.AiScreenVO;
 import com.sklabs1037.sklabs1037.ai.vo.AiStockVO;
 import com.sklabs1037.sklabs1037.mock.service.IMockTradeService;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -33,6 +35,8 @@ import java.util.*;
  *     → search_news 도구 추가 (30분마다 수집하는 T_NEWS를 RAG 검색 대상으로)
  *   - 모의투자 기능 추가 후 "내 포트폴리오 어때?"에 답하지 못하던 문제
  *     → get_my_mock_portfolio 도구 추가 (질문한 회원 본인의 계좌만 조회, 회원 번호는 AI가 아니라 서버 세션에서)
+ *   - 종목이 3,900개로 늘어 "코스닥에서 5일 연속 오른 종목" 같은 조건 질문이 생김
+ *     → screen_stocks 도구 추가 (AI는 정해진 조건 칸만 채우고, SQL은 서버에 고정 → 아무 SQL이나 실행될 위험 없음)
  */
 @Slf4j
 @Service
@@ -48,6 +52,9 @@ public class AiChatServiceImpl implements IAiChatService {
             - 주가, 날짜, 거래량 같은 숫자는 반드시 도구로 조회한 값만 사용해. 절대 지어내지 마.
             - 종목코드를 모르면 먼저 find_stock으로 찾아.
             - 여러 종목의 수익률 비교나 순위 질문은 get_return_ranking 한 번으로 답해. 수익률을 직접 계산하지 마.
+            - "~한 종목 찾아줘"처럼 조건으로 종목을 고르는 질문(연속 상승·하락, 기간 수익률, 시가총액, 거래량 급증, 최고가 근처, 가격대)은 screen_stocks로 답해.
+              조건을 도구 입력으로 옮기고, 결과는 "- 종목명(코드): 핵심 숫자" 한 줄씩. 조건에 맞는 전체 개수(matchCount)와 기준일도 알려줘.
+              시가총액은 억 원 단위로 넣어 (1조 = 10000). 결과가 없으면 조건을 조금 넓혀 다시 찾아볼지 제안해.
             - 회사가 무슨 사업을 하는지 같은 질문은 search_stock_docs로 문서를 찾아 그 내용을 근거로 답해.
             - 최근 이슈, 주가가 오르거나 내린 이유, 뉴스 질문은 search_news로 최근 기사를 찾아 근거로 답해.
             - "내 포트폴리오", "내 모의투자", "내 계좌", "내 보유 종목" 질문은 get_my_mock_portfolio로 조회해서 답해.
@@ -59,6 +66,11 @@ public class AiChatServiceImpl implements IAiChatService {
             - 투자 권유(사라/팔라)는 하지 말고, 데이터 기반 설명만 해. 답변 끝에 "투자 판단은 본인 책임입니다."를 붙여.
             - 한국어로 간결하게. 마크다운 표, 제목(#)은 쓰지 말고 짧은 문단과 "-" 목록만 사용해. 강조가 꼭 필요할 때만 **굵게**를 써.
             """;
+
+    // screen_stocks 정렬 (정해진 값만 SQL로, TOOLS보다 먼저 만들어져야 함)
+    private static final Set<String> SCREEN_SORTS = Set.of(
+            "return_desc", "return_asc", "change_desc", "change_asc", "market_cap_desc",
+            "volume_ratio_desc", "up_streak_desc", "down_streak_desc");
 
     // Claude에게 알려줄 도구 목록 (이름, 설명, 입력 형식)
     private static final List<Map<String, Object>> TOOLS = List.of(
@@ -79,6 +91,10 @@ public class AiChatServiceImpl implements IAiChatService {
                     "코스피·코스닥 주식(ETF 제외)의 최근 N거래일 수익률(%) 상위 15개와 하위 15개를 높은 순으로 준다. 시작일/종료일 종가 포함. 순위 질문에 사용.",
                     Map.of("days", Map.of("type", "integer", "description", "수익률 기간 (거래일 수, 1~99)")),
                     List.of("days")),
+            tool("screen_stocks",
+                    "코스피·코스닥 종목(약 3,900개)을 조건으로 골라준다(스크리너). 조건은 모두 선택이고 함께 쓰면 AND. 최근 거래일 종가 기준. 최대 30개 + 조건에 맞는 전체 개수(matchCount).",
+                    screenProperties(),
+                    List.of()),
             tool("search_stock_docs",
                     "종목 설명 문서를 키워드로 검색한다. 회사의 사업 내용, 특징을 답할 때 근거로 사용.",
                     Map.of("query", Map.of("type", "string", "description", "핵심 단어만 공백으로 구분 (조사 빼고). 예: 'SK하이닉스 HBM'")),
@@ -357,6 +373,58 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "screen_stocks": {
+
+                AiScreenVO param = new AiScreenVO();
+                String market = str(input.get("market")).toUpperCase();
+                param.setMarket(Set.of("STOCK", "KOSPI", "KOSDAQ", "ETF", "ALL").contains(market) ? market : "STOCK");
+                param.setDays(intValue(input.get("days"), 20, 1, 60));
+                param.setMinReturn(decimal(input.get("min_return"), -100, 1000));
+                param.setMaxReturn(decimal(input.get("max_return"), -100, 1000));
+                param.setMinChange(decimal(input.get("min_change"), -30, 30));
+                param.setMaxChange(decimal(input.get("max_change"), -30, 30));
+                param.setMinCapEok(decimal(input.get("min_market_cap_eok"), 0, 100_000_000));
+                param.setMaxCapEok(decimal(input.get("max_market_cap_eok"), 0, 100_000_000));
+                param.setMinPrice(decimal(input.get("min_price"), 0, 100_000_000));
+                param.setMaxPrice(decimal(input.get("max_price"), 0, 100_000_000));
+                param.setMinUpStreak(input.get("min_up_streak") == null ? null : intValue(input.get("min_up_streak"), 1, 1, 20));
+                param.setMinDownStreak(input.get("min_down_streak") == null ? null : intValue(input.get("min_down_streak"), 1, 1, 20));
+                param.setMinVolumeRatio(decimal(input.get("min_volume_ratio"), 0, 100));
+                param.setMaxFromHigh(decimal(input.get("max_from_high"), 0, 100));
+                String sort = str(input.get("sort"));
+                param.setSort(SCREEN_SORTS.contains(sort) ? sort : "return_desc");
+                param.setLimit(intValue(input.get("limit"), 15, 1, 30));
+
+                List<AiScreenVO> rows = aiChatDao.selectScreen(param);
+
+                List<Map<String, Object>> list = new ArrayList<>();
+                for (AiScreenVO r : rows) {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("symbol", r.getSymbol());
+                    row.put("name", r.getName());
+                    row.put("market", "ETF".equals(r.getSecurityType()) ? "ETF" : r.getStockMarket());
+                    row.put("close", r.getClosePrice());
+                    row.put("returnRate", r.getReturnRate());
+                    row.put("changeRate", r.getChangeRate());
+                    row.put("marketCapEok", r.getMarketCapEok());
+                    row.put("upStreak", r.getUpStreak());
+                    row.put("downStreak", r.getDownStreak());
+                    row.put("volumeRatio", r.getVolumeRatio());
+                    row.put("fromHigh", r.getFromHigh());
+                    list.add(row);
+                }
+
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("matchCount", rows.isEmpty() ? 0 : rows.get(0).getMatchCount());
+                result.put("baseDate", rows.isEmpty() ? null : String.valueOf(rows.get(0).getEndDate()));
+                result.put("periodStart", rows.isEmpty() ? null : String.valueOf(rows.get(0).getStartDate()));
+                result.put("periodDays", param.getDays());
+                result.put("stocks", list);
+
+                return result;
+
+            }
+
             default:
                 throw new IllegalArgumentException("알 수 없는 도구: " + toolName);
 
@@ -391,8 +459,74 @@ public class AiChatServiceImpl implements IAiChatService {
             case "search_stock_docs"  -> "문서 검색 (" + str(input.get("query")) + ")";
             case "search_news"        -> "뉴스 검색 (" + str(input.get("query")) + ")";
             case "get_my_mock_portfolio" -> "내 모의투자 계좌 조회";
+            case "screen_stocks"      -> "조건 검색 (" + describeScreen(input) + ")";
             default                   -> toolName;
         };
+
+    }
+
+    // screen_stocks 입력 형식
+    private static Map<String, Object> screenProperties() {
+
+        Map<String, Object> p = new LinkedHashMap<>();
+        p.put("market", Map.of("type", "string", "enum", List.of("STOCK", "KOSPI", "KOSDAQ", "ETF", "ALL"),
+                "description", "STOCK=코스피+코스닥 주식(기본), ALL=주식+ETF"));
+        p.put("days", Map.of("type", "integer", "description", "수익률·평균 거래량·최고가를 볼 기간 (거래일 1~60, 기본 20)"));
+        p.put("min_return", Map.of("type", "number", "description", "기간 수익률 % 이상 (예: 10)"));
+        p.put("max_return", Map.of("type", "number", "description", "기간 수익률 % 이하 (예: -10 → 10% 넘게 하락)"));
+        p.put("min_change", Map.of("type", "number", "description", "최근 하루 등락률 % 이상"));
+        p.put("max_change", Map.of("type", "number", "description", "최근 하루 등락률 % 이하"));
+        p.put("min_market_cap_eok", Map.of("type", "number", "description", "시가총액 하한 (억 원, 1조=10000)"));
+        p.put("max_market_cap_eok", Map.of("type", "number", "description", "시가총액 상한 (억 원)"));
+        p.put("min_price", Map.of("type", "number", "description", "종가 하한 (원)"));
+        p.put("max_price", Map.of("type", "number", "description", "종가 상한 (원)"));
+        p.put("min_up_streak", Map.of("type", "integer", "description", "최근 연속 상승 일수 이상 (1~20)"));
+        p.put("min_down_streak", Map.of("type", "integer", "description", "최근 연속 하락 일수 이상 (1~20)"));
+        p.put("min_volume_ratio", Map.of("type", "number", "description", "최근 거래량 ÷ 기간 평균 거래량 이상 (거래량 급증, 예: 2)"));
+        p.put("max_from_high", Map.of("type", "number", "description", "기간 최고 종가에서 몇 % 이내 (최고가 근처, 예: 3)"));
+        p.put("sort", Map.of("type", "string", "enum", List.copyOf(new java.util.TreeSet<>(SCREEN_SORTS)),
+                "description", "정렬 (기본 return_desc)"));
+        p.put("limit", Map.of("type", "integer", "description", "보여줄 개수 (1~30, 기본 15)"));
+
+        return p;
+
+    }
+
+    // 도구 사용 기록용 조건 요약 ("KOSDAQ, 20일, 연속상승≥3")
+    private String describeScreen(Map<String, Object> input) {
+
+        List<String> parts = new ArrayList<>();
+        parts.add(str(input.getOrDefault("market", "STOCK")));
+        if (input.get("days") != null) parts.add(input.get("days") + "일");
+        input.forEach((k, v) -> {
+            if (v != null && !Set.of("market", "days", "sort", "limit").contains(k)) parts.add(k + "=" + v);
+        });
+
+        return String.join(", ", parts);
+
+    }
+
+    // 숫자 입력 (없으면 null, min~max로 제한)
+    private BigDecimal decimal(Object value, double min, double max) {
+
+        double d;
+
+        if (value instanceof Number n) {
+            d = n.doubleValue();
+        } else if (value instanceof String text && !text.isBlank()) {
+            try {
+                d = Double.parseDouble(text.trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        } else {
+            return null;
+        }
+
+        if (Double.isNaN(d) || Double.isInfinite(d)) return null;
+        d = Math.max(min, Math.min(d, max));
+
+        return BigDecimal.valueOf(d);
 
     }
 

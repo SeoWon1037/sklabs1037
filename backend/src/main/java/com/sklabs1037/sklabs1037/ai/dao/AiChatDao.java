@@ -28,6 +28,9 @@ public interface AiChatDao {
     // [도구] 최근 뉴스 검색 (RAG)
     List<AiStockVO> searchNews(AiStockVO vo);
 
+    // [도구] screen_stocks: 조건 검색 (스크리너)
+    List<com.sklabs1037.sklabs1037.ai.vo.AiScreenVO> selectScreen(com.sklabs1037.sklabs1037.ai.vo.AiScreenVO vo);
+
     // 대화 기록 저장
     void insertChatLog(AiChatVO vo);
 

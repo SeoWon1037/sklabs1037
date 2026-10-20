@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🏅 내 활동·배지 / 🔔 알림 / 📅 출석
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.me.dao.MeDao">
+
+    <select id="selectActivity" resultType="java.util.LinkedHashMap">
+        SELECT  (SELECT COUNT(*) FROM T_MOCK_TRADE T WHERE T.USER_ID = #{userId})::INT                         AS "tradeCount"
+               ,(SELECT COUNT(*) FROM T_PREDICT_VOTE V WHERE V.USER_ID = #{userId})::INT                       AS "predictVotes"
+               ,(SELECT COUNT(*) FROM T_NEWS_QUIZ_PLAY P WHERE P.USER_ID = #{userId})::INT                     AS "quizPlays"
+               ,(SELECT COUNT(*)
+                   FROM T_NEWS_QUIZ_PLAY P
+                   JOIN T_NEWS_QUIZ Q ON Q.QUIZ_DATE = P.QUIZ_DATE
+                  WHERE P.USER_ID = #{userId}
+                    AND P.SCORE   = JSONB_ARRAY_LENGTH(Q.QUESTIONS_JSON::JSONB))::INT                           AS "quizPerfect"
+               ,(SELECT COALESCE(SUM(P.SCORE), 0) FROM T_NEWS_QUIZ_PLAY P WHERE P.USER_ID = #{userId})::INT    AS "quizScore"
+               ,(SELECT COUNT(*) FROM T_STOCK_POST S WHERE S.USER_ID = #{userId} AND S.DEL_DAY IS NULL)::INT   AS "boardPosts"
+               ,(SELECT COUNT(*)
+                   FROM T_STOCK_POST_LIKE L
+                   JOIN T_STOCK_POST S ON S.ID = L.POST_ID
+                  WHERE S.USER_ID = #{userId}
+                    AND S.DEL_DAY IS NULL)::INT                                                                AS "likesReceived"
+               ,(SELECT COUNT(*) FROM T_STOCK_COMMENT C WHERE C.USER_ID = #{userId} AND C.DEL_DAY IS NULL)::INT AS "comments"
+               ,(SELECT COUNT(*) FROM T_AI_CHAT_LOG A WHERE A.USER_ID = #{userId})::INT                        AS "aiChats"
+               ,(SELECT COUNT(*) FROM T_BEAUTY_LOG B WHERE B.USER_ID = #{userId})::INT                         AS "beautyLogs"
+               ,(SELECT COUNT(*) FROM T_WATCHLIST W WHERE W.USER_ID = #{userId})::INT                          AS "watchCount"
+               ,(SELECT COUNT(*) FROM T_PRICE_ALERT P WHERE P.USER_ID = #{userId})::INT                        AS "alertCount"
+               ,(SELECT R.TYPE_CODE
+                   FROM T_PERSONA_RESULT R
+                  WHERE R.USER_ID = #{userId}
+                  ORDER BY R.ID DESC
+                  LIMIT 1)                                                                                     AS "personaType"
+    </select>
+
+    <select id="selectBadges" resultType="java.util.LinkedHashMap">
+        SELECT  CODE                                            AS "code"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT    AS "earnedAt"
+          FROM T_USER_BADGE
+         WHERE 1=1
+           AND USER_ID = #{userId}
+    </select>
+
+    <insert id="insertBadge">
+        INSERT INTO T_USER_BADGE (USER_ID, CODE)
+        VALUES (#{userId}, #{code})
+        ON CONFLICT (USER_ID, CODE) DO NOTHING
+    </insert>
+
+    <insert id="insertNotification">
+        INSERT INTO T_NOTIFICATION (USER_ID, KIND, TITLE, BODY, LINK, DEDUPE_KEY)
+        VALUES (#{userId}, #{kind}, #{title}, #{body}, #{link}, #{dedupeKey})
+        ON CONFLICT (USER_ID, DEDUPE_KEY) WHERE DEDUPE_KEY IS NOT NULL DO NOTHING
+    </insert>
+
+    <insert id="insertPredictNotifications">
+        INSERT INTO T_NOTIFICATION (USER_ID, KIND, TITLE, BODY, LINK, DEDUPE_KEY)
+        SELECT  V.USER_ID
+               ,'PREDICT'
+               ,#{title}
+               ,COUNT(*) FILTER (WHERE V.CORRECT IS NOT NULL) || '문제 중 ' || COUNT(*) FILTER (WHERE V.CORRECT) || '개 맞혔어요'
+               ,'/predict'
+               ,'PREDICT:' || #{tradeDate}
+          FROM T_PREDICT_VOTE V
+          JOIN T_PREDICT_ITEM I ON I.ID = V.ITEM_ID
+         WHERE 1=1
+           AND I.TRADE_DATE = #{tradeDate}
+         GROUP BY V.USER_ID
+        ON CONFLICT (USER_ID, DEDUPE_KEY) WHERE DEDUPE_KEY IS NOT NULL DO NOTHING
+    </insert>
+
+    <select id="selectNotifications" resultType="java.util.LinkedHashMap">
+        SELECT  ID                                              AS "id"
+               ,KIND                                            AS "kind"
+               ,TITLE                                           AS "title"
+               ,BODY                                            AS "body"
+               ,LINK                                            AS "link"
+               ,(READ_YN = 'Y')                                 AS "read"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT    AS "insAt"
+          FROM T_NOTIFICATION
+         WHERE 1=1
+           AND USER_ID = #{userId}
+         ORDER BY ID DESC
+         LIMIT  #{limit}
+    </select>
+
+    <select id="countUnread" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_NOTIFICATION
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND READ_YN = 'N'
+    </select>
+
+    <!-- id가 없으면 전부 읽음 -->
+    <update id="markRead">
+        UPDATE T_NOTIFICATION
+           SET  READ_YN = 'Y'
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND READ_YN = 'N'
+        <if test="id != null">
+           AND ID = #{id}
+        </if>
+    </update>
+
+    <insert id="insertAttendance">
+        INSERT INTO T_ATTENDANCE (USER_ID, DAY)
+        VALUES (#{userId}, #{day})
+        ON CONFLICT (USER_ID, DAY) DO NOTHING
+    </insert>
+
+    <select id="selectAttendDays" resultType="java.time.LocalDate">
+        SELECT  DAY
+          FROM T_ATTENDANCE
+         WHERE 1=1
+           AND USER_ID = #{userId}
+         ORDER BY DAY DESC
+         LIMIT  400
+    </select>
+
+    <select id="countPredictVotes" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_PREDICT_VOTE V
+          JOIN T_PREDICT_ITEM I ON I.ID = V.ITEM_ID
+         WHERE 1=1
+           AND V.USER_ID    = #{userId}
+           AND I.TRADE_DATE = #{tradeDate}
+    </select>
+
+    <select id="countPredictItems" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_PREDICT_ITEM
+         WHERE 1=1
+           AND TRADE_DATE = #{tradeDate}
+    </select>
+
+    <select id="countBoardPostsToday" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_STOCK_POST
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND INS_DAY <![CDATA[>=]]> (#{day}::TIMESTAMP AT TIME ZONE 'Asia/Seoul')
+    </select>
+</mapper>

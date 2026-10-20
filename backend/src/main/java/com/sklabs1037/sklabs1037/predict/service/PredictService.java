@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.predict.service;
 
+import com.sklabs1037.sklabs1037.me.service.NotificationService;
 import com.sklabs1037.sklabs1037.mock.service.MockMarketHours;
 import com.sklabs1037.sklabs1037.ops.service.JobRunService.JobOutcome;
 import com.sklabs1037.sklabs1037.predict.dao.PredictDao;
@@ -41,10 +42,14 @@ public class PredictService {
     @Autowired
     private PredictDao predictDao;
 
+    // 🔔 채점이 끝난 날마다 투표한 사람에게 결과 알림
+    @Autowired
+    private NotificationService notificationService;
+
     // ============================================
     // 날짜 규칙 (순수 계산, 테스트 가능)
     // ============================================
-    static LocalDate roundDate(ZonedDateTime now) {
+    public static LocalDate roundDate(ZonedDateTime now) {
 
         LocalDate day = now.toLocalDate();
 
@@ -161,6 +166,7 @@ public class PredictService {
         int graded = 0;
         int waiting = 0;
         int failed = 0;
+        Set<LocalDate> gradedDates = new TreeSet<>();
 
         for (PredictVO item : predictDao.selectUngraded(upTo)) {
 
@@ -193,6 +199,7 @@ public class PredictService {
                 if (predictDao.gradeItem(g) > 0) {
                     predictDao.gradeVotes(g);
                     graded++;
+                    gradedDates.add(item.getTradeDate());
                 }
 
             } catch (Exception e) {
@@ -203,6 +210,8 @@ public class PredictService {
             }
 
         }
+
+        for (LocalDate d : gradedDates) notificationService.predictGraded(d);
 
         return JobOutcome.of(graded + failed, failed, "채점 " + graded + "문제" + (waiting > 0 ? " · 시세 기다림 " + waiting : ""));
 

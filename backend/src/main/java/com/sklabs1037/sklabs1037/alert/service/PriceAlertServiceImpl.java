@@ -2,6 +2,7 @@ package com.sklabs1037.sklabs1037.alert.service;
 
 import com.sklabs1037.sklabs1037.alert.dao.PriceAlertDao;
 import com.sklabs1037.sklabs1037.alert.vo.PriceAlertVO;
+import com.sklabs1037.sklabs1037.me.service.NotificationService;
 import com.sklabs1037.sklabs1037.mock.service.MockPriceService;
 import com.sklabs1037.sklabs1037.mock.vo.MockTradeVO;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,10 @@ public class PriceAlertServiceImpl implements IPriceAlertService {
     private static final int MAX_ACTIVE = 20;
 
     private static final Set<String> CONDITIONS = Set.of("ABOVE", "BELOW");
+
+    // 🔔 목표가 도달 사이트 알림
+    @Autowired
+    private NotificationService notificationService;
 
     @Autowired
     private PriceAlertDao priceAlertDao;
@@ -182,6 +187,12 @@ public class PriceAlertServiceImpl implements IPriceAlertService {
             // 먼저 "보냄"으로 잡은 경우에만 발송 (메일이 두 번 가지 않게)
             a.setSentPrice(p.getPrice());
             if (priceAlertDao.markSent(a) == 0) continue;
+
+            // 🔔 사이트 안 알림 (메일과 별개, 메일 주소가 없는 계정도 받음)
+            notificationService.notify(a.getUserId(), "ALERT",
+                    "🔔 " + a.getName() + " 목표가 도달",
+                    String.format("%,d원 %s → 지금 %,d원", a.getTargetPrice().longValue(), "ABOVE".equals(a.getCondition()) ? "이상" : "이하", p.getPrice().longValue()),
+                    "/stock?symbol=" + a.getSymbol());
 
             // 이메일이 없는 계정(일부 소셜 로그인)은 보낼 곳이 없으니 재시도하지 않고 "보냄"으로 둠
             if (a.getEmail() == null || !a.getEmail().contains("@")) {

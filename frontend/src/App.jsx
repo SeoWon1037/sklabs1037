@@ -25,6 +25,7 @@ import LeaguePage from './pages/league/LeaguePage'
 import PredictPage from './pages/predict/PredictPage'
 import PersonaPage from './pages/persona/PersonaPage'
 import QuizPage from './pages/quiz/QuizPage'
+import ActivityPage from './pages/me/ActivityPage'
 import LottoPage from './pages/lotto/LottoPage'
 import BeautyLabPage from './pages/beauty/BeautyLabPage'
 
@@ -43,6 +44,7 @@ function App() {
         <Route path="/predict" element={<PredictPage />} />              {/* 🎯 오를까 내릴까 (매일 예측 게임) */}
         <Route path="/persona" element={<PersonaPage />} />              {/* 🧭 투자 성향 테스트 */}
         <Route path="/quiz" element={<QuizPage />} />                    {/* 📰 오늘의 뉴스 퀴즈 */}
+        <Route path="/activity" element={<ActivityPage />} />            {/* 🏅 내 활동 · 업적 */}
         <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
         <Route path="/admin" element={<AdminOpsPage />} />               {/* 관리자: 운영 상태 (기본) */}
         <Route path="/admin/ops" element={<AdminOpsPage />} />           {/* 관리자: 운영 상태 (메일 속 링크) */}

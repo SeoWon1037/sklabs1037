@@ -21,6 +21,7 @@ import './MainPage.css'
 import WeatherBox from '../../components/weather/WeatherBox'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import MockBanner from '../../components/mock/MockBanner'
+import TodayCard from '../../components/me/TodayCard'
 
 // 바로가기 아이콘
 // 바로가기 (위 상단 메뉴와 같은 순서 + 기업 정보 · 투자 성향 · 뉴스 퀴즈)
@@ -280,9 +281,10 @@ function MainPage() {
                 <nav className="home-login-menu">
                   <Link to="/ai">AI 비서</Link>
                   <Link to="/mock">모의투자</Link>
-                  <Link to="/stock">관심종목</Link>
+                  <Link to="/activity">🏅 내 활동</Link>
                   <Link to="/mypage">마이페이지</Link>
                 </nav>
+                <TodayCard />
               </>
             ) : (
               <div className="home-login-guest">

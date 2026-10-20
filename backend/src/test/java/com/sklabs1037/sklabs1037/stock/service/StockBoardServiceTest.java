@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.stock.service;
 
+import com.sklabs1037.sklabs1037.me.service.NotificationService;
 import com.sklabs1037.sklabs1037.ops.service.OpsAlertService;
 import com.sklabs1037.sklabs1037.stock.dao.StockBoardDao;
 import com.sklabs1037.sklabs1037.stock.vo.StockBoardVO;
@@ -57,6 +58,7 @@ class StockBoardServiceTest {
         Fakes.set(s, "stockBoardDao", Fakes.fake(StockBoardDao.class, b, calls));
         Fakes.set(s, "boardLiveHub", new BoardLiveHub());
         Fakes.set(s, "opsAlertService", new OpsAlertService());   // 설정이 없어서 메일은 실제로 안 나감
+        Fakes.set(s, "notificationService", new NotificationService());   // 저장소가 없어서 알림은 조용히 실패 (원래 일은 진행)
 
         return s;
 

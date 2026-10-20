@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.stock.service;
 
+import com.sklabs1037.sklabs1037.me.service.NotificationService;
 import com.sklabs1037.sklabs1037.ops.service.OpsAlertService;
 import com.sklabs1037.sklabs1037.stock.dao.StockBoardDao;
 import com.sklabs1037.sklabs1037.stock.vo.StockBoardVO;
@@ -40,6 +41,10 @@ public class StockBoardServiceImpl implements IStockBoardService {
     // 신고가 쌓여 글이 가려지면 관리자 메일
     @Autowired
     private OpsAlertService opsAlertService;
+
+    // 🔔 내 글에 댓글 / 내 글이 신고로 가려짐 → 글쓴이에게 사이트 알림
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     public List<StockBoardVO> getPosts(Long stockId, int page, int size, Long viewerId, String sort) {
@@ -155,7 +160,7 @@ public class StockBoardServiceImpl implements IStockBoardService {
             throw new IllegalArgumentException("삭제된 글에는 댓글을 달 수 없습니다.");
         }
 
-        notifyComment(postId, false);
+        notifyComment(postId, false, userId);
 
     }
 
@@ -175,7 +180,7 @@ public class StockBoardServiceImpl implements IStockBoardService {
 
         stockBoardDao.deleteComment(param);
 
-        notifyComment(comment.getPostId(), true);
+        notifyComment(comment.getPostId(), true, userId);
 
     }
 
@@ -230,6 +235,9 @@ public class StockBoardServiceImpl implements IStockBoardService {
 
             // 보고 있는 화면들이 목록을 다시 받아서 가림 처리
             boardLiveHub.deleted(post.getStockId(), postId, true);
+
+            notificationService.notify(post.getUserId(), "REPORT", "🚩 내 토론 글이 신고가 쌓여 가려졌어요",
+                    "관리자가 확인한 뒤 다시 보이거나 삭제돼요.", "/stock?tab=board&stockId=" + post.getStockId(), "REPORT:" + postId);
 
             // 메일은 시간이 걸리니 따로 (신고 응답은 바로)
             Thread mail = new Thread(() -> opsAlertService.alert("BOARD_REPORT_" + postId,
@@ -295,7 +303,7 @@ public class StockBoardServiceImpl implements IStockBoardService {
     }
 
     // 댓글이 달린 글의 종목을 찾아서 그 종목 화면에 알림 (알림 실패는 댓글 저장과 무관)
-    private void notifyComment(Long postId, boolean delete) {
+    private void notifyComment(Long postId, boolean delete, Long actorId) {
 
         try {
 
@@ -304,6 +312,12 @@ public class StockBoardServiceImpl implements IStockBoardService {
 
             if (delete) boardLiveHub.deleted(post.getStockId(), postId, false);
             else boardLiveHub.commentCreated(post.getStockId(), postId);
+
+            // 남의 글에 단 댓글이면 글쓴이에게 알림
+            if (!delete && !post.getUserId().equals(actorId)) {
+                notificationService.notify(post.getUserId(), "COMMENT", "💬 내 토론 글에 댓글이 달렸어요", null,
+                        "/stock?tab=board&stockId=" + post.getStockId());
+            }
 
         } catch (Exception ignore) {
             // 알림만 빠짐 (화면은 다음 새로고침 때 반영)

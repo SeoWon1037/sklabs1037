@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../theme/useTheme'
+import NotificationBell from './NotificationBell'
 import './Header.css'
 import './HeaderUser.css'
 
@@ -125,6 +126,7 @@ function Header() {
           {user ? (
             // ===== 로그인 상태 =====
             <>
+              <NotificationBell />
               <Link to="/mypage" className="header-user-chip" title="마이페이지">
                 <span className="header-user-icon">👤</span>
                 {user.nickname}님

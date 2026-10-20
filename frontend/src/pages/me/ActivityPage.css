@@ -1,0 +1,123 @@
+/* ============================================
+   🏅 내 활동 · 업적 (/activity)
+   ============================================ */
+.act-page {
+  --act-muted: color-mix(in srgb, var(--text) 58%, transparent);
+  --act-soft: color-mix(in srgb, var(--text) 4%, transparent);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+.act-muted { color: var(--act-muted); font-size: 13px; }
+.act-eyebrow { margin: 0; color: var(--primary); font-size: 13px; font-weight: 700; }
+.act-hero h1, .act-page > h1 { margin: 4px 0 14px; font-size: 28px; letter-spacing: -0.5px; }
+.act-login {
+  padding: 28px 20px;
+  border-radius: 16px;
+  background: var(--act-soft);
+  text-align: center;
+}
+.act-login p { margin: 0 0 14px; color: var(--act-muted); }
+
+.act-summary { display: flex; gap: 22px; flex-wrap: wrap; }
+.act-summary div { display: flex; align-items: baseline; gap: 4px; }
+.act-summary b { font-size: 28px; font-variant-numeric: tabular-nums; }
+.act-summary span { color: var(--act-muted); font-size: 13px; }
+.act-progress {
+  height: 8px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.act-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), #f59e0b);
+}
+
+/* 새 배지 축하 */
+.act-new {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(150deg, color-mix(in srgb, #f59e0b 22%, transparent), var(--act-soft));
+  text-align: center;
+  animation: act-pop 0.4s ease-out;
+}
+.act-new-title { margin: 0 0 10px; font-size: 17px; font-weight: 800; }
+.act-new-list { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.act-new-badge { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 80px; }
+.act-new-badge span { font-size: 38px; animation: act-spin 0.8s ease-out; }
+.act-new-badge b { font-size: 13px; }
+.act-new-close {
+  margin-top: 12px;
+  padding: 6px 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+@keyframes act-pop { from { transform: scale(0.94); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes act-spin { from { transform: rotateY(180deg) scale(0.5); } to { transform: none; } }
+
+/* 기록 카드 */
+.act-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 22px;
+}
+.act-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.act-card h2 { margin: 0 0 12px; font-size: 15px; }
+.act-card h2 a { color: inherit; text-decoration: none; }
+.act-card h2 a::after { content: ' ›'; color: var(--act-muted); }
+.act-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px; }
+.act-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.act-stat span { color: var(--act-muted); font-size: 12px; }
+.act-stat b { font-size: 18px; font-variant-numeric: tabular-nums; word-break: keep-all; }
+.act-stat b a { color: var(--primary); font-size: 14px; }
+.act-stat small { color: var(--act-muted); font-size: 11px; }
+
+.act-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 240px; margin-bottom: 8px; }
+.act-cal span { aspect-ratio: 1; border-radius: 4px; background: color-mix(in srgb, var(--text) 8%, transparent); }
+.act-cal .act-cal-on { background: #22c55e; }
+
+/* 배지 */
+.act-badges { margin-top: 30px; }
+.act-badges > h2 { margin: 0 0 6px; font-size: 20px; }
+.act-group h3 { margin: 18px 0 8px; color: var(--act-muted); font-size: 13px; }
+.act-badge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.act-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-align: center;
+}
+.act-badge-icon { font-size: 32px; }
+.act-badge b { font-size: 13px; }
+.act-badge small { color: var(--act-muted); font-size: 11px; line-height: 1.4; word-break: keep-all; }
+.act-badge em { color: var(--primary); font-size: 11px; font-style: normal; font-weight: 700; }
+.act-earned { background: color-mix(in srgb, #f59e0b 8%, transparent); border-color: color-mix(in srgb, #f59e0b 45%, var(--border)); }
+.act-locked .act-badge-icon { filter: grayscale(1); opacity: 0.35; }
+.act-locked b { color: var(--act-muted); }
+
+@media (min-width: 641px) {
+  .act-cards { grid-template-columns: repeat(2, 1fr); }
+  .act-badge-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 961px) {
+  .act-cards { grid-template-columns: repeat(3, 1fr); }
+  .act-badge-grid { grid-template-columns: repeat(5, 1fr); }
+}

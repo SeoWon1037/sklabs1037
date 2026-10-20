@@ -1,0 +1,96 @@
+/* ===== 🔔 알림 센터 ===== */
+.bell { position: relative; }
+.bell-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  font-size: 17px;
+  cursor: pointer;
+}
+.bell-btn:hover { background: var(--hover); }
+.bell-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.bell-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.bell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.bell-all {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bell-empty {
+  margin: 0;
+  padding: 24px 16px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  font-size: 13px;
+  text-align: center;
+}
+.bell-list {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.bell-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.bell-item:hover { background: var(--hover); }
+.bell-item b { font-size: 13px; font-weight: 600; }
+.bell-item span { color: color-mix(in srgb, var(--text) 65%, transparent); font-size: 12px; }
+.bell-item small { color: color-mix(in srgb, var(--text) 45%, transparent); font-size: 11px; }
+.bell-unread { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.bell-unread b { font-weight: 800; }
+
+@media (max-width: 640px) {
+  .bell-btn { width: 36px; height: 36px; font-size: 15px; }
+  .bell-panel { position: fixed; top: 56px; right: 16px; left: 16px; width: auto; }
+}

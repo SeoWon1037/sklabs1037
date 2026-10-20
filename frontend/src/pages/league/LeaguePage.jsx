@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './LeaguePage.css'
+import { LEAGUE_SEEN_KEY } from '../../components/me/todayKeys'
 
 const AVATAR = { NEWS: '📰', MOMENTUM: '🚀', STEADY: '🛡️' }
 
@@ -61,8 +62,11 @@ function LeaguePage() {
       .then((res) => res.json())
       .then((json) => {
         if (ignore) return
-        if (json.success) setData(json)
-        else setError(json.message || '불러오지 못했어요.')
+        if (json.success) {
+          setData(json)
+          // 📅 오늘의 SKLabs "AI 매매 일지 보기" 체크 (이 브라우저에 오늘 날짜 저장)
+          try { localStorage.setItem(LEAGUE_SEEN_KEY, new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)) } catch { /* 저장 못 해도 괜찮음 */ }
+        } else setError(json.message || '불러오지 못했어요.')
       })
       .catch(() => { if (!ignore) setError('서버에 연결할 수 없습니다.') })
     return () => { ignore = true }

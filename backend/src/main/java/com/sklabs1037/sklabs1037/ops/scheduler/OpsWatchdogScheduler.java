@@ -47,6 +47,8 @@ public class OpsWatchdogScheduler {
     @Scheduled(cron = "0 30 21 * * MON-FRI", zone = "Asia/Seoul")
     public void checkStockDaily() {
 
+        if (!jobRunService.backgroundEnabled()) return;   // 로컬 PC에서는 감시·메일 안 함
+
         // 아직 도는 중이면 (종목이 많아 오래 걸리는 날) 기다림
         if (jobRunService.isRunning("STOCK_DAILY") || succeededSince("STOCK_DAILY", todayAt(20, 0))) return;
 
@@ -62,6 +64,8 @@ public class OpsWatchdogScheduler {
     @Scheduled(cron = "0 50 15 * * MON-FRI", zone = "Asia/Seoul")
     public void checkMockSnapshot() {
 
+        if (!jobRunService.backgroundEnabled()) return;   // 로컬 PC에서는 감시·메일 안 함
+
         if (jobRunService.isRunning("MOCK_SNAPSHOT") || succeededSince("MOCK_SNAPSHOT", todayAt(15, 30))) return;
 
         opsAlertService.alert("WATCH_MOCK_SNAPSHOT", "오늘 모의투자 자산 기록이 없어요",
@@ -75,6 +79,8 @@ public class OpsWatchdogScheduler {
     @Scheduled(cron = "0 0 8,17 * * *", zone = "Asia/Seoul")
     public void checkNewsSummary() {
 
+        if (!jobRunService.backgroundEnabled()) return;   // 로컬 PC에서는 감시·메일 안 함
+
         if (succeededSince("NEWS_SUMMARY", ZonedDateTime.now(KST).minusHours(1).toOffsetDateTime())) return;
 
         opsAlertService.alert("WATCH_NEWS_SUMMARY", "AI 뉴스 요약이 안 됐어요",
@@ -87,6 +93,8 @@ public class OpsWatchdogScheduler {
     @Scheduled(cron = "0 10 9-23 * * *", zone = "Asia/Seoul")
     public void checkNewsCollect() {
 
+        if (!jobRunService.backgroundEnabled()) return;   // 로컬 PC에서는 감시·메일 안 함
+
         if (succeededSince("NEWS_COLLECT", ZonedDateTime.now(KST).minusHours(2).toOffsetDateTime())) return;
 
         opsAlertService.alert("WATCH_NEWS_COLLECT", "뉴스 수집이 2시간째 없어요",
@@ -97,6 +105,8 @@ public class OpsWatchdogScheduler {
     // 오래된 기록 정리
     @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Seoul")
     public void cleanUp() {
+
+        if (!jobRunService.backgroundEnabled()) return;   // 로컬 PC에서는 감시·메일 안 함
 
         try {
 

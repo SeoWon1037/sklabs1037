@@ -171,6 +171,12 @@ function AdminOpsPage() {
 
       {notice && <p className="ops-notice" role="status">{notice}</p>}
 
+      {ops.backgroundJobs === false && (
+        <p className="ops-notice" role="status">
+          💻 이 서버(로컬 PC)에서는 스케줄러·서버 시작 작업이 꺼져 있어요. 운영 서버와 토스 토큰·메일이 겹치지 않게 하려는 거예요. "지금 실행"은 쓸 수 있어요.
+        </p>
+      )}
+
       {/* ===== 한 줄 요약 ===== */}
       <section className={`ops-summary ${failedJobs.length > 0 || !tossOk ? 'ops-summary-bad' : 'ops-summary-ok'}`}>
         {failedJobs.length === 0 && tossOk

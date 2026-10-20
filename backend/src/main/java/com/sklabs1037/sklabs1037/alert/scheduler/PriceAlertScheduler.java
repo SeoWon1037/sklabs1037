@@ -25,7 +25,8 @@ public class PriceAlertScheduler {
     @Scheduled(cron = "30 * 9-15 * * MON-FRI", zone = "Asia/Seoul")
     public void check() {
 
-        if (!MockMarketHours.isOpen(MockMarketHours.now())) return;
+        // 로컬 PC에서는 안 돎 (운영 서버와 같은 알림을 두 번 확인하지 않게)
+        if (!MockMarketHours.isOpen(MockMarketHours.now()) || !jobRunService.backgroundEnabled()) return;
 
         try {
 

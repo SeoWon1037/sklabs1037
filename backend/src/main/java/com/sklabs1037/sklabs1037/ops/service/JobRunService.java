@@ -20,7 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * - 시작할 때 RUNNING 1줄 → 끝나면 SUCCESS / PARTIAL(일부 실패) / FAIL(예외)
  * - 같은 작업이 이미 돌고 있으면 건너뜀 (관리자 수동 실행과 스케줄이 겹쳐도 한 번만)
- * - FAIL이거나 실패가 10% 이상이면 관리자에게 메일 (같은 작업은 1시간에 한 번)
+ * - FAIL이거나 실패가 10% 이상이면 관리자에게 메일
+ *   같은 작업은 1시간에 한 번: 서버 메모리 + DB(최근 1시간 안에 이미 실패 기록이 있으면 보냈던 것) → 재시작·배포해도 또 안 감
+ * - 로컬 PC처럼 백그라운드 작업이 꺼진 서버에서는 수동 실행(MANUAL)만 (BackgroundJobGuard)
  * - 기록(DB)이 실패해도 작업 자체는 그대로 돌게 (기록 오류는 로그만)
  */
 @Slf4j
@@ -35,6 +37,9 @@ public class JobRunService {
 
     @Autowired
     private OpsAlertService opsAlertService;
+
+    @Autowired
+    private BackgroundJobGuard backgroundJobGuard;
 
     // 서버가 켜진 시각 (그 전부터 RUNNING인 기록 = 중단된 작업)
     private final OffsetDateTime bootAt = OffsetDateTime.now();
@@ -86,6 +91,12 @@ public class JobRunService {
     // 작업 실행 + 기록 → 실행했으면 true, 이미 돌고 있어서 건너뛰었으면 false
     public boolean execute(String job, String trigger, JobBody body) {
 
+        // 로컬 PC 등 백그라운드 작업이 꺼진 서버: 관리자 수동 실행만
+        if (!"MANUAL".equals(trigger) && !backgroundJobGuard.enabled()) {
+            log.debug("백그라운드 작업 꺼짐 → 건너뜀: {} ({})", job, trigger);
+            return false;
+        }
+
         if (!running.add(job)) {
             log.info("이미 실행 중이라 건너뜀: {} ({})", job, trigger);
             return false;
@@ -107,7 +118,7 @@ public class JobRunService {
             // (전체 수를 모르는 실패 = 단계 자체가 실패한 것도 메일)
             Integer total = out.total();
             boolean many = total == null || total == 0 || (double) failed / total >= ALERT_FAIL_RATE;
-            if (failed > 0 && many) {
+            if (failed > 0 && many && !alertedRecently(job, runId)) {
                 opsAlertService.alert(job, label(job) + " 일부 실패 (" + failed + (total == null || total == 0 ? "" : "/" + total) + ")",
                         label(job) + " 작업에서 실패가 있었어요. (" + trigger + ")\n\n" + nullToEmpty(out.message()));
             }
@@ -119,7 +130,7 @@ public class JobRunService {
             log.error("작업 실패: {} ({})", job, trigger, e);
             finish(runId, "FAIL", null, null, errorText(e));
 
-            opsAlertService.alert(job, label(job) + " 실패",
+            if (!alertedRecently(job, runId)) opsAlertService.alert(job, label(job) + " 실패",
                     label(job) + " 작업이 실패했어요. (" + trigger + ")\n\n에러: " + errorText(e));
 
             return true;
@@ -134,6 +145,8 @@ public class JobRunService {
 
     // 1분마다 도는 작업의 실패만 기록 + 메일 (성공은 기록하지 않음)
     public void recordFailure(String job, String trigger, Exception e) {
+
+        if (!backgroundJobGuard.enabled()) return;
 
         // 계속 실패해도 기록은 10분에 한 줄만 (1분마다 쌓이지 않게)
         java.time.Instant now = java.time.Instant.now();
@@ -160,7 +173,43 @@ public class JobRunService {
 
         }
 
-        opsAlertService.alert(job, label(job) + " 실패", label(job) + " 작업이 실패했어요.\n\n에러: " + errorText(e));
+        if (!alertedRecently(job, null, 1)) {
+            opsAlertService.alert(job, label(job) + " 실패", label(job) + " 작업이 실패했어요.\n\n에러: " + errorText(e));
+        }
+
+    }
+
+    // 최근 1시간 안에 같은 작업의 다른 실패 기록이 있으면 = 그때 이미 메일을 보냄 (서버 재시작에도 유지)
+    private boolean alertedRecently(String job, Long runId) {
+
+        return alertedRecently(job, runId, 0);
+
+    }
+
+    // allowed: 방금 넣은 실패 기록처럼 세지 않을 개수
+    private boolean alertedRecently(String job, Long runId, int allowed) {
+
+        try {
+
+            JobRunVO vo = new JobRunVO();
+            vo.setJobName(job);
+            vo.setRunId(runId);
+            vo.setSince(OffsetDateTime.now().minusHours(1));
+
+            return jobRunDao.countProblemsSince(vo) > allowed;
+
+        } catch (Exception e) {
+
+            return false;   // 확인을 못 하면 메모리 기준(1시간 한 번)만
+
+        }
+
+    }
+
+    // 이 서버에서 백그라운드 작업을 돌리는지 (로컬 PC면 false)
+    public boolean backgroundEnabled() {
+
+        return backgroundJobGuard.enabled();
 
     }
 

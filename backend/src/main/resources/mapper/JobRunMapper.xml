@@ -118,6 +118,21 @@
            AND STARTED_AT &gt;= #{since}
     </select>
 
+    <!-- 이 시각 이후 실패 기록 수 (서버가 다시 켜져도 메일이 또 가지 않게 DB로 확인) -->
+    <select id="countProblemsSince"
+            parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO"
+            resultType="int">
+        SELECT  COUNT(*)
+          FROM T_JOB_RUN
+         WHERE 1=1
+           AND JOB_NAME   = #{jobName}
+           AND STATUS     IN ('FAIL', 'PARTIAL')
+           AND STARTED_AT &gt;= #{since}
+        <if test="runId != null">
+           AND ID         &lt;&gt; #{runId}
+        </if>
+    </select>
+
     <!-- 오래된 기록 삭제 -->
     <delete id="deleteOldRuns"
             parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO">

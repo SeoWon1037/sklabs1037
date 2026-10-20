@@ -33,6 +33,9 @@ public interface JobRunDao {
     // 이 시각 이후 성공(SUCCESS / PARTIAL)한 횟수
     int countSuccessSince(JobRunVO vo);
 
+    // 이 시각 이후 실패(FAIL / PARTIAL) 기록 수 (지금 실행은 빼고) → 이미 알림 메일을 보냈을 기록
+    int countProblemsSince(JobRunVO vo);
+
     // 오래된 기록 삭제
     int deleteOldRuns(JobRunVO vo);
 

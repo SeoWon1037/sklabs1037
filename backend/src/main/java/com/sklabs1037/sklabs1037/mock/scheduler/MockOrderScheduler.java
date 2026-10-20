@@ -43,7 +43,7 @@ public class MockOrderScheduler {
     @Scheduled(cron = "0 * 9-15 * * MON-FRI", zone = "Asia/Seoul")
     public void matchOrders() {
 
-        if (!MockMarketHours.isOpen(MockMarketHours.now())) return;
+        if (!MockMarketHours.isOpen(MockMarketHours.now()) || !jobRunService.backgroundEnabled()) return;
 
         try {
 

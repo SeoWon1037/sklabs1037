@@ -67,6 +67,9 @@ public class OpsAdminController {
     private OpsJobs opsJobs;
 
     @Autowired
+    private JobRunService jobRunService;
+
+    @Autowired
     private OpsAlertService opsAlertService;
 
     @Autowired
@@ -112,6 +115,7 @@ public class OpsAdminController {
             body.put("toss", tossApiClient.health());
             body.put("data", jobRunDao.selectDataHealth());
             body.put("running", opsJobs.runningJobs());
+            body.put("backgroundJobs", jobRunService.backgroundEnabled());   // 이 서버에서 스케줄러가 도는지 (로컬 PC면 false)
 
             return ResponseEntity.ok(body);
 

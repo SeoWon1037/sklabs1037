@@ -1,6 +1,7 @@
 package com.sklabs1037.sklabs1037.beauty.controller;
 
 import com.sklabs1037.sklabs1037.beauty.service.BeautyLabService;
+import com.sklabs1037.sklabs1037.beauty.service.FormulaCheckService;
 import com.sklabs1037.sklabs1037.beauty.service.IngredientDictionary;
 import com.sklabs1037.sklabs1037.beauty.vo.IngredientVO;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
@@ -44,6 +45,9 @@ public class BeautyLabController {
 
     @Autowired
     private IngredientDictionary dictionary;
+
+    @Autowired
+    private FormulaCheckService formulaCheckService;
 
     @Autowired
     private JsonMapper jsonMapper;
@@ -241,6 +245,61 @@ public class BeautyLabController {
     // ============================================
     // 성분 사전 (누구나)
     // ============================================
+    // ============================================
+    // 🧪 처방 검토 (AI 없이 규칙만, 로그인 없이 누구나)
+    // POST /api/beauty/formula/check
+    //   { items: [{ name, pct, qs }], rinseOff, claims: ['미백'], kids }
+    //   → { verdict, total, qsPct, issues, functional, label, items, ruleVersion }
+    // ============================================
+    @PostMapping("/formula/check")
+    public ResponseEntity<Map<String, Object>> formulaCheck(@RequestBody Map<String, Object> req) {
+
+        try {
+
+            List<FormulaCheckService.Item> items = new ArrayList<>();
+
+            if (req.get("items") instanceof List<?> list) {
+                for (Object o : list) {
+                    if (!(o instanceof Map<?, ?> m)) continue;
+                    String name = m.get("name") == null ? "" : String.valueOf(m.get("name"));
+                    if (name.length() > 100) throw new IllegalArgumentException("원료 이름은 100자까지 쓸 수 있어요.");
+                    boolean qs = Boolean.TRUE.equals(m.get("qs"));
+                    Double pct = null;
+                    if (!qs && m.get("pct") != null && !String.valueOf(m.get("pct")).isBlank()) {
+                        try {
+                            pct = Double.valueOf(String.valueOf(m.get("pct")).replace(",", "").replace("%", "").trim());
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("'" + name + "' 함량을 숫자로 넣어주세요.");
+                        }
+                    }
+                    items.add(new FormulaCheckService.Item(name, pct, qs));
+                }
+            }
+
+            List<String> claims = new ArrayList<>();
+            if (req.get("claims") instanceof List<?> list) for (Object o : list) claims.add(String.valueOf(o));
+
+            Map<String, Object> result = formulaCheckService.check(items,
+                    Boolean.TRUE.equals(req.get("rinseOff")), claims, Boolean.TRUE.equals(req.get("kids")));
+
+            Map<String, Object> body = new HashMap<>(result);
+            body.put("success", true);
+
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        } catch (Exception e) {
+
+            log.error("처방 검토 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "처방을 검토하지 못했습니다.");
+
+        }
+
+    }
+
     @GetMapping("/ingredients")
     public ResponseEntity<Map<String, Object>> ingredients(@RequestParam(required = false) String q) {
 

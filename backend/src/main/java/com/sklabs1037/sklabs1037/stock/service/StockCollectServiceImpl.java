@@ -278,6 +278,33 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
     }
 
+    // 종목 화면에서 연 종목: 같은 종목은 10분에 한 번만 확인
+    private final Map<Long, java.time.Instant> refreshedAt = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Override
+    public boolean refreshIfStale(Long stockId, String symbol, LocalDate lastDate) {
+
+        if (!tossApiClient.isConfigured() || stockId == null) return false;
+        if (lastDate != null && !lastDate.isBefore(lastClosedTradingDay())) return false;
+
+        java.time.Instant now = java.time.Instant.now();
+        java.time.Instant before = refreshedAt.get(stockId);
+        if (before != null && now.isBefore(before.plusSeconds(600))) return false;
+        refreshedAt.put(stockId, now);
+
+        StockCollectVO stock = new StockCollectVO();
+        stock.setStockId(stockId);
+        stock.setSymbol(symbol);
+
+        int n = collectOne(stock, 5);
+        stockCollectDao.updateLatestPrice(stockId);
+
+        log.info("종목 화면에서 최신 시세 보충: {} → {}건", symbol, n);
+
+        return n > 0;
+
+    }
+
     // 장 마감(15:30) 기준 가장 최근 거래일 (주말 제외, 공휴일은 모름 → 공휴일엔 받아도 새 데이터가 없을 뿐)
     private LocalDate lastClosedTradingDay() {
 

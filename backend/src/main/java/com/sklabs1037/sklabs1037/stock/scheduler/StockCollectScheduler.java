@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 시세 수집 스케줄러
- * - 앱 시작 시 (별도 스레드): 종목 목록 동기화 → 상장 주식 수 → 시세 없는 종목은 현재가 임시로 → 시세 이력이 부족한 종목만 initial-count일치 채움
- *   → 최근 거래일 시세가 빠진 종목(20:30 수집을 놓친 날) daily-count일치 → 상장 주식 수
+ * - 앱 시작 시 (별도 스레드): 종목 목록 동기화 → 상장 주식 수 → 시세 없는 종목은 현재가 임시로 → 최근 거래일 시세가 빠진 종목(20:30 수집을 놓친 날) daily-count일치
+ *   → 시세 이력이 부족한 종목만 initial-count일치 채움 → 상장 주식 수
  *   (이력은 주요 종목 → 코스피 → 큰 종목 순이라 목록이 위에서부터 차례로 채워짐)
  * - 평일 20:30: 종목 목록 동기화 → 전 종목(약 3,000개) 최근 daily-count일 수집 (겹치는 날짜는 UPSERT) → 상장 주식 수
  *   → 10분 남짓 걸려서 다른 스케줄 작업이 기다리지 않게 spring.task.scheduling.pool.size를 늘려 둠
@@ -76,17 +76,8 @@ public class StockCollectScheduler {
 
             }
 
-            try {
-
-                stockCollectService.collectMissingHistory(minHistory, initialCount);
-
-            } catch (Exception e) {
-
-                log.error("시세 이력 보충 실패", e);
-
-            }
-
             // 정기 수집(20:30)을 놓친 종목 따라잡기 (서버가 꺼져 있었거나 토스 오류였던 날)
+            // - 이력 보충보다 먼저: 주요 종목·큰 종목부터 최신 시세가 바로 맞춰지게
             try {
 
                 stockCollectService.collectStale(dailyCount);
@@ -94,6 +85,16 @@ public class StockCollectScheduler {
             } catch (Exception e) {
 
                 log.error("놓친 시세 수집 실패", e);
+
+            }
+
+            try {
+
+                stockCollectService.collectMissingHistory(minHistory, initialCount);
+
+            } catch (Exception e) {
+
+                log.error("시세 이력 보충 실패", e);
 
             }
 

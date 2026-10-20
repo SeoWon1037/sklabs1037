@@ -109,15 +109,24 @@ public class StockMainServiceImpl implements IStockMainService {
         StockMainVO stock = stockMainDao.selectStockDetail(param);
         if (stock == null) return null;
 
-        // 시세가 아직 없는 종목 → 지금 토스에서 받기 (실패해도 화면은 "시세 없음"으로)
-        if (stockMainDao.selectCandles(param).isEmpty()) {
+        List<StockMainVO> existing = stockMainDao.selectCandles(param);
 
-            try {
+        try {
+
+            if (existing.isEmpty()) {
+
+                // 시세가 아직 없는 종목 → 지금 토스에서 받기
                 stockCollectService.collectHistoryNow(stock.getStockId(), stock.getSymbol());
-            } catch (Exception e) {
-                // 토스 오류여도 종목 정보는 보여줌
+
+            } else {
+
+                // 마지막 시세가 최근 거래일보다 오래됐으면 (정기 수집을 놓친 날) 최근 며칠치를 바로 받기
+                stockCollectService.refreshIfStale(stock.getStockId(), stock.getSymbol(), existing.get(existing.size() - 1).getTradeDate());
+
             }
 
+        } catch (Exception e) {
+            // 토스 오류여도 종목 정보는 갖고 있는 시세로 보여줌
         }
 
         // 화면에서 쓰기 편한 짧은 이름으로

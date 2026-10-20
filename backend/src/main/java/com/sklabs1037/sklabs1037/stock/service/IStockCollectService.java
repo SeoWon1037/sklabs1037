@@ -23,6 +23,10 @@ public interface IStockCollectService {
     // 전 종목 상장 주식 수 갱신 (200종목씩 묶어서 토스 호출) → 갱신한 종목 수
     int updateSharesOutstanding();
 
+    // 한 종목의 마지막 시세 날짜가 최근 거래일보다 오래됐으면 최근 몇 일치를 바로 받기 (종목 화면을 열 때)
+    // - 같은 종목은 10분에 한 번만 (공휴일처럼 새 시세가 없는 날 계속 부르지 않게)
+    boolean refreshIfStale(Long stockId, String symbol, java.time.LocalDate lastDate);
+
     // 정기 수집을 놓친 종목 따라잡기 (서버가 꺼져 있었거나 토스 오류로 20:30 수집이 안 된 날)
     int collectStale(int count);
 

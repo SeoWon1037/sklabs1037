@@ -1100,6 +1100,9 @@
 }
 .mock-league-link {
   display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 10px;
@@ -1111,4 +1114,11 @@
 }
 .mock-league-link:hover {
   background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+/* 랭킹 아래 설명: 한 줄 (넘치면 … , 전체 문장은 마우스를 올리면) */
+.mock-rank-note {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

@@ -390,11 +390,16 @@ function MockTradePage() {
           )}
         </ol>
       )}
-      <Link to="/league" className="mock-league-link">🤖 AI 투자자 3명도 같은 규칙으로 참가 중 · 매매 일지 보기 →</Link>
-      <p className="mock-note">
-        {rankPeriod === 'WEEK'
+      <Link to="/league" className="mock-league-link" title="AI 투자자 3명도 같은 규칙으로 참가 중 · 매매 일지 보기">🤖 AI 3명도 같은 규칙으로 참가 중 · 일지 보기 →</Link>
+      <p
+        className="mock-note mock-rank-note"
+        title={rankPeriod === 'WEEK'
           ? '이번 주 수익률 = 지난주 마지막 장 마감 기록 대비 (이번 주에 시작했으면 1,000만 원 대비)'
           : '총자산 = 현금 + 주문에 묶인 돈 + 보유 주식 평가금액 · 거래 1번 이상 한 계좌만'}
+      >
+        {rankPeriod === 'WEEK'
+          ? '이번 주 = 지난주 장 마감 대비 (처음이면 1,000만 원)'
+          : '총자산 = 현금 + 주문 대기 + 주식 평가 · 거래한 계좌만'}
       </p>
     </section>
   )

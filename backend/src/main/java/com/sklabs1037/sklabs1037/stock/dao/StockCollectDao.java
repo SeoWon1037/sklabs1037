@@ -49,6 +49,9 @@ public interface StockCollectDao {
     // 이력이 아직 없는 종목에 현재가를 임시 종가로
     int fillMissingLastPrice(List<StockCollectVO> list);
 
+    // 과거 시세를 받은 날 표시 (다시 받지 않게)
+    int markHistoryDone(Long stockId);
+
     // 최신 종가 · 전일 종가 · 거래량을 T_STOCK에 복사 (목록·시가총액을 빠르게)
     int updateLatestPrice(Long stockId);
 }

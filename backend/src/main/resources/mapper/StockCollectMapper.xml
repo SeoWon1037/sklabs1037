@@ -75,6 +75,7 @@
         WHERE 1=1
         AND S.USE_YN = 'Y'
         AND S.DEL_DAY IS NULL
+        AND S.HISTORY_DAY IS NULL   -- 한 번 받은 종목은 짧아도(최근 상장) 다시 안 받음
         GROUP BY S.ID
         ,S.SYMBOL
         ,S.NAME
@@ -240,6 +241,15 @@
               ,SECURITY_TYPE = EXCLUDED.SECURITY_TYPE
               ,UPT_DAY       = NOW()
     </insert>
+
+    <!-- 과거 시세를 받은 날 표시 -->
+    <update id="markHistoryDone"
+            parameterType="long">
+        UPDATE T_STOCK
+           SET HISTORY_DAY = CURRENT_DATE
+         WHERE 1=1
+           AND ID = #{stockId}
+    </update>
 
     <!-- 최신 종가 · 전일 종가 · 거래량을 T_STOCK에 복사 (종목 하나 수집할 때마다) -->
     <update id="updateLatestPrice">

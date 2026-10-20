@@ -169,7 +169,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
         log.info("시세 이력 보충 대상: {}종목 ({}일치)", targets.size(), count);
 
-        return collectStocks(targets, count);
+        return collectStocks(targets, count, true);
 
     }
 
@@ -187,6 +187,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
         int n = collectOne(stock, initialCount);
         stockCollectDao.updateLatestPrice(stockId);
+        stockCollectDao.markHistoryDone(stockId);
 
         log.info("시세 즉시 수집: {} → {}건", symbol, n);
 
@@ -387,6 +388,13 @@ public class StockCollectServiceImpl implements IStockCollectService {
     // 여러 종목 수집 (종목 사이에 쉬면서)
     private CollectResult collectStocks(List<StockCollectVO> stocks, int count) {
 
+        return collectStocks(stocks, count, false);
+
+    }
+
+    // markHistory: 과거 시세 보충이면 받은 종목에 "받은 날" 표시 (최근 상장 종목을 매번 다시 받지 않게)
+    private CollectResult collectStocks(List<StockCollectVO> stocks, int count, boolean markHistory) {
+
         int saved = 0;
         int failed = 0;
         String firstError = null;
@@ -399,6 +407,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
                 saved += collectOne(stock, count);
                 stockCollectDao.updateLatestPrice(stock.getStockId());
+                if (markHistory) stockCollectDao.markHistoryDone(stock.getStockId());
 
             } catch (Exception e) {
 

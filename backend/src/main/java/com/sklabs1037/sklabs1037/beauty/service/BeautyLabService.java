@@ -135,12 +135,42 @@ public class BeautyLabService {
     // ============================================
     // 1. 성분 분석
     // ============================================
-    @SuppressWarnings("unchecked")
     public Map<String, Object> analyze(Long userId, String imageBase64, String mediaType, String text, String skinType) {
 
         checkLimit(userId, "ANALYZE");
 
+        Read read = readItems(imageBase64, mediaType, text, null);
+
+        Map<String, Object> result = buildAnalysis(read.items(), skinType);
+        result.put("inputType", read.image() ? "IMAGE" : "TEXT");
+        result.put("productName", read.productName());
+        result.put("productType", read.productType());
+        result.put("readNote", read.note());
+        result.put("skinType", skinType);
+
+        result.put("logId", saveLog(userId, "ANALYZE", read.image() ? "IMAGE" : "TEXT", read.title(), read.items().size(), result));
+        result.put("remaining", Math.max(0, DAILY_LIMIT - countToday(userId, "ANALYZE")));
+
+        return result;
+
+    }
+
+    // 사진 또는 글에서 읽은 전성분
+    record Read(List<String[]> items, String productName, String productType, String note, boolean image) {
+
+        // 기록 제목: 제품명 → 없으면 "정제수 외 24개"
+        String title() {
+            return !productName.isEmpty() ? productName : items.get(0)[0] + " 외 " + (items.size() - 1) + "개";
+        }
+    }
+
+    // 전성분 읽기 (사진: Claude Vision이 읽기만 / 글: 서버가 나눔, AI 호출 없음)
+    // - label: 비교에서 "A 제품" 같은 이름 (오류 메시지에 붙임), name: 직접 적은 제품명
+    @SuppressWarnings("unchecked")
+    private Read readItems(String imageBase64, String mediaType, String text, String label) {
+
         boolean isImage = imageBase64 != null && !imageBase64.isBlank();
+        String who = label == null ? "" : label + ": ";
         String productName = "";
         String productType = "";
         String note = "";
@@ -161,7 +191,7 @@ public class BeautyLabService {
             Map<String, Object> input = toolInput(response, "record_label");
 
             if (!Boolean.TRUE.equals(input.get("readable"))) {
-                throw new IllegalArgumentException("사진에서 전성분을 찾지 못했어요. 성분표가 크고 선명하게 보이게 다시 찍어주세요."
+                throw new IllegalArgumentException(who + "사진에서 전성분을 찾지 못했어요. 성분표가 크고 선명하게 보이게 다시 찍어주세요."
                         + (str(input.get("note")).isEmpty() ? "" : " (" + str(input.get("note")) + ")"));
             }
 
@@ -188,21 +218,118 @@ public class BeautyLabService {
 
         }
 
-        if (items.isEmpty()) throw new IllegalArgumentException("성분을 하나도 찾지 못했어요.");
-        if (items.size() > MAX_ITEMS) items = items.subList(0, MAX_ITEMS);
+        if (items.isEmpty()) throw new IllegalArgumentException(who + "성분을 하나도 찾지 못했어요.");
+        if (items.size() > MAX_ITEMS) items = new ArrayList<>(items.subList(0, MAX_ITEMS));
 
-        Map<String, Object> result = buildAnalysis(items, skinType);
-        result.put("inputType", isImage ? "IMAGE" : "TEXT");
-        result.put("productName", productName);
-        result.put("productType", productType);
-        result.put("readNote", note);
+        return new Read(items, productName, productType, note, isImage);
+
+    }
+
+    // ============================================
+    // 1-2. 두 제품 성분 비교
+    // ============================================
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> compare(Long userId, Map<String, String> a, Map<String, String> b, String skinType) {
+
+        checkLimit(userId, "COMPARE");
+
+        Read ra = readItems(a.get("image"), a.get("mediaType"), a.get("text"), "A 제품");
+        Read rb = readItems(b.get("image"), b.get("mediaType"), b.get("text"), "B 제품");
+
+        Map<String, Object> resA = buildAnalysis(ra.items(), skinType);
+        Map<String, Object> resB = buildAnalysis(rb.items(), skinType);
+
+        String nameA = firstNonBlank(a.get("name"), ra.productName(), "A 제품");
+        String nameB = firstNonBlank(b.get("name"), rb.productName(), "B 제품");
+        resA.put("productName", nameA);
+        resB.put("productName", nameB);
+
+        // 성분 이름을 사전 기준으로 맞춰서 비교 (사전에 없으면 표기 차이만 맞춘 이름)
+        Map<String, String> keysA = compareKeys(ra.items());
+        Map<String, String> keysB = compareKeys(rb.items());
+
+        List<String> common = new ArrayList<>();
+        List<String> onlyA = new ArrayList<>();
+        List<String> onlyB = new ArrayList<>();
+
+        keysA.forEach((k, label) -> (keysB.containsKey(k) ? common : onlyA).add(label));
+        keysB.forEach((k, label) -> { if (!keysA.containsKey(k)) onlyB.add(label); });
+
+        int union = keysA.size() + keysB.size() - common.size();
+        int similarity = union == 0 ? 0 : Math.round(common.size() * 100f / union);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("a", resA);
+        result.put("b", resB);
+        result.put("common", common);
+        result.put("onlyA", onlyA);
+        result.put("onlyB", onlyB);
+        result.put("similarity", similarity);
         result.put("skinType", skinType);
+        result.put("verdicts", verdicts(nameA, nameB, resA, resB, similarity, skinType));
 
-        String title = !productName.isEmpty() ? productName : items.get(0)[0] + " 외 " + (items.size() - 1) + "개";
-        result.put("logId", saveLog(userId, "ANALYZE", isImage ? "IMAGE" : "TEXT", title, items.size(), result));
-        result.put("remaining", Math.max(0, DAILY_LIMIT - countToday(userId, "ANALYZE")));
+        boolean image = ra.image() || rb.image();
+        result.put("logId", saveLog(userId, "COMPARE", image ? "IMAGE" : "TEXT", cut(nameA + " vs " + nameB, 200),
+                ra.items().size() + rb.items().size(), result));
+        result.put("remaining", Math.max(0, DAILY_LIMIT - countToday(userId, "COMPARE")));
 
         return result;
+
+    }
+
+    // 비교용 이름 (사전 한글명 → 없으면 정규화한 이름) → 화면에 보일 이름
+    private Map<String, String> compareKeys(List<String[]> items) {
+
+        Map<String, String> keys = new LinkedHashMap<>();
+
+        for (String[] item : items) {
+            IngredientVO hit = dictionary.find(item[0]);
+            String label = hit != null ? hit.getNameKo() : item[0];
+            keys.putIfAbsent(hit != null ? "#" + hit.getIngredientId() : IngredientDictionary.normalize(item[0]), label);
+        }
+
+        return keys;
+
+    }
+
+    // 비교 요약 문장 (규칙으로)
+    @SuppressWarnings("unchecked")
+    private List<String> verdicts(String nameA, String nameB, Map<String, Object> a, Map<String, Object> b, int similarity, String skinType) {
+
+        List<String> out = new ArrayList<>();
+
+        out.add("두 제품의 성분이 " + similarity + "% 겹쳐요." + (similarity >= 60 ? " 꽤 비슷한 처방이에요." : similarity <= 25 ? " 처방이 많이 달라요." : ""));
+
+        Set<String> fa = ((Map<String, List<String>>) a.get("functional")).keySet();
+        Set<String> fb = ((Map<String, List<String>>) b.get("functional")).keySet();
+        for (String t : fa) if (!fb.contains(t)) out.add(nameA + "에만 " + t + " 기능성 고시 성분이 들어 있어요.");
+        for (String t : fb) if (!fa.contains(t)) out.add(nameB + "에만 " + t + " 기능성 고시 성분이 들어 있어요.");
+
+        int alA = ((List<?>) a.get("allergens")).size();
+        int alB = ((List<?>) b.get("allergens")).size();
+        boolean frA = Boolean.TRUE.equals(a.get("fragrance"));
+        boolean frB = Boolean.TRUE.equals(b.get("fragrance"));
+
+        if (frA != frB) out.add((frA ? nameB : nameA) + "은(는) 향료가 표시돼 있지 않아요.");
+        if (alA != alB) out.add("알레르기 유발 가능 착향제: " + nameA + " " + alA + "개 / " + nameB + " " + alB + "개");
+
+        if (skinType != null) {
+            int ca = ((List<?>) a.get("skinCautions")).size();
+            int cb = ((List<?>) b.get("skinCautions")).size();
+            out.add(ca == cb
+                    ? skinType + " 피부 기준 주의 성분 수는 같아요 (" + ca + "개)."
+                    : skinType + " 피부 기준으로는 " + (ca < cb ? nameA : nameB) + "의 주의 성분이 더 적어요 (" + Math.min(ca, cb) + "개 vs " + Math.max(ca, cb) + "개).");
+        }
+
+        return out;
+
+    }
+
+    private String firstNonBlank(String... values) {
+
+        for (String v : values) if (v != null && !v.isBlank()) return cut(v.trim(), 60);
+
+        return "";
 
     }
 

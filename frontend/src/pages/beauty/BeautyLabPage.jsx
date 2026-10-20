@@ -1,6 +1,7 @@
 // ============================================
 // 뷰티 랩 (주소: /beauty, /beauty?tab=brief, /beauty?tab=dict)
 // - 🔬 성분 분석: 화장품 전성분 사진/글 → 역할·기능성·알레르기·내 피부 주의 성분
+// - ⚖️ 성분 비교: 두 제품 전성분 → 공통 / 한쪽에만, 겹침 %, 기능성·향료·착향제·내 피부 주의 수
 // - 📝 기획 브리프: 브랜드 요청 → 개발 브리프 + 규제 확인 + 추천 성분 + 되물을 질문
 // - 📖 성분 사전: 판단 기준이 되는 사전 (누구나)
 // - 설계 원칙: "AI는 읽고 정리만, 판단은 직접 정리한 사전과 규칙으로" → AI가 성분 효능을 지어내지 않게
@@ -10,12 +11,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import AnalyzeTab from '../../components/beauty/AnalyzeTab'
 import BriefTab from '../../components/beauty/BriefTab'
+import CompareTab from '../../components/beauty/CompareTab'
 import DictionaryTab from '../../components/beauty/DictionaryTab'
 import { formatDay } from '../../components/beauty/beautyUtils'
 import './BeautyLabPage.css'
 
 const TABS = [
   { value: 'analyze', label: '🔬 성분 분석' },
+  { value: 'compare', label: '⚖️ 성분 비교' },
   { value: 'brief', label: '📝 기획 브리프' },
   { value: 'dict', label: '📖 성분 사전' },
 ]
@@ -29,6 +32,7 @@ function BeautyLabPage() {
   const [history, setHistory] = useState(null)       // { loggedIn, logs, remainingAnalyze, remainingBrief }
   const [analysis, setAnalysis] = useState(null)
   const [brief, setBrief] = useState(null)
+  const [compare, setCompare] = useState(null)
   const [historyMsg, setHistoryMsg] = useState('')
 
   const loadHistory = useCallback(() => {
@@ -52,6 +56,9 @@ function BeautyLabPage() {
       if (json.kind === 'BRIEF') {
         setBrief(json)
         setTab('brief')
+      } else if (json.kind === 'COMPARE') {
+        setCompare(json)
+        setTab('compare')
       } else {
         setAnalysis(json)
         setTab('analyze')
@@ -94,6 +101,14 @@ function BeautyLabPage() {
               onResult={(r) => { setAnalysis(r); loadHistory() }}
             />
           )}
+          {tab === 'compare' && (
+            <CompareTab
+              loggedIn={loggedIn}
+              remaining={history?.remainingCompare}
+              result={compare}
+              onResult={(r) => { setCompare(r); loadHistory() }}
+            />
+          )}
           {tab === 'brief' && (
             <BriefTab
               loggedIn={loggedIn}
@@ -116,14 +131,16 @@ function BeautyLabPage() {
                 {history.logs?.map((l) => (
                   <li key={l.logId}>
                     <button type="button" onClick={() => openLog(l)}>
-                      <span className={`bl-tag ${l.kind === 'BRIEF' ? 'bl-tag-blue' : 'bl-tag-green'}`}>{l.kind === 'BRIEF' ? '브리프' : l.inputType === 'IMAGE' ? '사진 분석' : '분석'}</span>
+                      <span className={`bl-tag ${l.kind === 'BRIEF' ? 'bl-tag-blue' : l.kind === 'COMPARE' ? 'bl-tag-violet' : 'bl-tag-green'}`}>
+                        {l.kind === 'BRIEF' ? '브리프' : l.kind === 'COMPARE' ? '비교' : l.inputType === 'IMAGE' ? '사진 분석' : '분석'}
+                      </span>
                       <strong>{l.title}</strong>
                       <small>{formatDay(l.insDay)}{l.itemCount ? ` · 성분 ${l.itemCount}개` : ''}</small>
                     </button>
                   </li>
                 ))}
               </ul>
-              <p className="bl-muted bl-small">분석·브리프는 각각 하루 {history.limit}번까지 쓸 수 있어요.</p>
+              <p className="bl-muted bl-small">분석·비교·브리프는 각각 하루 {history.limit}번까지 쓸 수 있어요.</p>
             </section>
           </aside>
         )}

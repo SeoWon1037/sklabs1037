@@ -22,6 +22,7 @@ import java.util.*;
  * API 목록
  *   POST /api/beauty/analyze { image, text, skinType }   성분 분석 (로그인, 하루 20번)
  *        - image: "data:image/jpeg;base64,..." (화면에서 1568px 이하로 줄여서 보냄) / text: 전성분 붙여넣기
+ *   POST /api/beauty/compare { a: {image|text, name}, b: {...}, skinType }   두 제품 성분 비교 (로그인, 하루 20번)
  *   POST /api/beauty/brief { request }                   기획 요청 → 개발 브리프 (로그인, 하루 20번)
  *   GET  /api/beauty/ingredients?q=나이아신              성분 사전 검색 (누구나)
  *   GET  /api/beauty/history                             내 최근 기록 + 오늘 남은 횟수
@@ -111,6 +112,95 @@ public class BeautyLabController {
     }
 
     // ============================================
+    // 두 제품 성분 비교
+    // ============================================
+    @PostMapping("/compare")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<Map<String, Object>> compare(@RequestBody Map<String, Object> req, HttpServletRequest request) {
+
+        Long userId = getLoginUserId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
+
+        String skinType = req.get("skinType") == null ? null : String.valueOf(req.get("skinType"));
+        if (skinType != null && !BeautyLabService.SKIN_TYPES.contains(skinType)) skinType = null;
+
+        Map<String, String> a;
+        Map<String, String> b;
+
+        try {
+            a = productInput(req.get("a"), "A 제품");
+            b = productInput(req.get("b"), "B 제품");
+        } catch (IllegalArgumentException e) {
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+
+        try {
+
+            Map<String, Object> body = new LinkedHashMap<>(beautyLabService.compare(userId, a, b, skinType));
+            body.put("success", true);
+
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        } catch (RestClientResponseException e) {
+
+            log.error("성분 비교 AI 오류: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return fail(HttpStatus.BAD_GATEWAY, "AI가 사진을 읽지 못했어요. 잠시 후 다시 시도해주세요.");
+
+        } catch (Exception e) {
+
+            log.error("성분 비교 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "비교 중 오류가 발생했어요.");
+
+        }
+
+    }
+
+    // { image | text, name } → { image(base64), mediaType, text, name } (검사 포함)
+    private Map<String, String> productInput(Object raw, String label) {
+
+        if (!(raw instanceof Map<?, ?> m)) throw new IllegalArgumentException(label + "을(를) 입력해주세요.");
+
+        String image = m.get("image") == null ? "" : String.valueOf(m.get("image"));
+        String text = m.get("text") == null ? "" : String.valueOf(m.get("text")).trim();
+        String name = m.get("name") == null ? "" : String.valueOf(m.get("name")).trim();
+
+        Map<String, String> out = new HashMap<>();
+        out.put("name", name.length() > 60 ? name.substring(0, 60) : name);
+
+        if (!image.isBlank()) {
+
+            int comma = image.indexOf(',');
+            if (!image.startsWith("data:") || comma < 0 || !image.substring(0, comma).endsWith(";base64")) {
+                throw new IllegalArgumentException(label + ": 사진 형식을 확인해주세요.");
+            }
+
+            String mediaType = image.substring(5, comma - ";base64".length());
+            String base64 = image.substring(comma + 1);
+
+            if (!IMAGE_TYPES.contains(mediaType)) throw new IllegalArgumentException(label + ": JPG, PNG, WEBP 사진만 올릴 수 있어요.");
+            if (base64.length() > MAX_IMAGE_CHARS / 2) throw new IllegalArgumentException(label + ": 사진이 너무 커요.");
+
+            out.put("image", base64);
+            out.put("mediaType", mediaType);
+
+        } else {
+
+            if (text.isEmpty()) throw new IllegalArgumentException(label + ": 사진을 올리거나 전성분을 붙여 넣어주세요.");
+            if (text.length() > MAX_TEXT) throw new IllegalArgumentException(label + ": 전성분은 " + MAX_TEXT + "자 이내로 붙여 넣어주세요.");
+
+            out.put("text", text);
+
+        }
+
+        return out;
+
+    }
+
+    // ============================================
     // 기획 브리프
     // ============================================
     @PostMapping("/brief")
@@ -188,6 +278,7 @@ public class BeautyLabController {
             body.put("logs", beautyLabService.myLogs(userId));
             body.put("remainingAnalyze", beautyLabService.remaining(userId, "ANALYZE"));
             body.put("remainingBrief", beautyLabService.remaining(userId, "BRIEF"));
+            body.put("remainingCompare", beautyLabService.remaining(userId, "COMPARE"));
 
             return ResponseEntity.ok(body);
 

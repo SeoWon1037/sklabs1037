@@ -604,6 +604,113 @@
   color: var(--primary);
 }
 
+/* 성분 비교 */
+.bl-product-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.bl-product-label {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 32px;
+  text-align: center;
+}
+.bl-product-name {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+}
+.bl-product-name:focus {
+  border-color: var(--primary);
+}
+.bl-mode-small button {
+  height: 32px;
+  font-size: 13px;
+}
+.bl-preview-small {
+  max-height: 180px;
+}
+.bl-field-top {
+  margin-top: 0;
+}
+.bl-submit .bl-link {
+  margin-left: auto;
+}
+.bl-similarity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 74px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+.bl-similarity strong {
+  font-size: 22px;
+  font-weight: 800;
+}
+.bl-similarity small {
+  font-size: 12px;
+  font-weight: 700;
+}
+.bl-compare-table {
+  margin-top: 14px;
+}
+.bl-compare-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.bl-compare-row span {
+  color: var(--bl-muted);
+}
+.bl-compare-row b,
+.bl-compare-head strong {
+  color: var(--text);
+  font-weight: 700;
+  word-break: keep-all;
+}
+.bl-compare-head {
+  border-top: none;
+}
+.bl-compare-row .bl-better {
+  color: #16a34a;
+}
+.bl-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.bl-common {
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+.bl-names {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text);
+}
+
 /* ============================================
    태블릿 이하
    ============================================ */
@@ -615,6 +722,7 @@
     position: static;
   }
   .bl-two,
+  .bl-three,
   .bl-dict {
     grid-template-columns: 1fr;
   }
@@ -655,5 +763,12 @@
   }
   .bl-remaining {
     text-align: center;
+  }
+  .bl-submit .bl-link {
+    margin: 0 auto;
+  }
+  .bl-compare-row {
+    grid-template-columns: 84px minmax(0, 1fr) minmax(0, 1fr);
+    font-size: 13px;
   }
 }

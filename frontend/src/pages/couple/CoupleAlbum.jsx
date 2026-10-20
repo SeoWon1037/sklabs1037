@@ -39,6 +39,7 @@ function CoupleAlbum() {
   const [view, setView] = useState(null)        // 크게 보기
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [loadError, setLoadError] = useState('')
   const fileRef = useRef(null)
   const target = useRef('')
 
@@ -46,8 +47,12 @@ function CoupleAlbum() {
     let ignore = false
     fetch('/api/couple/photos')
       .then((res) => res.json())
-      .then((json) => { if (!ignore && json.success) setAlbum(json) })
-      .catch(() => {})
+      .then((json) => {
+        if (ignore) return
+        if (json.success) setAlbum(json)
+        else setLoadError(json.message || '앨범을 불러오지 못했어요.')
+      })
+      .catch(() => { if (!ignore) setLoadError('앨범을 불러오지 못했어요.') })
     return () => { ignore = true }
   }, [])
 
@@ -100,7 +105,15 @@ function CoupleAlbum() {
     if (ok) setView(null)
   }
 
-  if (!album) return null
+  // 안 보이고 지나가지 않게 (예: 앨범 표를 만드는 SQL을 아직 안 돌렸을 때)
+  if (!album) {
+    return (
+      <section className="ca">
+        <h2>📸 우리의 기념일 앨범</h2>
+        <p className="ca-locked">{loadError || '앨범을 불러오는 중...'}</p>
+      </section>
+    )
+  }
 
   return (
     <section className="ca">

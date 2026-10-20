@@ -284,7 +284,6 @@ function MainPage() {
                   <Link to="/activity">🏅 내 활동</Link>
                   <Link to="/mypage">마이페이지</Link>
                 </nav>
-                <TodayCard />
               </>
             ) : (
               <div className="home-login-guest">
@@ -389,6 +388,9 @@ function MainPage() {
 
         {/* ===== 2줄 오른쪽: 오늘의 시세 + 지금 토론 중 + 날씨 ===== */}
         <div className="home-side">
+
+          {/* 📅 오늘의 SKLabs (로그인했을 때만, 작은 4칸) */}
+          {user && <TodayCard />}
 
           {/* [오늘의 시세 = 시가총액 TOP 3 | ⭐ 관심 종목] */}
           <section className="home-box home-quotes-box">

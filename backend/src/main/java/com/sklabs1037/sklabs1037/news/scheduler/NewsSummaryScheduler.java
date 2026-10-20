@@ -1,6 +1,7 @@
 package com.sklabs1037.sklabs1037.news.scheduler;
 
 import com.sklabs1037.sklabs1037.news.service.INewsSummaryService;
+import com.sklabs1037.sklabs1037.ops.service.OpsJobs;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -21,6 +22,9 @@ public class NewsSummaryScheduler {
     @Autowired
     private INewsSummaryService newsSummaryService;
 
+    @Autowired
+    private OpsJobs opsJobs;
+
     // 앱 시작 직후 (필요할 때만)
     @EventListener(ApplicationReadyEvent.class)
     public void initialSummary() {
@@ -32,13 +36,15 @@ public class NewsSummaryScheduler {
                 return;
             }
 
-            newsSummaryService.summarizeAll();
-
         } catch (Exception e) {
 
-            log.error("뉴스 최초 요약 실패", e);
+            // 확인을 못 하면 요약하지 않음 (배포마다 Claude 비용이 나가지 않게, 정해진 시각에 다시 돎)
+            log.warn("최근 요약 확인 실패 → 시작 시 요약 건너뜀: {}", e.getMessage());
+            return;
 
         }
+
+        opsJobs.run("NEWS_SUMMARY", "STARTUP");
 
     }
 
@@ -46,7 +52,7 @@ public class NewsSummaryScheduler {
     @Scheduled(cron = "${news.summary.cron:0 30 7,16 * * *}", zone = "Asia/Seoul")
     public void scheduledSummary() {
 
-        newsSummaryService.summarizeAll();
+        opsJobs.run("NEWS_SUMMARY", "SCHEDULE");
 
     }
 }

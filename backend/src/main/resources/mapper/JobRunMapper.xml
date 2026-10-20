@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    작업 실행 기록 SQL (관리자 > 운영 상태)
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.ops.dao.JobRunDao">
+
+    <!-- 공통 칸 -->
+    <sql id="runColumns">
+        R.ID              AS RUN_ID
+       ,R.JOB_NAME
+       ,R.TRIGGER_TYPE
+       ,R.STATUS
+       ,R.TOTAL_COUNT
+       ,R.FAIL_COUNT
+       ,R.MESSAGE
+       ,R.STARTED_AT
+       ,R.ENDED_AT
+       ,EXTRACT(EPOCH FROM (COALESCE(R.ENDED_AT, NOW()) - R.STARTED_AT))::BIGINT AS DURATION_SEC
+    </sql>
+
+    <!-- 시작 기록 -->
+    <insert id="insertRun"
+            parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO"
+            useGeneratedKeys="true" keyProperty="runId" keyColumn="id">
+        INSERT INTO T_JOB_RUN (
+               JOB_NAME
+              ,TRIGGER_TYPE
+              ,STATUS
+        ) VALUES (
+               #{jobName}
+              ,#{triggerType}
+              ,'RUNNING'
+        )
+    </insert>
+
+    <!-- 끝 기록 -->
+    <update id="finishRun"
+            parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO">
+        UPDATE T_JOB_RUN
+           SET STATUS      = #{status}
+              ,TOTAL_COUNT = #{totalCount}
+              ,FAIL_COUNT  = #{failCount}
+              ,MESSAGE     = #{message}
+              ,ENDED_AT    = NOW()
+         WHERE 1=1
+           AND ID = #{runId}
+    </update>
+
+    <!-- 이미 끝난 기록 한 번에 -->
+    <insert id="insertFinishedRun"
+            parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO">
+        INSERT INTO T_JOB_RUN (
+               JOB_NAME
+              ,TRIGGER_TYPE
+              ,STATUS
+              ,TOTAL_COUNT
+              ,FAIL_COUNT
+              ,MESSAGE
+              ,ENDED_AT
+        ) VALUES (
+               #{jobName}
+              ,#{triggerType}
+              ,#{status}
+              ,#{totalCount}
+              ,#{failCount}
+              ,#{message}
+              ,NOW()
+        )
+    </insert>
+
+    <!-- 서버가 켜지기 전부터 RUNNING인 기록 = 서버가 꺼지면서 중단된 작업 -->
+    <update id="abortStaleRuns"
+            parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO">
+        UPDATE T_JOB_RUN
+           SET STATUS   = 'ABORTED'
+              ,MESSAGE  = COALESCE(MESSAGE, '서버가 다시 시작되면서 중단됨')
+              ,ENDED_AT = #{bootAt}
+         WHERE 1=1
+           AND STATUS     = 'RUNNING'
+           AND STARTED_AT &lt; #{bootAt}
+    </update>
+
+    <!-- 최근 실행 목록 -->
+    <select id="selectRecentRuns"
+            parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO"
+            resultType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO">
+        SELECT  <include refid="runColumns"/>
+          FROM T_JOB_RUN R
+         ORDER BY R.STARTED_AT DESC
+                 ,R.ID DESC
+         LIMIT #{limit}
+    </select>
+
+    <!-- 작업별 마지막 실행 1줄씩 -->
+    <select id="selectLatestPerJob"
+            resultType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO">
+        SELECT  DISTINCT ON (R.JOB_NAME)
+                <include refid="runColumns"/>
+          FROM T_JOB_RUN R
+         ORDER BY R.JOB_NAME
+                 ,R.STARTED_AT DESC
+                 ,R.ID DESC
+    </select>
+
+    <!-- 이 시각 이후 성공한 횟수 (감시) -->
+    <select id="countSuccessSince"
+            parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO"
+            resultType="int">
+        SELECT  COUNT(*)
+          FROM T_JOB_RUN
+         WHERE 1=1
+           AND JOB_NAME   = #{jobName}
+           AND STATUS     IN ('SUCCESS', 'PARTIAL')
+           AND STARTED_AT &gt;= #{since}
+    </select>
+
+    <!-- 오래된 기록 삭제 -->
+    <delete id="deleteOldRuns"
+            parameterType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO">
+        DELETE FROM T_JOB_RUN
+         WHERE 1=1
+           AND STARTED_AT &lt; NOW() - (#{keepDays} * INTERVAL '1 day')
+    </delete>
+
+    <!-- 데이터 상태 (서브쿼리 하나씩, 전부 인덱스·작은 테이블) -->
+    <select id="selectDataHealth"
+            resultType="com.sklabs1037.sklabs1037.ops.vo.JobRunVO">
+        WITH S AS (
+            SELECT  COUNT(*)                          AS STOCK_COUNT
+                   ,COUNT(LAST_CLOSE)                 AS PRICED_COUNT
+                   ,MAX(LAST_TRADE_DATE)              AS LAST_TRADE_DATE
+              FROM T_STOCK
+             WHERE 1=1
+               AND USE_YN  = 'Y'
+               AND DEL_DAY IS NULL
+        )
+        SELECT  S.STOCK_COUNT
+               ,S.PRICED_COUNT
+               ,S.LAST_TRADE_DATE
+               ,(SELECT COUNT(*)
+                   FROM T_STOCK T
+                  WHERE T.USE_YN = 'Y'
+                    AND T.DEL_DAY IS NULL
+                    AND (T.LAST_TRADE_DATE IS NULL OR T.LAST_TRADE_DATE &lt; S.LAST_TRADE_DATE))   AS STALE_COUNT
+               ,(SELECT MAX(N.PUB_DATE) FROM T_NEWS N)                                         AS LAST_NEWS_AT
+               ,(SELECT COUNT(*) FROM T_NEWS N WHERE N.PUB_DATE &gt;= CURRENT_DATE)             AS NEWS_TODAY
+               ,(SELECT MAX(M.SUMMARY_AT) FROM T_NEWS_SUMMARY M)                               AS LAST_SUMMARY_AT
+               ,(SELECT COUNT(*) FROM T_PRICE_ALERT A WHERE A.STATUS = 'ACTIVE')               AS ACTIVE_ALERTS
+               ,(SELECT COUNT(*) FROM T_MOCK_ORDER O WHERE O.STATUS = 'PENDING')               AS PENDING_ORDERS
+          FROM S
+    </select>
+
+    <!-- 관리자 메일 주소 -->
+    <select id="selectAdminEmails"
+            resultType="string">
+        SELECT  U.EMAIL
+          FROM T_USER U
+         WHERE 1=1
+           AND U.ROLE  = 'ADMIN'
+           AND U.EMAIL LIKE '%@%'
+    </select>
+
+</mapper>

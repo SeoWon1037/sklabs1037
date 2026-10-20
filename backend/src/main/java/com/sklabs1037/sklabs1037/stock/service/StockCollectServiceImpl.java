@@ -2,6 +2,7 @@ package com.sklabs1037.sklabs1037.stock.service;
 
 import com.sklabs1037.sklabs1037.client.TossApiClient;
 import com.sklabs1037.sklabs1037.stock.dao.StockCollectDao;
+import com.sklabs1037.sklabs1037.stock.vo.CollectResult;
 import com.sklabs1037.sklabs1037.stock.vo.StockCollectVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -115,11 +116,10 @@ public class StockCollectServiceImpl implements IStockCollectService {
     // 1. 정기 수집 (평일 20:30)
     // ============================================
     @Override
-    public int collectAll(int count) {
+    public CollectResult collectAll(int count) {
 
         if (!tossApiClient.isConfigured()) {
-            log.warn("토스 API 키가 없어 시세 수집을 건너뜀");
-            return 0;
+            throw new IllegalStateException("토스 API 키가 없어 시세 수집을 할 수 없습니다.");
         }
 
         // 새로 상장한 종목도 같이 받게 목록부터 (실패해도 기존 종목은 수집)
@@ -129,7 +129,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
             log.warn("종목 목록 동기화 실패: {}", e.getMessage());
         }
 
-        int saved = collectStocks(stockCollectDao.selectTargetStocks(), count);
+        CollectResult result = collectStocks(stockCollectDao.selectTargetStocks(), count);
 
         // 상장 주식 수는 실패해도 시세 수집 결과에 영향 없게 따로
         try {
@@ -138,7 +138,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
             log.warn("상장 주식 수 갱신 실패: {}", e.getMessage());
         }
 
-        return saved;
+        return result;
 
     }
 
@@ -153,18 +153,18 @@ public class StockCollectServiceImpl implements IStockCollectService {
     // 2. 이력 보충 (서버 시작 시, 새 종목)
     // ============================================
     @Override
-    public int collectMissingHistory(int minRows, int count) {
+    public CollectResult collectMissingHistory(int minRows, int count) {
 
         if (!tossApiClient.isConfigured()) {
             log.warn("토스 API 키가 없어 시세 이력 보충을 건너뜀");
-            return 0;
+            return CollectResult.EMPTY;
         }
 
         List<StockCollectVO> targets = stockCollectDao.selectStocksNeedingHistory(minRows);
 
         if (targets.isEmpty()) {
             log.info("시세 이력 보충: 대상 없음");
-            return 0;
+            return CollectResult.EMPTY;
         }
 
         log.info("시세 이력 보충 대상: {}종목 ({}일치)", targets.size(), count);
@@ -260,16 +260,16 @@ public class StockCollectServiceImpl implements IStockCollectService {
     // 6. 놓친 수집 따라잡기
     // ============================================
     @Override
-    public int collectStale(int count) {
+    public CollectResult collectStale(int count) {
 
-        if (!tossApiClient.isConfigured()) return 0;
+        if (!tossApiClient.isConfigured()) return CollectResult.EMPTY;
 
         LocalDate expected = lastClosedTradingDay();
         List<StockCollectVO> targets = stockCollectDao.selectStaleStocks(expected);
 
         if (targets.isEmpty()) {
             log.info("놓친 시세 수집: 없음 (기준 {})", expected);
-            return 0;
+            return CollectResult.EMPTY;
         }
 
         log.info("놓친 시세 수집: {}종목 (기준 {}, 최근 {}일치)", targets.size(), expected, count);
@@ -385,10 +385,11 @@ public class StockCollectServiceImpl implements IStockCollectService {
     // ============================================
 
     // 여러 종목 수집 (종목 사이에 쉬면서)
-    private int collectStocks(List<StockCollectVO> stocks, int count) {
+    private CollectResult collectStocks(List<StockCollectVO> stocks, int count) {
 
         int saved = 0;
         int failed = 0;
+        String firstError = null;
 
         for (int i = 0; i < stocks.size(); i++) {
 
@@ -402,6 +403,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
             } catch (Exception e) {
 
                 failed++;
+                if (firstError == null) firstError = stock.getSymbol() + " " + e.getMessage();
 
                 // 실패가 많으면 로그가 넘치니 처음 몇 개만 자세히
                 if (failed <= 5) log.error("시세 수집 실패: {} {}", stock.getSymbol(), stock.getName(), e);
@@ -419,7 +421,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
         log.info("시세 수집 완료: 종목 {}개, 저장 {}건, 실패 {}종목", stocks.size(), saved, failed);
 
-        return saved;
+        return new CollectResult(stocks.size(), saved, failed, firstError);
 
     }
 

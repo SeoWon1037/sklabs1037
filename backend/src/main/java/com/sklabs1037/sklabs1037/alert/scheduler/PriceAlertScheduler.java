@@ -2,6 +2,7 @@ package com.sklabs1037.sklabs1037.alert.scheduler;
 
 import com.sklabs1037.sklabs1037.alert.service.IPriceAlertService;
 import com.sklabs1037.sklabs1037.mock.service.MockMarketHours;
+import com.sklabs1037.sklabs1037.ops.service.JobRunService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,6 +19,9 @@ public class PriceAlertScheduler {
     @Autowired
     private IPriceAlertService priceAlertService;
 
+    @Autowired
+    private JobRunService jobRunService;
+
     @Scheduled(cron = "30 * 9-15 * * MON-FRI", zone = "Asia/Seoul")
     public void check() {
 
@@ -31,6 +35,7 @@ public class PriceAlertScheduler {
         } catch (Exception e) {
 
             log.error("가격 알림 확인 실패", e);
+            jobRunService.recordFailure("ALERT_CHECK", "SCHEDULE", e);   // 실패만 기록 + 관리자 메일 (1시간에 한 번)
 
         }
 

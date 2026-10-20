@@ -1,12 +1,14 @@
 // ============================================
-// 관리자: AI 피드백 대시보드 (주소: /admin)
+// 관리자: AI 피드백 대시보드 (주소: /admin/feedback)
 // - 백엔드 API (관리자만)
 //   GET /api/admin/feedback                  요약 / 도구별 / 날짜별
 //   GET /api/admin/feedback/chats?rating=    대화 목록
 // - 👎 받은 답변을 모아 보고 → 프롬프트·도구 개선에 활용
 // ============================================
 import { useEffect, useState } from 'react'
+import AdminTabs from '../../components/admin/AdminTabs'
 import './AdminFeedbackPage.css'
+import './AdminOpsPage.css'
 
 // 목록 필터
 const FILTERS = [
@@ -52,6 +54,7 @@ function AdminFeedbackPage() {
   if (error) {
     return (
       <main className="admin-page">
+        <AdminTabs />
         <p className="admin-empty admin-error">{error}</p>
       </main>
     )
@@ -60,6 +63,7 @@ function AdminFeedbackPage() {
   if (!dashboard) {
     return (
       <main className="admin-page">
+        <AdminTabs />
         <p className="admin-empty">불러오는 중...</p>
       </main>
     )
@@ -73,6 +77,7 @@ function AdminFeedbackPage() {
 
   return (
     <main className="admin-page">
+      <AdminTabs />
 
       <div className="admin-head">
         <h1 className="admin-title">AI 피드백 대시보드</h1>

@@ -1,6 +1,6 @@
 package com.sklabs1037.sklabs1037.news.controller;
 
-import com.sklabs1037.sklabs1037.news.service.INewsCollectService;
+import com.sklabs1037.sklabs1037.ops.service.OpsJobs;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -18,21 +18,13 @@ import org.springframework.stereotype.Component;
 public class NewsCollectScheduler {
 
     @Autowired
-    private INewsCollectService newsCollectService;
+    private OpsJobs opsJobs;
 
     // 앱 시작 직후 1번
     @EventListener(ApplicationReadyEvent.class)
     public void initialLoad() {
 
-        try {
-
-            newsCollectService.collectAll();
-
-        } catch (Exception e) {
-
-            log.error("뉴스 최초 수집 실패", e);
-
-        }
+        opsJobs.run("NEWS_COLLECT", "STARTUP");   // 실패 기록·메일은 JobRunService
 
     }
 
@@ -40,7 +32,7 @@ public class NewsCollectScheduler {
     @Scheduled(cron = "${news.collect.cron}", zone = "Asia/Seoul")
     public void scheduledCollect() {
 
-        newsCollectService.collectAll();
+        opsJobs.run("NEWS_COLLECT", "SCHEDULE");
 
     }
 }

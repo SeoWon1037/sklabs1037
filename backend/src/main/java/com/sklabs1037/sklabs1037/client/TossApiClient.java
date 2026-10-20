@@ -54,6 +54,11 @@ public class TossApiClient {
     private Instant tokenExpiresAt = Instant.EPOCH;
     private Instant tokenIssuedAt = Instant.EPOCH;
 
+    // 운영 상태 (관리자 화면): 마지막 성공 / 마지막 실패
+    private volatile Instant lastOkAt;
+    private volatile Instant lastErrorAt;
+    private volatile String lastError;
+
     // 키가 설정돼 있는지 (CI처럼 키가 없는 환경에서는 수집을 건너뛰려고)
     public boolean isConfigured() {
 
@@ -127,6 +132,41 @@ public class TossApiClient {
     // 401(유효하지 않은 토큰)이면 토큰을 새로 받아서 1번만 다시 시도
     //   → 같은 키로 다른 서버(로컬 PC ↔ 운영 EC2)가 토큰을 새로 받으면 이쪽 토큰이 무효가 되기 때문
     private <T> T withRetry(Supplier<T> call) {
+
+        try {
+
+            T result = retrying(call);
+            lastOkAt = Instant.now();
+
+            return result;
+
+        } catch (RuntimeException e) {
+
+            lastErrorAt = Instant.now();
+            String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            lastError = message.length() > 300 ? message.substring(0, 300) : message;
+            throw e;
+
+        }
+
+    }
+
+    // 운영 상태 (관리자 화면용, 토큰 값은 절대 넣지 않음)
+    public Map<String, Object> health() {
+
+        Map<String, Object> h = new java.util.LinkedHashMap<>();
+        h.put("configured", isConfigured());
+        h.put("lastOkAt", lastOkAt == null ? null : lastOkAt.toString());
+        h.put("lastErrorAt", lastErrorAt == null ? null : lastErrorAt.toString());
+        h.put("lastError", lastError);
+        h.put("tokenIssuedAt", tokenIssuedAt.equals(Instant.EPOCH) ? null : tokenIssuedAt.toString());
+        h.put("tokenExpiresAt", tokenExpiresAt.equals(Instant.EPOCH) ? null : tokenExpiresAt.toString());
+
+        return h;
+
+    }
+
+    private <T> T retrying(Supplier<T> call) {
 
         long waitMs = 1000;
         boolean tokenRenewed = false;

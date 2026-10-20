@@ -2,6 +2,9 @@ package com.sklabs1037.sklabs1037.mock.scheduler;
 
 import com.sklabs1037.sklabs1037.mock.service.IMockTradeService;
 import com.sklabs1037.sklabs1037.mock.service.MockMarketHours;
+import com.sklabs1037.sklabs1037.ops.service.JobRunService;
+import com.sklabs1037.sklabs1037.ops.service.JobRunService.JobOutcome;
+import com.sklabs1037.sklabs1037.ops.service.OpsJobs;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -21,6 +24,7 @@ import java.util.List;
  * - 서버가 켜질 때: 서버가 꺼져 있어서 만료되지 못한 지난 주문 정리 (+ 장 마감 뒤면 오늘 기록)
  *
  * 주문 1건 = 트랜잭션 1개 → 한 건이 실패해도 나머지 주문은 계속 처리
+ * 실행 기록·실패 메일: 만료·자산 기록은 매번 기록, 1분마다 도는 체결 확인은 실패했을 때만 (JobRunService)
  */
 @Slf4j
 @Component
@@ -28,6 +32,12 @@ public class MockOrderScheduler {
 
     @Autowired
     private IMockTradeService mockTradeService;
+
+    @Autowired
+    private JobRunService jobRunService;
+
+    @Autowired
+    private OpsJobs opsJobs;
 
     // 정규장 1분마다 체결 확인 (9시~15시대, 15:30 이후는 안에서 걸러냄)
     @Scheduled(cron = "0 * 9-15 * * MON-FRI", zone = "Asia/Seoul")
@@ -39,6 +49,7 @@ public class MockOrderScheduler {
 
             List<Long> ids = mockTradeService.findFillableOrderIds();
             int filled = 0;
+            Exception firstError = null;
 
             for (Long id : ids) {
 
@@ -49,16 +60,19 @@ public class MockOrderScheduler {
                 } catch (Exception e) {
 
                     log.error("지정가 주문 체결 실패: {}", id, e);
+                    if (firstError == null) firstError = e;
 
                 }
 
             }
 
             if (filled > 0) log.info("지정가 주문 체결: {}건", filled);
+            if (firstError != null) jobRunService.recordFailure("MOCK_MATCH", "SCHEDULE", firstError);
 
         } catch (Exception e) {
 
             log.error("지정가 주문 확인 실패", e);
+            jobRunService.recordFailure("MOCK_MATCH", "SCHEDULE", e);
 
         }
 
@@ -68,7 +82,7 @@ public class MockOrderScheduler {
     @Scheduled(cron = "0 35 15 * * MON-FRI", zone = "Asia/Seoul")
     public void expireOrders() {
 
-        expireUpTo(MockMarketHours.now().toLocalDate());
+        expireUpTo(MockMarketHours.now().toLocalDate(), "SCHEDULE");
 
     }
 
@@ -76,16 +90,7 @@ public class MockOrderScheduler {
     @Scheduled(cron = "0 40 15 * * MON-FRI", zone = "Asia/Seoul")
     public void snapshot() {
 
-        try {
-
-            int saved = mockTradeService.snapshotAll(MockMarketHours.now().toLocalDate());
-            log.info("모의투자 일별 자산 기록: {}계좌", saved);
-
-        } catch (Exception e) {
-
-            log.error("모의투자 일별 자산 기록 실패", e);
-
-        }
+        opsJobs.run("MOCK_SNAPSHOT", "SCHEDULE");
 
     }
 
@@ -99,23 +104,25 @@ public class MockOrderScheduler {
         // 오늘 장 마감(15:35)이 지났으면 오늘 주문까지
         if (now.toLocalTime().isAfter(java.time.LocalTime.of(15, 35))) upTo = now.toLocalDate();
 
-        expireUpTo(upTo);
+        expireUpTo(upTo, "STARTUP");
 
         // 평일 장 마감(15:40) 뒤에 서버가 켜졌으면 오늘 기록도 (그 시각에 꺼져 있었을 수 있어서, 같은 날은 덮어씀)
         java.time.DayOfWeek d = now.getDayOfWeek();
         boolean weekday = d != java.time.DayOfWeek.SATURDAY && d != java.time.DayOfWeek.SUNDAY;
 
-        if (weekday && now.toLocalTime().isAfter(java.time.LocalTime.of(15, 40))) snapshot();
+        if (weekday && now.toLocalTime().isAfter(java.time.LocalTime.of(15, 40))) opsJobs.run("MOCK_SNAPSHOT", "STARTUP");
 
     }
 
-    private void expireUpTo(LocalDate upTo) {
+    private void expireUpTo(LocalDate upTo, String trigger) {
 
-        try {
+        jobRunService.execute("MOCK_EXPIRE", trigger, () -> {
 
+            List<Long> ids = mockTradeService.findExpiredOrderIds(upTo);
             int expired = 0;
+            int failed = 0;
 
-            for (Long id : mockTradeService.findExpiredOrderIds(upTo)) {
+            for (Long id : ids) {
 
                 try {
 
@@ -124,6 +131,7 @@ public class MockOrderScheduler {
                 } catch (Exception e) {
 
                     log.error("지정가 주문 만료 실패: {}", id, e);
+                    failed++;
 
                 }
 
@@ -131,12 +139,9 @@ public class MockOrderScheduler {
 
             if (expired > 0) log.info("미체결 지정가 주문 만료: {}건", expired);
 
-        } catch (Exception e) {
+            return JobOutcome.of(ids.size(), failed, upTo + "까지 " + expired + "건 만료");
 
-            // 테이블이 아직 없는 환경(CI)에서도 서버는 정상적으로 켜지게
-            log.warn("지정가 주문 만료 처리 실패: {}", e.getMessage());
-
-        }
+        });
 
     }
 }

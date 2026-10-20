@@ -1,0 +1,356 @@
+/* ============================================
+   관리자: 운영 상태 (AdminFeedbackPage.css의 admin-* 공통 스타일 위에)
+   ============================================ */
+
+/* 관리자 탭 (운영 상태 / AI 피드백) */
+.admin-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+.admin-tab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--text) 65%, transparent);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.admin-tab-active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.ops-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.ops-head-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ops-btn {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ops-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.ops-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.ops-btn-run {
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  color: var(--primary);
+}
+.ops-notice {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* 한 줄 요약 */
+.ops-summary {
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.ops-summary-ok {
+  background: color-mix(in srgb, #22c55e 12%, transparent);
+  color: color-mix(in srgb, #22c55e 85%, var(--text));
+}
+.ops-summary-bad {
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  color: color-mix(in srgb, #d97706 85%, var(--text));
+}
+
+/* 상태 카드 */
+.ops-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ops-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+.ops-card-title {
+  font-weight: 700;
+}
+.ops-card strong {
+  margin: 2px 0 4px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.ops-card .ops-good {
+  color: #16a34a;
+}
+.ops-card .ops-bad {
+  color: #e5484d;
+}
+.ops-card-error {
+  color: #e5484d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-meter {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  overflow: hidden;
+}
+.ops-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #22c55e;
+}
+
+/* 상태 배지 */
+.ops-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ops-badge-ok {
+  background: color-mix(in srgb, #22c55e 16%, transparent);
+  color: #16a34a;
+}
+.ops-badge-warn {
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  color: #d97706;
+}
+.ops-badge-bad {
+  background: color-mix(in srgb, #e5484d 16%, transparent);
+  color: #e5484d;
+}
+.ops-badge-run {
+  background: color-mix(in srgb, #3b82f6 16%, transparent);
+  color: #3b82f6;
+}
+.ops-badge-off {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+
+/* 작업 목록 */
+.ops-box {
+  margin-bottom: 16px;
+}
+.ops-jobs,
+.ops-runs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ops-job {
+  display: grid;
+  grid-template-columns: 190px 170px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.ops-job:first-child {
+  border-top: none;
+}
+.ops-job-name,
+.ops-job-status {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.ops-job-name strong {
+  font-size: 15px;
+  color: var(--text);
+}
+.ops-job-name small,
+.ops-job-status small {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+.ops-job-status .ops-badge {
+  align-self: flex-start;
+}
+.ops-job-message {
+  margin: 0;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 70%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-job-message b {
+  color: var(--text);
+}
+.ops-job-action {
+  text-align: right;
+}
+.ops-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+}
+
+/* 최근 실행 */
+.ops-run {
+  border-top: 1px solid var(--border);
+}
+.ops-run:first-child {
+  border-top: none;
+}
+.ops-run summary {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) 80px 80px 80px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+.ops-run summary::-webkit-details-marker {
+  display: none;
+}
+.ops-run-time,
+.ops-run-trigger,
+.ops-run-dur {
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ops-run-job {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-run-dur {
+  text-align: right;
+}
+.ops-run summary .ops-badge {
+  justify-self: start;
+}
+.ops-run-detail {
+  padding: 0 0 12px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--text) 70%, transparent);
+}
+.ops-run-detail p {
+  margin: 0 0 4px;
+}
+.ops-run-message {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ============================================
+   태블릿 이하
+   ============================================ */
+@media (max-width: 960px) {
+  .ops-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ops-job {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+  }
+  .ops-job-status {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .ops-job-message {
+    grid-column: 1 / -1;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    word-break: break-all;
+  }
+  .ops-job-action {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  .ops-job-action:empty {
+    display: none;
+  }
+}
+
+/* ============================================
+   휴대폰 화면 (640px 이하)
+   ============================================ */
+@media (max-width: 640px) {
+  .ops-head {
+    flex-direction: column;
+  }
+  .ops-cards {
+    gap: 8px;
+  }
+  .ops-card {
+    padding: 12px 14px;
+  }
+  .ops-card strong {
+    font-size: 18px;
+  }
+  .ops-job-status small {
+    display: none;
+  }
+  .ops-run summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 8px;
+  }
+  .ops-run-time {
+    grid-column: 1 / -1;
+    font-size: 12px;
+  }
+  .ops-run-trigger,
+  .ops-run-dur {
+    display: none;
+  }
+}

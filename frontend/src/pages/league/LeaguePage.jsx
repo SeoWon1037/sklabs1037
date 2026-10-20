@@ -79,7 +79,9 @@ function LeaguePage() {
   const aiBest = data?.traders?.length ? [...data.traders].sort((a, b) => Number(b.returnRate) - Number(a.returnRate))[0] : null
   const humanAvg = data?.human?.avgReturn
   const aiAvg = data?.aiAvgReturn
-  const leader = humanAvg == null || aiAvg == null ? null : Number(aiAvg) > Number(humanAvg) ? 'AI' : Number(aiAvg) < Number(humanAvg) ? '사람' : null
+  // AI가 아직 한 번도 매매 안 했으면(랭킹에 없음) 우세 표시 안 함 → "첫 매매 전"
+  const aiStarted = data?.traders?.some((t) => t.rank != null)
+  const leader = !aiStarted || humanAvg == null || aiAvg == null ? null : Number(aiAvg) > Number(humanAvg) ? 'AI' : Number(aiAvg) < Number(humanAvg) ? '사람' : null
 
   return (
     <main className="lg-page">
@@ -111,6 +113,7 @@ function LeaguePage() {
             <div className="lg-vs">
               <span>VS</span>
               {leader && <small>{leader} 우세</small>}
+              {data && !aiStarted && <small className="lg-vs-wait">AI 첫 매매 전</small>}
             </div>
             <div className="lg-side lg-side-ai">
               <span className="lg-side-label">🤖 AI 평균</span>

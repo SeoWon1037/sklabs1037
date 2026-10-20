@@ -246,6 +246,7 @@ public class JobRunService {
             Map.entry("AI_LEAGUE", "AI 투자 리그 매매"),
             Map.entry("AI_IMPROVE", "AI 비서 자기 개선"),
             Map.entry("QA_BOT", "AI QA 봇 화면 점검"),
+            Map.entry("PREDICT_GRADE", "예측 게임 채점"),
             Map.entry("WATCHDOG", "작업 감시")
     );
 

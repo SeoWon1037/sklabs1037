@@ -3,6 +3,7 @@ package com.sklabs1037.sklabs1037.ops.service;
 import com.sklabs1037.sklabs1037.ai.service.PromptImproveService;
 import com.sklabs1037.sklabs1037.brief.service.MorningBriefService;
 import com.sklabs1037.sklabs1037.league.service.AiLeagueService;
+import com.sklabs1037.sklabs1037.predict.service.PredictService;
 import com.sklabs1037.sklabs1037.mock.service.IMockTradeService;
 import com.sklabs1037.sklabs1037.mock.service.MockMarketHours;
 import com.sklabs1037.sklabs1037.news.service.INewsCollectService;
@@ -34,7 +35,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE");
 
     @Autowired
     private JobRunService jobRunService;
@@ -59,6 +60,9 @@ public class OpsJobs {
 
     @Autowired
     private PromptImproveService promptImproveService;
+
+    @Autowired
+    private PredictService predictService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -141,6 +145,9 @@ public class OpsJobs {
 
             // 🔁 👎 분석 → 프롬프트 개선안 → 옛·새 채점 (새 👎 3개 미만이면 바로 끝)
             case "AI_IMPROVE" -> promptImproveService::run;
+
+            // 🎯 오를까 내릴까 채점 (시세가 아직 없는 문제는 다음에)
+            case "PREDICT_GRADE" -> predictService::gradeAll;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

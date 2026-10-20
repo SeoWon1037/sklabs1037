@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🎯 오를까 내릴까 (매일 예측 게임)
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.predict.dao.PredictDao">
+
+    <!-- 최근 5거래일 수익률 (%) : 최신 종가 / 5거래일 전 종가 -->
+    <sql id="ret5">
+        (
+            SELECT  ROUND((MAX(CASE WHEN R.RN = 1 THEN R.CLOSE_PRICE END)
+                         / NULLIF(MAX(CASE WHEN R.RN = 6 THEN R.CLOSE_PRICE END), 0) - 1) * 100, 2)
+              FROM (
+                    SELECT  P.CLOSE_PRICE
+                           ,ROW_NUMBER() OVER (ORDER BY P.TRADE_DATE DESC) AS RN
+                      FROM T_STOCK_PRICE P
+                     WHERE 1=1
+                       AND P.STOCK_ID   = S.ID
+                       AND P.TRADE_DATE <![CDATA[>=]]> CURRENT_DATE - 20
+                   ) R
+        )
+    </sql>
+
+    <select id="selectCandidates"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  S.ID            AS STOCK_ID
+               ,S.SYMBOL
+               ,S.NAME
+               ,<include refid="ret5"/> AS RET5
+          FROM T_STOCK S
+         WHERE 1=1
+           AND S.USE_YN        = 'Y'
+           AND S.DEL_DAY       IS NULL
+           AND S.SECURITY_TYPE = 'STOCK'
+           AND S.LAST_CLOSE         IS NOT NULL
+           AND S.SHARES_OUTSTANDING IS NOT NULL
+         ORDER BY S.LAST_CLOSE * S.SHARES_OUTSTANDING DESC
+         LIMIT  #{limit}
+    </select>
+
+    <insert id="insertItem"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        INSERT INTO T_PREDICT_ITEM (
+               TRADE_DATE
+              ,STOCK_ID
+              ,SEQ
+              ,BOT_PICK
+        ) VALUES (
+               #{tradeDate}
+              ,#{stockId}
+              ,#{seq}
+              ,#{botPick}
+        )
+        ON CONFLICT (TRADE_DATE, STOCK_ID) DO NOTHING
+    </insert>
+
+    <select id="selectRound"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  I.ID            AS ITEM_ID
+               ,I.TRADE_DATE
+               ,I.STOCK_ID
+               ,S.SYMBOL
+               ,S.NAME
+               ,I.SEQ
+               ,I.BOT_PICK
+               ,I.BASE_DATE
+               ,I.BASE_CLOSE
+               ,I.RESULT_CLOSE
+               ,I.RESULT
+               ,S.LAST_CLOSE
+               ,<include refid="ret5"/> AS RET5
+               ,(SELECT COUNT(*) FROM T_PREDICT_VOTE V WHERE V.ITEM_ID = I.ID AND V.PICK = 'UP')::INT   AS UP_COUNT
+               ,(SELECT COUNT(*) FROM T_PREDICT_VOTE V WHERE V.ITEM_ID = I.ID AND V.PICK = 'DOWN')::INT AS DOWN_COUNT
+               ,(SELECT V.PICK    FROM T_PREDICT_VOTE V WHERE V.ITEM_ID = I.ID AND V.USER_ID = #{userId, jdbcType=BIGINT}) AS PICK
+               ,(SELECT V.CORRECT FROM T_PREDICT_VOTE V WHERE V.ITEM_ID = I.ID AND V.USER_ID = #{userId, jdbcType=BIGINT}) AS CORRECT
+          FROM T_PREDICT_ITEM I
+          JOIN T_STOCK S ON S.ID = I.STOCK_ID
+         WHERE 1=1
+           AND I.TRADE_DATE = #{tradeDate}
+         ORDER BY I.SEQ
+    </select>
+
+    <select id="selectItem"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  I.ID            AS ITEM_ID
+               ,I.TRADE_DATE
+               ,I.STOCK_ID
+               ,I.RESULT
+          FROM T_PREDICT_ITEM I
+         WHERE 1=1
+           AND I.ID = #{itemId}
+    </select>
+
+    <insert id="upsertVote"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        INSERT INTO T_PREDICT_VOTE (
+               ITEM_ID
+              ,USER_ID
+              ,PICK
+        ) VALUES (
+               #{itemId}
+              ,#{userId}
+              ,#{pick}
+        )
+        ON CONFLICT (ITEM_ID, USER_ID) DO UPDATE
+           SET  PICK    = EXCLUDED.PICK
+               ,UPD_DAY = NOW()
+    </insert>
+
+    <select id="selectUngraded"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  I.ID            AS ITEM_ID
+               ,I.TRADE_DATE
+               ,I.STOCK_ID
+          FROM T_PREDICT_ITEM I
+         WHERE 1=1
+           AND I.RESULT     IS NULL
+           AND I.TRADE_DATE <![CDATA[<=]]> #{upTo}
+         ORDER BY I.TRADE_DATE, I.SEQ
+    </select>
+
+    <select id="selectClose"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  P.TRADE_DATE
+               ,P.CLOSE_PRICE   AS RESULT_CLOSE
+          FROM T_STOCK_PRICE P
+         WHERE 1=1
+           AND P.STOCK_ID   = #{stockId}
+           AND P.TRADE_DATE = #{tradeDate}
+    </select>
+
+    <select id="selectPrevClose"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  P.TRADE_DATE    AS BASE_DATE
+               ,P.CLOSE_PRICE   AS BASE_CLOSE
+          FROM T_STOCK_PRICE P
+         WHERE 1=1
+           AND P.STOCK_ID   = #{stockId}
+           AND P.TRADE_DATE <![CDATA[<]]> #{tradeDate}
+         ORDER BY P.TRADE_DATE DESC
+         LIMIT  1
+    </select>
+
+    <update id="gradeItem"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        UPDATE T_PREDICT_ITEM
+           SET  BASE_DATE    = #{baseDate}
+               ,BASE_CLOSE   = #{baseClose}
+               ,RESULT_CLOSE = #{resultClose}
+               ,RESULT       = #{result}
+               ,GRADED_DAY   = NOW()
+         WHERE 1=1
+           AND ID     = #{itemId}
+           AND RESULT IS NULL
+    </update>
+
+    <!-- 보합·무효면 CORRECT는 NULL로 남김 (적중률에서 빠짐) -->
+    <update id="gradeVotes"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        UPDATE T_PREDICT_VOTE
+           SET  CORRECT = CASE WHEN #{result} IN ('UP', 'DOWN') THEN PICK = #{result} END
+         WHERE 1=1
+           AND ITEM_ID = #{itemId}
+    </update>
+
+    <select id="selectLastGradedDate"
+            resultType="java.time.LocalDate">
+        SELECT  MAX(TRADE_DATE)
+          FROM T_PREDICT_ITEM
+         WHERE 1=1
+           AND RESULT IS NOT NULL
+    </select>
+
+    <select id="selectMyGraded"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  I.TRADE_DATE
+               ,I.SEQ
+               ,V.CORRECT
+          FROM T_PREDICT_VOTE V
+          JOIN T_PREDICT_ITEM I ON I.ID = V.ITEM_ID
+         WHERE 1=1
+           AND V.USER_ID  = #{userId}
+           AND V.CORRECT  IS NOT NULL
+         ORDER BY I.TRADE_DATE DESC, I.SEQ DESC
+         LIMIT  #{limit}
+    </select>
+
+    <select id="selectLeaderboard"
+            parameterType="com.sklabs1037.sklabs1037.predict.vo.PredictVO"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  V.USER_ID
+               ,U.NICKNAME
+               ,COUNT(*)::INT                          AS GRADED
+               ,COUNT(*) FILTER (WHERE V.CORRECT)::INT AS HITS
+          FROM T_PREDICT_VOTE V
+          JOIN T_PREDICT_ITEM I ON I.ID = V.ITEM_ID
+          JOIN T_USER         U ON U.ID = V.USER_ID
+         WHERE 1=1
+           AND V.CORRECT IS NOT NULL
+           AND U.DEL_DAY IS NULL
+        <if test="fromDate != null">
+           AND I.TRADE_DATE <![CDATA[>=]]> #{fromDate}
+        </if>
+         GROUP BY V.USER_ID, U.NICKNAME
+        HAVING COUNT(*) <![CDATA[>=]]> #{minGraded}
+         ORDER BY HITS DESC, (COUNT(*) FILTER (WHERE V.CORRECT))::NUMERIC / COUNT(*) DESC, V.USER_ID
+         LIMIT  #{limit}
+    </select>
+
+    <select id="selectBotRecord"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  COUNT(*)::INT                              AS GRADED
+               ,COUNT(*) FILTER (WHERE BOT_PICK = RESULT)::INT AS HITS
+          FROM T_PREDICT_ITEM
+         WHERE 1=1
+           AND RESULT IN ('UP', 'DOWN')
+           AND BOT_PICK IS NOT NULL
+    </select>
+
+    <!-- 사람들 다수결: 문제마다 표가 많은 쪽 (동점·투표 없음 제외) -->
+    <select id="selectCrowdRecord"
+            resultType="com.sklabs1037.sklabs1037.predict.vo.PredictVO">
+        SELECT  COUNT(*)::INT                                   AS GRADED
+               ,COUNT(*) FILTER (WHERE X.MAJORITY = X.RESULT)::INT AS HITS
+          FROM (
+                SELECT  I.RESULT
+                       ,CASE WHEN SUM(CASE WHEN V.PICK = 'UP' THEN 1 ELSE 0 END) > SUM(CASE WHEN V.PICK = 'DOWN' THEN 1 ELSE 0 END) THEN 'UP'
+                             WHEN SUM(CASE WHEN V.PICK = 'UP' THEN 1 ELSE 0 END) <![CDATA[<]]> SUM(CASE WHEN V.PICK = 'DOWN' THEN 1 ELSE 0 END) THEN 'DOWN'
+                        END AS MAJORITY
+                  FROM T_PREDICT_ITEM I
+                  JOIN T_PREDICT_VOTE V ON V.ITEM_ID = I.ID
+                 WHERE 1=1
+                   AND I.RESULT IN ('UP', 'DOWN')
+                 GROUP BY I.ID, I.RESULT
+               ) X
+         WHERE 1=1
+           AND X.MAJORITY IS NOT NULL
+    </select>
+</mapper>

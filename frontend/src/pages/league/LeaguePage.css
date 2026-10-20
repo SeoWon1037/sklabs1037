@@ -338,3 +338,9 @@
     font-size: 14px;
   }
 }
+
+/* AI가 아직 매매 전일 때 VS 아래 표시 */
+.lg-vs .lg-vs-wait {
+  background: var(--lg-soft);
+  color: var(--lg-muted);
+}

@@ -28,6 +28,7 @@ const SHORTCUTS = [
   { icon: '📈', label: '주식 종목', to: '/stock' },
   { icon: '💰', label: '모의투자', to: '/mock' },
   { icon: '🏆', label: 'AI 리그', to: '/league' },
+  { icon: '🎯', label: '예측 게임', to: '/predict' },
   { icon: '🤖', label: 'AI 비서', to: '/ai' },
   { icon: '💄', label: '뷰티 랩', to: '/beauty' },
   { icon: '🍀', label: '오늘의 숫자', to: '/lotto' },

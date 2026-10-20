@@ -1,0 +1,659 @@
+/* ============================================
+   뷰티 랩 (/beauty)
+   - PC: 왼쪽 탭 내용 + 오른쪽 최근 기록
+   - 휴대폰: 한 줄씩 (최근 기록은 아래)
+   ============================================ */
+.bl-page {
+  --bl-muted: color-mix(in srgb, var(--text) 58%, transparent);
+  --bl-soft: color-mix(in srgb, var(--text) 4%, transparent);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 16px 64px;
+}
+
+/* 머리말 */
+.bl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.bl-head h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+}
+.bl-head p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--bl-muted);
+}
+.bl-principle {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bl-muted);
+  white-space: nowrap;
+}
+
+/* 탭 */
+.bl-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.bl-tabs::-webkit-scrollbar {
+  display: none;
+}
+.bl-tabbtn {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--bl-muted);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bl-tabbtn-active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* 배치 */
+.bl-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+.bl-main,
+.bl-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.bl-side {
+  position: sticky;
+  top: 84px;
+}
+
+/* 카드 */
+.bl-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  min-width: 0;
+}
+.bl-card-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+.bl-card-title small {
+  font-size: 12px;
+  font-weight: 600;
+}
+.bl-gap {
+  margin-top: 20px;
+}
+.bl-muted {
+  color: var(--bl-muted);
+}
+.bl-small {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+.bl-intro {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.bl-error {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #e5484d 12%, transparent);
+  color: #e5484d;
+  font-size: 14px;
+}
+.bl-disclaimer {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--bl-muted);
+}
+
+/* 입력 방식 (사진 / 글) */
+.bl-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.bl-mode button {
+  height: 38px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--bl-muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bl-mode .bl-mode-active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* 사진 올리기 */
+.bl-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 2px dashed color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 14px;
+}
+.bl-drop-filled {
+  border-style: solid;
+}
+.bl-drop-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 22px 10px;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.bl-drop-icon {
+  font-size: 34px;
+}
+.bl-drop-btn strong {
+  font-size: 15px;
+}
+.bl-drop-btn small {
+  font-size: 13px;
+  color: var(--bl-muted);
+}
+.bl-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+/* 글 입력 */
+.bl-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.bl-text textarea,
+.bl-search {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+.bl-text textarea:focus,
+.bl-search:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.bl-search {
+  margin-bottom: 12px;
+}
+.bl-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 피부 타입 칩 */
+.bl-field {
+  margin-top: 16px;
+}
+.bl-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bl-muted);
+}
+.bl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bl-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bl-chip-active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+/* 버튼 */
+.bl-submit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+.bl-primary {
+  height: 46px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.bl-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.bl-ghost {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bl-remaining {
+  font-size: 13px;
+  color: var(--bl-muted);
+}
+.bl-login {
+  margin: 18px 0 0;
+  font-size: 14px;
+  color: var(--bl-muted);
+}
+.bl-login a {
+  color: var(--primary);
+  font-weight: 700;
+}
+.bl-more {
+  width: 100%;
+  height: 40px;
+  margin-top: 8px;
+  border: 1px dashed color-mix(in srgb, var(--text) 25%, transparent);
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 태그·배지 */
+.bl-tag,
+.bl-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bl-badge {
+  padding: 4px 10px;
+}
+.bl-tag-blue { background: color-mix(in srgb, #3b82f6 14%, transparent); color: #3b82f6; }
+.bl-tag-green { background: color-mix(in srgb, #22c55e 14%, transparent); color: #16a34a; }
+.bl-tag-violet,
+.bl-badge-violet { background: color-mix(in srgb, #8b5cf6 15%, transparent); color: #8b5cf6; }
+.bl-tag-amber,
+.bl-badge-amber { background: color-mix(in srgb, #f59e0b 16%, transparent); color: #d97706; }
+.bl-badge-red { background: color-mix(in srgb, #e5484d 14%, transparent); color: #e5484d; }
+.bl-tag-gray { background: color-mix(in srgb, var(--text) 9%, transparent); color: var(--bl-muted); }
+
+/* 결과 요약 */
+.bl-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.bl-summary-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+}
+.bl-summary-head p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.bl-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--primary);
+}
+.bl-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.bl-highlights {
+  margin: 0;
+  padding: 14px 16px 14px 32px;
+  border-radius: 12px;
+  background: var(--bl-soft);
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text);
+}
+.bl-cautions {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #e5484d 8%, transparent);
+  font-size: 14px;
+  color: var(--text);
+}
+.bl-cautions strong {
+  color: #e5484d;
+}
+.bl-cautions ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  line-height: 1.7;
+}
+.bl-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+.bl-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+/* 전성분 목록 */
+.bl-ings,
+.bl-dict,
+.bl-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bl-ing {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.bl-ing:first-child {
+  border-top: none;
+}
+.bl-ing-warn {
+  margin: 0 -12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #e5484d 6%, transparent);
+}
+.bl-ing-no {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 26px;
+  text-align: center;
+  color: var(--bl-muted);
+}
+.bl-ing-body {
+  min-width: 0;
+  flex: 1;
+}
+.bl-ing-body p,
+.bl-dict-item p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+}
+.bl-ing-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.bl-ing-name strong {
+  font-size: 15px;
+  color: var(--text);
+  word-break: break-all;
+}
+.bl-ing-name small {
+  font-size: 12px;
+  color: var(--bl-muted);
+}
+.bl-ing-caution {
+  color: #d97706 !important;
+}
+
+/* 브리프 */
+.bl-brief-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+}
+.bl-brief-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.bl-brief-row span {
+  color: var(--bl-muted);
+}
+.bl-brief-row strong {
+  font-weight: 600;
+  color: var(--text);
+  word-break: keep-all;
+}
+.bl-brief-row .bl-missing {
+  color: #d97706;
+  font-weight: 700;
+}
+.bl-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.bl-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text);
+}
+.bl-ol {
+  padding-left: 20px;
+}
+.bl-suggest {
+  margin-bottom: 12px;
+}
+.bl-suggest .bl-list {
+  margin-top: 6px;
+}
+.bl-details summary {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+}
+.bl-details p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 성분 사전 */
+.bl-dict {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.bl-dict-item {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.bl-dict-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.bl-alias {
+  font-size: 12px !important;
+}
+
+/* 최근 기록 */
+.bl-history li + li {
+  border-top: 1px solid var(--border);
+}
+.bl-history button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.bl-history strong {
+  font-size: 14px;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bl-history small {
+  font-size: 12px;
+  color: var(--bl-muted);
+}
+.bl-history button:hover strong {
+  color: var(--primary);
+}
+
+/* ============================================
+   태블릿 이하
+   ============================================ */
+@media (max-width: 960px) {
+  .bl-layout {
+    grid-template-columns: 1fr;
+  }
+  .bl-side {
+    position: static;
+  }
+  .bl-two,
+  .bl-dict {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   휴대폰 화면 (640px 이하)
+   ============================================ */
+@media (max-width: 640px) {
+  .bl-page {
+    padding: 20px 16px 48px;
+  }
+  .bl-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bl-head h1 {
+    font-size: 22px;
+  }
+  .bl-card {
+    padding: 16px;
+  }
+  .bl-brief-grid {
+    grid-template-columns: 1fr;
+  }
+  .bl-summary-head {
+    flex-direction: column;
+  }
+  .bl-badges {
+    justify-content: flex-start;
+  }
+  .bl-submit {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .bl-primary {
+    width: 100%;
+  }
+  .bl-remaining {
+    text-align: center;
+  }
+}

@@ -19,6 +19,7 @@ import MockTradePage from './pages/mock/MockTradePage'
 import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
 import AdminOpsPage from './pages/admin/AdminOpsPage'
 import LottoPage from './pages/lotto/LottoPage'
+import BeautyLabPage from './pages/beauty/BeautyLabPage'
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
         <Route path="/login" element={<UserLoginPage />} />              {/* 로그인 */}
         <Route path="/find" element={<UserFindPage />} />                {/* 아이디·비밀번호 찾기 */}
         <Route path="/mypage" element={<UserMyPage />} />                {/* 마이페이지 */}
+        <Route path="/beauty" element={<BeautyLabPage />} />             {/* 뷰티 랩 (성분 분석 / 기획 브리프 / 성분 사전) */}
         <Route path="/lotto" element={<LottoPage />} />                  {/* 오늘의 숫자 (로또 / 연금복권) */}
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
       </Routes>

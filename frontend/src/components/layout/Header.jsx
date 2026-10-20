@@ -17,6 +17,7 @@ const MENUS = [
   { to: '/stock', label: '주식 종목' },
   { to: '/mock', label: '모의투자' },
   { to: '/ai', label: 'AI 비서' },
+  { to: '/beauty', label: '뷰티 랩' },
   { to: '/lotto', label: '오늘의 숫자' },
 ]
 

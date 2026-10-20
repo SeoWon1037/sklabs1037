@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    뷰티 랩 SQL (성분 사전, 분석·브리프 기록)
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.beauty.dao.BeautyLabDao">
+
+    <!-- 성분 사전 전체 -->
+    <select id="selectIngredients"
+            resultType="com.sklabs1037.sklabs1037.beauty.vo.IngredientVO">
+        SELECT  ID          AS INGREDIENT_ID
+               ,NAME_KO
+               ,NAME_EN
+               ,ALIASES
+               ,CATEGORY
+               ,DESCRIPTION
+               ,FUNCTIONAL
+               ,ALLERGEN_YN
+               ,CAUTION
+               ,CAUTION_SKIN
+          FROM T_INGREDIENT
+         ORDER BY ID
+    </select>
+
+    <!-- 기록 저장 -->
+    <insert id="insertLog"
+            parameterType="com.sklabs1037.sklabs1037.beauty.vo.BeautyLogVO"
+            useGeneratedKeys="true" keyProperty="logId" keyColumn="id">
+        INSERT INTO T_BEAUTY_LOG (
+               USER_ID
+              ,KIND
+              ,INPUT_TYPE
+              ,TITLE
+              ,ITEM_COUNT
+              ,RESULT_JSON
+        ) VALUES (
+               #{userId}
+              ,#{kind}
+              ,#{inputType}
+              ,#{title}
+              ,#{itemCount}
+              ,#{resultJson}
+        )
+    </insert>
+
+    <!-- 오늘 사용 횟수 (한국 날짜 기준) -->
+    <select id="countToday"
+            parameterType="com.sklabs1037.sklabs1037.beauty.vo.BeautyLogVO"
+            resultType="int">
+        SELECT  COUNT(*)
+          FROM T_BEAUTY_LOG
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND KIND    = #{kind}
+           AND INS_DAY &gt;= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul')
+    </select>
+
+    <!-- 내 최근 기록 -->
+    <select id="selectMyLogs"
+            parameterType="com.sklabs1037.sklabs1037.beauty.vo.BeautyLogVO"
+            resultType="com.sklabs1037.sklabs1037.beauty.vo.BeautyLogVO">
+        SELECT  ID          AS LOG_ID
+               ,KIND
+               ,INPUT_TYPE
+               ,TITLE
+               ,ITEM_COUNT
+               ,INS_DAY
+          FROM T_BEAUTY_LOG
+         WHERE 1=1
+           AND USER_ID = #{userId}
+         ORDER BY INS_DAY DESC
+                 ,ID DESC
+         LIMIT #{limit}
+    </select>
+
+    <!-- 내 기록 하나 -->
+    <select id="selectMyLog"
+            parameterType="com.sklabs1037.sklabs1037.beauty.vo.BeautyLogVO"
+            resultType="com.sklabs1037.sklabs1037.beauty.vo.BeautyLogVO">
+        SELECT  ID          AS LOG_ID
+               ,KIND
+               ,INPUT_TYPE
+               ,TITLE
+               ,ITEM_COUNT
+               ,RESULT_JSON
+               ,INS_DAY
+          FROM T_BEAUTY_LOG
+         WHERE 1=1
+           AND ID      = #{logId}
+           AND USER_ID = #{userId}
+    </select>
+
+</mapper>

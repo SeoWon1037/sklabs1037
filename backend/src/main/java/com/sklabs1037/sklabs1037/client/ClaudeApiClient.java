@@ -49,15 +49,32 @@ public class ClaudeApiClient {
                                              List<Map<String, Object>> tools,
                                              List<Map<String, Object>> messages) {
 
+        return createMessage(system, tools, messages, null, maxTokens);
+
+    }
+
+    // 정해진 도구 하나를 반드시 쓰게 해서 "정해진 모양의 JSON"으로 답을 받기 (뷰티 랩 성분 읽기, 기획 브리프)
+    // - toolChoice: {"type":"tool","name":"도구 이름"}
+    // - 이미지(사진)는 messages의 content에 {"type":"image","source":{...base64}} 블록으로 넣음
+    public Map<String, Object> createMessage(String system,
+                                             List<Map<String, Object>> tools,
+                                             List<Map<String, Object>> messages,
+                                             Map<String, Object> toolChoice,
+                                             int maxTokensOverride) {
+
         Map<String, Object> body = new HashMap<>();
         body.put("model", model);
-        body.put("max_tokens", maxTokens);
+        body.put("max_tokens", maxTokensOverride > 0 ? maxTokensOverride : maxTokens);
         body.put("system", system);
         body.put("messages", messages);
 
         // 도구가 있을 때만 보냄
         if (tools != null && !tools.isEmpty()) {
             body.put("tools", tools);
+        }
+
+        if (toolChoice != null) {
+            body.put("tool_choice", toolChoice);
         }
 
         return restClient.post()

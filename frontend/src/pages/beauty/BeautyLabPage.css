@@ -711,6 +711,138 @@
   color: var(--text);
 }
 
+/* 규제 Q&A */
+.bl-examples {
+  margin-top: 10px;
+}
+.bl-examples .bl-chip {
+  text-align: left;
+}
+.bl-answer {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+.bl-cite {
+  display: inline-block;
+  min-width: 18px;
+  height: 18px;
+  margin: 0 2px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: 2px;
+}
+.bl-sources,
+.bl-docs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bl-sources li {
+  border-top: 1px solid var(--border);
+  scroll-margin-top: 90px;
+}
+.bl-sources summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.bl-sources summary small {
+  font-size: 12px;
+  color: var(--bl-muted);
+}
+.bl-source-cited summary strong {
+  color: var(--primary);
+}
+.bl-sources .bl-small {
+  margin: -4px 0 12px;
+}
+.bl-source-text {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bl-soft);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+.bl-docs li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.bl-docs li > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bl-docs strong {
+  font-size: 14px;
+  color: var(--text);
+}
+.bl-docs small {
+  font-size: 12px;
+  color: var(--bl-muted);
+  word-break: break-all;
+}
+.bl-danger {
+  color: #e5484d;
+}
+.bl-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px dashed color-mix(in srgb, var(--text) 22%, transparent);
+  border-radius: 12px;
+}
+.bl-upload h4 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}
+.bl-upload input[type='text'] {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+.bl-upload input[type='file'] {
+  font-size: 13px;
+  color: var(--text);
+}
+.bl-upload .bl-primary {
+  align-self: flex-start;
+}
+.bl-ok {
+  margin: 0;
+  font-size: 14px;
+  color: #16a34a;
+}
+
 /* ============================================
    태블릿 이하
    ============================================ */

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    화장품 규제 Q&A (RAG) SQL - pgvector
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.beauty.dao.RegulationDao">
+
+    <insert id="insertDoc"
+            parameterType="com.sklabs1037.sklabs1037.beauty.vo.RagDocVO"
+            useGeneratedKeys="true" keyProperty="docId" keyColumn="id">
+        INSERT INTO T_RAG_DOC (
+               TITLE
+              ,SOURCE
+              ,FILE_NAME
+              ,USER_ID
+        ) VALUES (
+               #{title}
+              ,#{source}
+              ,#{fileName}
+              ,#{userId}
+        )
+    </insert>
+
+    <update id="updateDoc"
+            parameterType="com.sklabs1037.sklabs1037.beauty.vo.RagDocVO">
+        UPDATE T_RAG_DOC
+           SET STATUS      = COALESCE(#{status}, STATUS)
+              ,PAGE_COUNT  = COALESCE(#{pageCount}, PAGE_COUNT)
+              ,CHUNK_COUNT = COALESCE(#{chunkCount}, CHUNK_COUNT)
+              ,MESSAGE     = #{message}
+              ,UPD_DAY     = NOW()
+         WHERE 1=1
+           AND ID = #{docId}
+    </update>
+
+    <select id="selectDocs"
+            resultType="com.sklabs1037.sklabs1037.beauty.vo.RagDocVO">
+        SELECT  ID          AS DOC_ID
+               ,TITLE
+               ,SOURCE
+               ,FILE_NAME
+               ,STATUS
+               ,PAGE_COUNT
+               ,CHUNK_COUNT
+               ,MESSAGE
+               ,INS_DAY
+               ,UPD_DAY
+          FROM T_RAG_DOC
+         ORDER BY ID DESC
+    </select>
+
+    <delete id="deleteDoc"
+            parameterType="long">
+        DELETE FROM T_RAG_DOC
+         WHERE 1=1
+           AND ID = #{docId}
+    </delete>
+
+    <insert id="insertChunk"
+            parameterType="com.sklabs1037.sklabs1037.beauty.vo.RagChunkVO">
+        INSERT INTO T_RAG_CHUNK (
+               DOC_ID
+              ,SEQ
+              ,PAGE
+              ,CONTENT
+              ,EMBEDDING
+        ) VALUES (
+               #{docId}
+              ,#{seq}
+              ,#{page}
+              ,#{content}
+              ,CAST(#{embedding} AS vector)
+        )
+    </insert>
+
+    <!-- 질문과 뜻이 가까운 문단 (코사인 거리 &lt;=&gt; 가 작은 순, HNSW 인덱스 사용) -->
+    <select id="searchChunks"
+            parameterType="com.sklabs1037.sklabs1037.beauty.vo.RagChunkVO"
+            resultType="com.sklabs1037.sklabs1037.beauty.vo.RagChunkVO">
+        SELECT  C.ID        AS CHUNK_ID
+               ,C.DOC_ID
+               ,C.SEQ
+               ,C.PAGE
+               ,C.CONTENT
+               ,D.TITLE
+               ,D.SOURCE
+               ,1 - (C.EMBEDDING &lt;=&gt; CAST(#{embedding} AS vector)) AS SCORE
+          FROM T_RAG_CHUNK C
+          JOIN T_RAG_DOC D ON D.ID = C.DOC_ID
+                          AND D.STATUS = 'READY'
+         ORDER BY C.EMBEDDING &lt;=&gt; CAST(#{embedding} AS vector)
+         LIMIT #{limit}
+    </select>
+
+    <update id="failStaleDocs">
+        UPDATE T_RAG_DOC
+           SET STATUS  = 'FAIL'
+              ,MESSAGE = '서버가 다시 시작되면서 처리가 중단됐어요. 다시 올려주세요.'
+              ,UPD_DAY = NOW()
+         WHERE 1=1
+           AND STATUS = 'PROCESSING'
+    </update>
+
+</mapper>

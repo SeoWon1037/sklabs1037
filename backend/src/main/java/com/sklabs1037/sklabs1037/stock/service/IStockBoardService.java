@@ -11,8 +11,8 @@ import java.util.List;
  */
 public interface IStockBoardService {
 
-    // 종목 글 목록 (page: 1부터)
-    List<StockBoardVO> getPosts(Long stockId, int page, int size);
+    // 종목 글 목록 (page: 1부터, viewerId: 보는 사람 → 좋아요·신고 여부, sort: latest / popular)
+    List<StockBoardVO> getPosts(Long stockId, int page, int size, Long viewerId, String sort);
 
     // 전 종목 최근 글 (메인 화면)
     List<StockBoardVO> getRecentPosts(int size);
@@ -37,4 +37,21 @@ public interface IStockBoardService {
 
     // 댓글 삭제 (본인 또는 관리자)
     void deleteComment(Long userId, boolean admin, Long commentId);
+
+    // 신고가 이만큼 쌓이면 글을 가림
+    int BLIND_AT = 3;
+
+    // 좋아요 누르기/취소 → { liked, likeCount }
+    StockBoardVO toggleLike(Long userId, Long postId);
+
+    // 신고 → 이번 신고로 가려졌으면 blinded = true
+    StockBoardVO report(Long userId, Long postId, String reason, String memo);
+
+    // 관리자: 처리할 신고 목록 / 개수
+    List<StockBoardVO> getReportedPosts();
+
+    int countReportedPosts();
+
+    // 관리자: 신고 처리 (action: DELETE 글 삭제 / DISMISS 문제 없음)
+    void handleReport(Long adminId, Long postId, String action);
 }

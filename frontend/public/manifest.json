@@ -1,0 +1,21 @@
+{
+  "name": "SKLabs - AI 주식 비서 · 모의투자 · 뷰티 랩",
+  "short_name": "SKLabs",
+  "description": "실제 시세로 답하는 AI 주식 비서, 모의투자, 실시간 토론, 화장품 성분 분석",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111113",
+  "theme_color": "#111113",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "주식 종목", "url": "/stock", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "모의투자", "url": "/mock", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "뷰티 랩", "url": "/beauty", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

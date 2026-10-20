@@ -387,3 +387,131 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* ===== 정렬 / 좋아요 / 신고 ===== */
+.board-sorts {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 10px;
+}
+
+.board-sort {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.board-sort-on {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+}
+
+.board-notice {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.board-actions .board-toggle {
+  margin-top: 0;
+}
+
+.board-toggle:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.board-like-on {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.board-report-btn {
+  margin-left: auto;
+  padding: 4px 6px;
+  border: none;
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.board-report-btn:hover {
+  color: #e5484d;
+}
+
+.board-reported {
+  margin-left: auto;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 40%, transparent);
+}
+
+.board-badge-blind {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: var(--text-muted);
+}
+
+.board-report {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 0 6px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, #e5484d 35%, var(--border));
+  border-radius: 10px;
+}
+
+.board-report-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.board-report-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.board-report-on {
+  border-color: #e5484d;
+  color: #e5484d;
+  background: rgba(229, 72, 77, 0.1);
+}
+
+.board-report-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-report-note {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.board-report-foot .board-delete {
+  margin-left: 0;
+}
+
+.board-report .board-comment-input {
+  flex: none;
+}

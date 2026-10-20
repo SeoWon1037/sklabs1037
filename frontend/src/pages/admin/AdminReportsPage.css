@@ -1,0 +1,96 @@
+/* ===== 관리자: 신고 관리 ===== */
+.report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.report-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.report-stock {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.report-stock:hover {
+  text-decoration: underline;
+}
+
+.report-meta {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.report-count {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.report-count-hot {
+  background: rgba(229, 72, 77, 0.14);
+  color: #e5484d;
+}
+
+.report-content {
+  margin: 10px 0;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.report-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.report-reason {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.report-first {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.report-memos {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.report-delete {
+  border-color: rgba(229, 72, 77, 0.5);
+  color: #e5484d;
+}

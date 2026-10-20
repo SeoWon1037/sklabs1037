@@ -10,7 +10,11 @@
 //   GET    /api/stock/board/{postId}/comments        댓글 목록
 //   POST   /api/stock/board/{postId}/comments        댓글 쓰기
 //   DELETE /api/stock/board/comments/{commentId}     댓글 삭제
+//   POST   /api/stock/board/{postId}/like            좋아요 누르기/취소
+//   POST   /api/stock/board/{postId}/report          신고 (사유 + 메모)
 //   GET    /api/stock/board/stream?stockId=          실시간 알림 (SSE)
+// - 정렬: 최신순 / 인기순(좋아요 많은 순)
+// - 신고가 3개 쌓이면 서버가 내용을 가려서 보냄 → "가려진 글" 표시 (관리자·작성자는 내용이 보임)
 // - 실시간: 다른 사람이 글을 쓰면 "새 글 n개" 버튼, 댓글·삭제는 목록 숫자에 바로 반영, 보는 사람 수 표시
 //   (읽던 글이 갑자기 밀려 내려가지 않게 새 글은 버튼을 눌러야 위에 붙음)
 // ============================================
@@ -21,6 +25,20 @@ import './StockBoard.css'
 
 const POST_MAX = 500
 const COMMENT_MAX = 200
+
+// 신고 사유 (백엔드 StockBoardServiceImpl.REASONS 와 같게)
+const REASONS = [
+  { value: 'SPAM', label: '도배' },
+  { value: 'ABUSE', label: '욕설·비방' },
+  { value: 'AD', label: '광고' },
+  { value: 'FALSE', label: '허위 정보' },
+  { value: 'ETC', label: '기타' },
+]
+
+const SORTS = [
+  { value: 'latest', label: '최신순' },
+  { value: 'popular', label: '인기순' },
+]
 
 const OPINIONS = [
   { value: 'UP', label: '🔴 오를 것' },
@@ -152,6 +170,64 @@ function CommentArea({ postId, loggedIn, onCountChange, refreshKey }) {
 }
 
 // ============================================
+// 신고 칸 (🚩 신고를 누르면 그 글 아래에 펼쳐짐)
+// ============================================
+function ReportForm({ postId, onDone, onCancel }) {
+
+  const [reason, setReason] = useState(null)
+  const [memo, setMemo] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!reason || sending) return
+    setSending(true)
+    setError('')
+    try {
+      const data = await request(`/api/stock/board/${postId}/report`, jsonBody('POST', { reason, memo }))
+      onDone(data.blinded)
+    } catch (err) {
+      setError(err.message)
+      setSending(false)
+    }
+  }
+
+  return (
+    <form className="board-report" onSubmit={submit}>
+      <p className="board-report-title">어떤 문제가 있나요?</p>
+      <div className="board-report-reasons">
+        {REASONS.map((r) => (
+          <button
+            key={r.value}
+            type="button"
+            className={`board-opinion ${reason === r.value ? 'board-report-on' : ''}`}
+            onClick={() => setReason(r.value)}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <input
+        className="board-comment-input"
+        value={memo}
+        onChange={(e) => setMemo(e.target.value)}
+        maxLength={200}
+        placeholder="자세한 내용 (선택)"
+      />
+      <div className="board-report-foot">
+        <span className="board-report-note">신고가 3개 쌓이면 글이 가려지고 관리자가 확인해요.</span>
+        <button type="button" className="board-delete" onClick={onCancel}>취소</button>
+        <button type="submit" className="btn btn-primary board-comment-btn" disabled={!reason || sending}>
+          {sending ? '신고 중' : '신고'}
+        </button>
+      </div>
+      {error && <p className="board-error">{error}</p>}
+    </form>
+  )
+}
+
+// ============================================
 // 토론방
 // ============================================
 function StockBoard({ stockId, stockName }) {
@@ -162,6 +238,9 @@ function StockBoard({ stockId, stockName }) {
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState('')
   const [openId, setOpenId] = useState(null)        // 댓글을 펼친 글
+  const [sort, setSort] = useState('latest')        // 최신순 / 인기순
+  const [reportId, setReportId] = useState(null)    // 신고 칸을 펼친 글
+  const [notice, setNotice] = useState('')          // 신고 완료 같은 짧은 안내
 
   // ===== 실시간 =====
   const [incoming, setIncoming] = useState([])      // 아직 목록에 안 붙인 새 글 ("새 글 n개" 버튼)
@@ -182,9 +261,9 @@ function StockBoard({ stockId, stockName }) {
   const [writeError, setWriteError] = useState('')
 
   // 목록 불러오기 (page 1 = 새로 고침, 2 이상 = 아래에 이어 붙이기)
-  const loadPage = (nextPage) => {
+  const loadPage = (nextPage, nextSort = sort) => {
     setLoading(true)
-    return request(`/api/stock/board?stockId=${stockId}&page=${nextPage}`)
+    return request(`/api/stock/board?stockId=${stockId}&page=${nextPage}&sort=${nextSort}`)
       .then((data) => {
         setBoard((prev) => ({
           // 더보기: 그 사이 새 글이 생겨 한 칸씩 밀렸으면 같은 글이 또 올 수 있음 → 이미 있는 글은 빼고 붙이기
@@ -224,7 +303,7 @@ function StockBoard({ stockId, stockName }) {
   const syncTop = () => {
     clearTimeout(syncTimer.current)
     syncTimer.current = setTimeout(() => {
-      request(`/api/stock/board?stockId=${stockId}&page=1`)
+      request(`/api/stock/board?stockId=${stockId}&page=1&sort=${sort}`)
         .then((data) => {
           const fresh = new Map(data.posts.map((p) => [p.postId, p]))
           const known = new Set(boardRef.current.posts.map((p) => p.postId))
@@ -232,7 +311,9 @@ function StockBoard({ stockId, stockName }) {
             ...prev,
             posts: prev.posts.map((p) => {
               const f = fresh.get(p.postId)
-              return f ? { ...p, commentCount: f.commentCount, deleted: f.deleted, canDelete: f.canDelete } : p
+              return f
+                ? { ...p, commentCount: f.commentCount, likeCount: f.likeCount, deleted: f.deleted, blinded: f.blinded, content: f.content, opinion: f.opinion, canDelete: f.canDelete }
+                : p
             }),
             total: data.total,
             upCount: data.upCount,
@@ -258,6 +339,50 @@ function StockBoard({ stockId, stockName }) {
     if ((type === 'comment' || type === 'delete') && openRef.current === data.postId) setCommentTick((n) => n + 1)
     syncTop()
   })
+
+  // 정렬 바꾸기 (처음부터 다시)
+  const changeSort = (value) => {
+    if (value === sort) return
+    setSort(value)
+    setOpenId(null)
+    setReportId(null)
+    loadPage(1, value)
+  }
+
+  // 글 하나만 고치기 (좋아요·신고 결과)
+  const patchPost = (postId, changes) =>
+    setBoard((prev) => ({ ...prev, posts: prev.posts.map((p) => (p.postId === postId ? { ...p, ...changes } : p)) }))
+
+  // 좋아요: 먼저 화면에 반영하고, 서버 결과로 다시 맞춤 (실패하면 되돌림)
+  const toggleLike = async (post) => {
+    if (!board.loggedIn) {
+      setNotice('로그인하면 좋아요를 누를 수 있어요.')
+      return
+    }
+    const before = { liked: post.liked, likeCount: post.likeCount }
+    patchPost(post.postId, { liked: !post.liked, likeCount: post.likeCount + (post.liked ? -1 : 1) })
+    try {
+      const data = await request(`/api/stock/board/${post.postId}/like`, { method: 'POST' })
+      patchPost(post.postId, { liked: data.liked, likeCount: data.likeCount })
+    } catch (err) {
+      patchPost(post.postId, before)
+      setNotice(err.message)
+    }
+  }
+
+  const reported = (postId, blinded) => {
+    setReportId(null)
+    patchPost(postId, { reported: true })
+    setNotice(blinded ? '신고가 쌓여 글을 가렸어요. 관리자가 확인할게요.' : '신고했어요. 관리자가 확인할게요.')
+    if (blinded) syncTop()
+  }
+
+  // 안내 문구는 4초 뒤 사라짐
+  useEffect(() => {
+    if (!notice) return undefined
+    const timer = setTimeout(() => setNotice(''), 4000)
+    return () => clearTimeout(timer)
+  }, [notice])
 
   // 아직 목록에 없는 새 글 수 (방금 내 글쓰기로 목록이 바뀌었으면 자동으로 빠짐)
   const newCount = incoming.filter((p) => !board.posts.some((q) => q.postId === p.postId)).length
@@ -381,6 +506,23 @@ function StockBoard({ stockId, stockName }) {
       {listError && <p className="board-error">{listError}</p>}
       {!loading && !listError && board.posts.length === 0 && <p className="board-empty">아직 글이 없어요.</p>}
 
+      <div className="board-sorts" role="tablist" aria-label="정렬">
+        {SORTS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            role="tab"
+            aria-selected={sort === o.value}
+            className={`board-sort ${sort === o.value ? 'board-sort-on' : ''}`}
+            onClick={() => changeSort(o.value)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+
+      {notice && <p className="board-notice" role="status">{notice}</p>}
+
       {newCount > 0 && (
         <button type="button" className="board-new" onClick={() => loadPage(1)} disabled={loading}>
           🆕 새 글 {newCount}개 보기
@@ -393,6 +535,8 @@ function StockBoard({ stockId, stockName }) {
 
             {p.deleted ? (
               <p className="board-deleted">삭제된 글입니다.</p>
+            ) : p.blinded && p.content == null ? (
+              <p className="board-deleted">🚩 신고가 쌓여 가려진 글이에요.</p>
             ) : (
               <>
                 <div className="board-post-meta">
@@ -400,6 +544,7 @@ function StockBoard({ stockId, stockName }) {
                   {p.opinion === 'DOWN' && <span className="board-badge board-badge-down">내릴 것</span>}
                   <strong>{p.nickname}</strong>
                   <span>· {timeAgo(p.insAt)}</span>
+                  {p.blinded && <span className="board-badge board-badge-blind">가려짐</span>}
                   {p.canDelete && (
                     <button type="button" className="board-delete" onClick={() => removePost(p.postId)}>삭제</button>
                   )}
@@ -408,13 +553,46 @@ function StockBoard({ stockId, stockName }) {
               </>
             )}
 
-            <button
-              type="button"
-              className={`board-toggle ${openId === p.postId ? 'board-toggle-on' : ''}`}
-              onClick={() => setOpenId(openId === p.postId ? null : p.postId)}
-            >
-              💬 댓글 {p.commentCount}
-            </button>
+            <div className="board-actions">
+              <button
+                type="button"
+                className={`board-toggle ${openId === p.postId ? 'board-toggle-on' : ''}`}
+                onClick={() => setOpenId(openId === p.postId ? null : p.postId)}
+              >
+                💬 댓글 {p.commentCount}
+              </button>
+
+              {!p.deleted && (
+                <button
+                  type="button"
+                  className={`board-toggle ${p.liked ? 'board-like-on' : ''}`}
+                  onClick={() => toggleLike(p)}
+                  disabled={p.mine}
+                  aria-pressed={p.liked}
+                  title={p.mine ? '내 글에는 좋아요를 누를 수 없어요' : '좋아요'}
+                >
+                  👍 {p.likeCount ?? 0}
+                </button>
+              )}
+
+              {board.loggedIn && !p.deleted && !p.mine && (
+                p.reported ? (
+                  <span className="board-reported">신고함</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="board-report-btn"
+                    onClick={() => setReportId(reportId === p.postId ? null : p.postId)}
+                  >
+                    🚩 신고
+                  </button>
+                )
+              )}
+            </div>
+
+            {reportId === p.postId && (
+              <ReportForm postId={p.postId} onDone={(blinded) => reported(p.postId, blinded)} onCancel={() => setReportId(null)} />
+            )}
 
             {openId === p.postId && (
               <CommentArea

@@ -25,17 +25,20 @@ import java.util.Map;
  *
  * API 목록
  *   GET    /api/stock/board/recent?size=20             전 종목 최근 글 (메인 화면)  → { success, posts }
- *   GET    /api/stock/board?stockId=1&page=1          글 목록 (20개씩) + 의견 비율 → { success, posts, total, page, size, upCount, downCount, loggedIn }
+ *   GET    /api/stock/board?stockId=1&page=1&sort=    글 목록 (20개씩, sort: latest 최신 / popular 좋아요순) + 의견 비율 → { success, posts, total, page, size, upCount, downCount, loggedIn }
  *   POST   /api/stock/board  { stockId, opinion, content }  글 쓰기              → { success }
  *   DELETE /api/stock/board/{postId}                   글 삭제                     → { success }
  *   GET    /api/stock/board/{postId}/comments          댓글 목록                   → { success, comments }
  *   POST   /api/stock/board/{postId}/comments { content }   댓글 쓰기              → { success }
  *   DELETE /api/stock/board/comments/{commentId}       댓글 삭제                   → { success }
+ *   POST   /api/stock/board/{postId}/like              좋아요 누르기/취소          → { success, liked, likeCount }
+ *   POST   /api/stock/board/{postId}/report { reason, memo }  신고               → { success, blinded }
  *   GET    /api/stock/board/stream?stockId=1          실시간 알림 (SSE, stockId 없으면 전 종목 새 글) → text/event-stream
  *
  * - 목록은 누구나, 쓰기·삭제는 로그인한 사람만
  * - 삭제는 본인 글/댓글 또는 관리자만
- * - 작성자 회원 번호는 화면에 보내지 않고, 대신 삭제 가능 여부(canDelete)만 보냄
+ * - 작성자 회원 번호는 화면에 보내지 않고, 대신 삭제 가능 여부(canDelete)·내 글 여부(mine)만 보냄
+ * - 신고가 3개(BLIND_AT) 쌓인 글은 내용을 가려서 보냄 (관리자에게는 그대로)
  */
 @Slf4j
 @RestController
@@ -75,6 +78,7 @@ public class StockBoardController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> list(@RequestParam(required = false) Long stockId,
                                                     @RequestParam(defaultValue = "1") int page,
+                                                    @RequestParam(defaultValue = "latest") String sort,
                                                     HttpServletRequest request) {
 
         if (stockId == null) return fail(HttpStatus.BAD_REQUEST, "종목을 확인해주세요.");
@@ -86,17 +90,32 @@ public class StockBoardController {
 
             List<Map<String, Object>> posts = new ArrayList<>();
 
-            for (StockBoardVO p : stockBoardService.getPosts(stockId, safePage, PAGE_SIZE)) {
+            Long viewerId = (loginUser == null) ? null : loginUser.getId();
+            boolean admin = isAdmin(loginUser);
+
+            for (StockBoardVO p : stockBoardService.getPosts(stockId, safePage, PAGE_SIZE, viewerId, sort)) {
+
+                boolean deleted = Boolean.TRUE.equals(p.getDeleted());
+                boolean mine = viewerId != null && viewerId.equals(p.getUserId());
+                boolean blinded = !deleted && p.getReportCount() != null && p.getReportCount() >= IStockBoardService.BLIND_AT;
+
                 Map<String, Object> row = new HashMap<>();
                 row.put("postId", p.getPostId());
                 row.put("nickname", p.getNickname());
-                row.put("opinion", p.getOpinion());
-                row.put("content", p.getContent());
+                // 가려진 글: 관리자·작성자 본인만 내용을 봄
+                row.put("opinion", blinded && !admin && !mine ? null : p.getOpinion());
+                row.put("content", blinded && !admin && !mine ? null : p.getContent());
                 row.put("insAt", p.getInsAt());
-                row.put("deleted", Boolean.TRUE.equals(p.getDeleted()));
+                row.put("deleted", deleted);
+                row.put("blinded", blinded);
                 row.put("commentCount", p.getCommentCount());
-                row.put("canDelete", !Boolean.TRUE.equals(p.getDeleted()) && canDelete(loginUser, p.getUserId()));
+                row.put("likeCount", p.getLikeCount() == null ? 0 : p.getLikeCount());
+                row.put("liked", Boolean.TRUE.equals(p.getLiked()));
+                row.put("reported", Boolean.TRUE.equals(p.getReported()));
+                row.put("mine", mine);
+                row.put("canDelete", !deleted && canDelete(loginUser, p.getUserId()));
                 posts.add(row);
+
             }
 
             StockBoardVO opinion = stockBoardService.getOpinionCount(stockId);
@@ -142,6 +161,7 @@ public class StockBoardController {
                 row.put("content", p.getContent());
                 row.put("insAt", p.getInsAt());
                 row.put("commentCount", p.getCommentCount());
+                row.put("likeCount", p.getLikeCount() == null ? 0 : p.getLikeCount());
                 posts.add(row);
             }
 
@@ -211,6 +231,69 @@ public class StockBoardController {
 
             log.error("토론 글 삭제 오류", e);
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "글을 삭제하지 못했습니다.");
+
+        }
+
+    }
+
+    // 좋아요 누르기/취소
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<Map<String, Object>> like(@PathVariable Long postId, HttpServletRequest request) {
+
+        UserLoginVO loginUser = getLoginUser(request);
+        if (loginUser == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 좋아요를 누를 수 있어요.");
+
+        try {
+
+            StockBoardVO result = stockBoardService.toggleLike(loginUser.getId(), postId);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", true);
+            body.put("liked", result.getLiked());
+            body.put("likeCount", result.getLikeCount());
+
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        } catch (Exception e) {
+
+            log.error("토론 좋아요 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "좋아요를 저장하지 못했습니다.");
+
+        }
+
+    }
+
+    // 신고
+    @PostMapping("/{postId}/report")
+    public ResponseEntity<Map<String, Object>> report(@PathVariable Long postId,
+                                                      @RequestBody StockBoardVO vo,
+                                                      HttpServletRequest request) {
+
+        UserLoginVO loginUser = getLoginUser(request);
+        if (loginUser == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 신고할 수 있어요.");
+
+        try {
+
+            StockBoardVO result = stockBoardService.report(loginUser.getId(), postId, vo.getReason(), vo.getMemo());
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", true);
+            body.put("blinded", result.getBlinded());
+
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        } catch (Exception e) {
+
+            log.error("토론 신고 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "신고를 저장하지 못했습니다.");
 
         }
 

@@ -54,4 +54,25 @@ public interface StockBoardDao {
 
     // 댓글 삭제 (소프트 삭제)
     int deleteComment(StockBoardVO vo);
+
+    // 좋아요 (이미 눌렀으면 0) / 취소 (안 눌렀으면 0) / 개수
+    int insertLike(StockBoardVO vo);
+
+    int deleteLike(StockBoardVO vo);
+
+    int countLike(Long postId);
+
+    // 신고 (이미 신고했으면 0) / 처리 안 된 신고 수
+    int insertReport(StockBoardVO vo);
+
+    int countOpenReport(Long postId);
+
+    // 관리자: 처리할 신고가 있는 글 / 그 개수 / 한꺼번에 처리 / 삭제된 글 포함 글 정보
+    List<StockBoardVO> selectReportedPosts();
+
+    int countReportedPosts();
+
+    int handleReports(StockBoardVO vo);
+
+    StockBoardVO selectPostAny(Long postId);
 }

@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.stock.service;
 
+import com.sklabs1037.sklabs1037.ops.service.OpsAlertService;
 import com.sklabs1037.sklabs1037.stock.dao.StockBoardDao;
 import com.sklabs1037.sklabs1037.stock.vo.StockBoardVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,10 @@ public class StockBoardServiceImpl implements IStockBoardService {
     // 고를 수 있는 의견
     private static final Set<String> OPINIONS = Set.of("UP", "DOWN");
 
+    // 신고 사유 (도배 / 욕설·비방 / 광고 / 허위 정보 / 기타)
+    private static final Set<String> REASONS = Set.of("SPAM", "ABUSE", "AD", "FALSE", "ETC");
+    private static final int REPORT_MEMO_MAX = 200;
+
     @Autowired
     private StockBoardDao stockBoardDao;
 
@@ -32,11 +37,17 @@ public class StockBoardServiceImpl implements IStockBoardService {
     @Autowired
     private BoardLiveHub boardLiveHub;
 
+    // 신고가 쌓여 글이 가려지면 관리자 메일
+    @Autowired
+    private OpsAlertService opsAlertService;
+
     @Override
-    public List<StockBoardVO> getPosts(Long stockId, int page, int size) {
+    public List<StockBoardVO> getPosts(Long stockId, int page, int size, Long viewerId, String sort) {
 
         StockBoardVO param = new StockBoardVO();
         param.setStockId(stockId);
+        param.setViewerId(viewerId);
+        param.setSort("popular".equals(sort) ? "popular" : "latest");
         param.setLimit(size);
         param.setOffset((page - 1) * size);
 
@@ -165,6 +176,121 @@ public class StockBoardServiceImpl implements IStockBoardService {
         stockBoardDao.deleteComment(param);
 
         notifyComment(comment.getPostId(), true);
+
+    }
+
+    @Override
+    public StockBoardVO toggleLike(Long userId, Long postId) {
+
+        StockBoardVO post = (postId == null) ? null : stockBoardDao.selectPost(postId);
+        if (post == null) throw new IllegalArgumentException("삭제되었거나 없는 글입니다.");
+        if (post.getUserId().equals(userId)) throw new IllegalArgumentException("내 글에는 좋아요를 누를 수 없어요.");
+
+        StockBoardVO param = new StockBoardVO();
+        param.setPostId(postId);
+        param.setUserId(userId);
+
+        // 이미 눌렀으면 취소, 아니면 누르기 (동시에 두 번 눌러도 PK 때문에 한 번만 들어감)
+        boolean liked = stockBoardDao.deleteLike(param) == 0;
+        if (liked) stockBoardDao.insertLike(param);
+
+        StockBoardVO result = new StockBoardVO();
+        result.setLiked(liked);
+        result.setLikeCount(stockBoardDao.countLike(postId));
+
+        return result;
+
+    }
+
+    @Override
+    public StockBoardVO report(Long userId, Long postId, String reason, String memo) {
+
+        StockBoardVO post = (postId == null) ? null : stockBoardDao.selectPost(postId);
+        if (post == null) throw new IllegalArgumentException("삭제되었거나 없는 글입니다.");
+        if (post.getUserId().equals(userId)) throw new IllegalArgumentException("내 글은 신고할 수 없어요.");
+        if (reason == null || !REASONS.contains(reason)) throw new IllegalArgumentException("신고 사유를 골라주세요.");
+
+        String text = (memo == null) ? "" : memo.trim();
+        if (text.length() > REPORT_MEMO_MAX) throw new IllegalArgumentException("신고 내용은 " + REPORT_MEMO_MAX + "자까지 쓸 수 있습니다.");
+
+        StockBoardVO param = new StockBoardVO();
+        param.setPostId(postId);
+        param.setUserId(userId);
+        param.setReason(reason);
+        param.setMemo(text.isEmpty() ? null : text);
+
+        if (stockBoardDao.insertReport(param) == 0) throw new IllegalArgumentException("이미 신고한 글이에요.");
+
+        int open = stockBoardDao.countOpenReport(postId);
+
+        // 딱 기준에 닿은 순간에만 (그 뒤 신고마다 메일이 가지 않게)
+        boolean blinded = open == BLIND_AT;
+
+        if (blinded) {
+
+            // 보고 있는 화면들이 목록을 다시 받아서 가림 처리
+            boardLiveHub.deleted(post.getStockId(), postId, true);
+
+            // 메일은 시간이 걸리니 따로 (신고 응답은 바로)
+            Thread mail = new Thread(() -> opsAlertService.alert("BOARD_REPORT_" + postId,
+                    "신고가 쌓여 토론 글이 가려졌어요",
+                    "토론 글 #" + postId + "에 신고가 " + BLIND_AT + "개 쌓여 화면에서 가렸어요.\n"
+                            + "관리자 화면 → 🚩 신고 관리에서 삭제하거나 \"문제 없음\"으로 되돌려주세요."), "board-report-mail");
+            mail.setDaemon(true);
+            mail.start();
+
+        }
+
+        StockBoardVO result = new StockBoardVO();
+        result.setBlinded(open >= BLIND_AT);
+        result.setReportCount(open);
+
+        return result;
+
+    }
+
+    @Override
+    public List<StockBoardVO> getReportedPosts() {
+
+        return stockBoardDao.selectReportedPosts();
+
+    }
+
+    @Override
+    public int countReportedPosts() {
+
+        return stockBoardDao.countReportedPosts();
+
+    }
+
+    @Override
+    public void handleReport(Long adminId, Long postId, String action) {
+
+        StockBoardVO post = (postId == null) ? null : stockBoardDao.selectPostAny(postId);
+        if (post == null) throw new IllegalArgumentException("없는 글입니다.");
+
+        StockBoardVO param = new StockBoardVO();
+        param.setPostId(postId);
+        param.setUserId(adminId);
+
+        if ("DELETE".equals(action)) {
+
+            stockBoardDao.deletePost(param);          // 이미 지워진 글이면 0건 (그래도 신고는 정리)
+            param.setStatus("DELETED");
+
+        } else if ("DISMISS".equals(action)) {
+
+            param.setStatus("DISMISSED");             // 신고만 정리 → 가림 풀림
+
+        } else {
+
+            throw new IllegalArgumentException("처리 방법을 확인해주세요.");
+
+        }
+
+        if (stockBoardDao.handleReports(param) == 0) throw new IllegalArgumentException("이미 처리된 신고입니다.");
+
+        boardLiveHub.deleted(post.getStockId(), postId, true);
 
     }
 

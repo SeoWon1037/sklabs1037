@@ -50,11 +50,46 @@
         AND C.POST_ID = P.ID
         AND C.DEL_DAY IS NULL
         )                                                          AS COMMENT_COUNT
+        ,(
+        SELECT  COUNT(*)
+        FROM T_STOCK_POST_LIKE L
+        WHERE 1=1
+        AND L.POST_ID = P.ID
+        )                                                          AS LIKE_COUNT
+        ,EXISTS (
+        SELECT  1
+        FROM T_STOCK_POST_LIKE L
+        WHERE 1=1
+        AND L.POST_ID = P.ID
+        AND L.USER_ID = #{viewerId, jdbcType=BIGINT}
+        )                                                          AS LIKED
+        ,(
+        SELECT  COUNT(*)
+        FROM T_STOCK_POST_REPORT R
+        WHERE 1=1
+        AND R.POST_ID = P.ID
+        AND R.STATUS  = 'OPEN'
+        )                                                          AS REPORT_COUNT
+        ,EXISTS (
+        SELECT  1
+        FROM T_STOCK_POST_REPORT R
+        WHERE 1=1
+        AND R.POST_ID = P.ID
+        AND R.USER_ID = #{viewerId, jdbcType=BIGINT}
+        )                                                          AS REPORTED
         FROM T_STOCK_POST P
         JOIN T_USER U ON U.ID = P.USER_ID
         WHERE 1=1
         <include refid="visiblePost"/>
-        ORDER BY P.ID DESC
+        <choose>
+            <!-- 인기순: 좋아요 많은 순 (같으면 최신) -->
+            <when test="sort == 'popular'">
+                ORDER BY LIKE_COUNT DESC, P.ID DESC
+            </when>
+            <otherwise>
+                ORDER BY P.ID DESC
+            </otherwise>
+        </choose>
         LIMIT  #{limit}
         OFFSET  #{offset}
     </select>
@@ -80,11 +115,25 @@
         AND C.POST_ID = P.ID
         AND C.DEL_DAY IS NULL
         )                                                          AS COMMENT_COUNT
+        ,(
+        SELECT  COUNT(*)
+        FROM T_STOCK_POST_LIKE L
+        WHERE 1=1
+        AND L.POST_ID = P.ID
+        )                                                          AS LIKE_COUNT
         FROM T_STOCK_POST P
         JOIN T_STOCK S ON S.ID = P.STOCK_ID
         JOIN T_USER  U ON U.ID = P.USER_ID
         WHERE 1=1
         AND P.DEL_DAY IS NULL
+        <!-- 신고가 쌓여 가려진 글은 메인에서 빼기 (기준 3개 = StockBoardServiceImpl.BLIND_AT) -->
+        AND (
+        SELECT  COUNT(*)
+        FROM T_STOCK_POST_REPORT R
+        WHERE 1=1
+        AND R.POST_ID = P.ID
+        AND R.STATUS  = 'OPEN'
+        ) <![CDATA[<]]> 3
         ORDER BY P.ID DESC
         LIMIT  #{limit}
     </select>
@@ -236,5 +285,155 @@
         AND ID      = #{commentId}
         AND DEL_DAY IS NULL
     </update>
+
+
+    <!-- ============================================ -->
+    <!-- 좋아요                                         -->
+    <!-- ============================================ -->
+
+    <!-- 좋아요 (이미 눌렀으면 0건) -->
+    <insert id="insertLike"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        INSERT INTO T_STOCK_POST_LIKE (
+        POST_ID
+        ,USER_ID
+        )
+        VALUES (
+        #{postId}
+        ,#{userId}
+        )
+        ON CONFLICT (POST_ID, USER_ID) DO NOTHING
+    </insert>
+
+    <!-- 좋아요 취소 (안 눌렀으면 0건) -->
+    <delete id="deleteLike"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        DELETE FROM T_STOCK_POST_LIKE
+        WHERE 1=1
+        AND POST_ID = #{postId}
+        AND USER_ID = #{userId}
+    </delete>
+
+    <!-- 글 하나의 좋아요 수 -->
+    <select id="countLike"
+            resultType="int">
+        SELECT  COUNT(*)
+        FROM T_STOCK_POST_LIKE
+        WHERE 1=1
+        AND POST_ID = #{postId}
+    </select>
+
+    <!-- ============================================ -->
+    <!-- 신고                                           -->
+    <!-- ============================================ -->
+
+    <!-- 신고 (같은 사람이 같은 글을 또 신고하면 0건) -->
+    <insert id="insertReport"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        INSERT INTO T_STOCK_POST_REPORT (
+        POST_ID
+        ,USER_ID
+        ,REASON
+        ,MEMO
+        )
+        VALUES (
+        #{postId}
+        ,#{userId}
+        ,#{reason}
+        ,#{memo}
+        )
+        ON CONFLICT (POST_ID, USER_ID) DO NOTHING
+    </insert>
+
+    <!-- 처리 안 된 신고 수 -->
+    <select id="countOpenReport"
+            resultType="int">
+        SELECT  COUNT(*)
+        FROM T_STOCK_POST_REPORT
+        WHERE 1=1
+        AND POST_ID = #{postId}
+        AND STATUS  = 'OPEN'
+    </select>
+
+    <!--
+        관리자: 처리할 신고가 있는 글 (신고 많은 순)
+        - 이미 삭제된 글도 보여줌 (작성자가 지웠어도 신고는 정리해야 하니까)
+    -->
+    <select id="selectReportedPosts"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        SELECT  P.ID                                                       AS POST_ID
+        ,P.STOCK_ID
+        ,S.SYMBOL
+        ,S.NAME                                                     AS STOCK_NAME
+        ,U.NICKNAME
+        ,P.OPINION
+        ,P.CONTENT
+        ,(EXTRACT(EPOCH FROM P.INS_DAY) * 1000)::BIGINT              AS INS_AT
+        ,(P.DEL_DAY IS NOT NULL)                                    AS DELETED
+        ,R.REPORT_COUNT
+        ,R.REASONS
+        ,R.MEMOS
+        ,R.FIRST_REPORT_AT
+        FROM (
+        SELECT  X.POST_ID
+        ,COUNT(*)::INT                                              AS REPORT_COUNT
+        ,(EXTRACT(EPOCH FROM MIN(X.INS_DAY)) * 1000)::BIGINT        AS FIRST_REPORT_AT
+        ,(
+        SELECT  STRING_AGG(Y.REASON || ':' || Y.CNT, ',' ORDER BY Y.CNT DESC)
+        FROM (
+        SELECT  Z.REASON
+        ,COUNT(*) AS CNT
+        FROM T_STOCK_POST_REPORT Z
+        WHERE 1=1
+        AND Z.POST_ID = X.POST_ID
+        AND Z.STATUS  = 'OPEN'
+        GROUP BY Z.REASON
+        ) Y
+        )                                                          AS REASONS
+        ,STRING_AGG(NULLIF(TRIM(X.MEMO), ''), ' / ')                AS MEMOS
+        FROM T_STOCK_POST_REPORT X
+        WHERE 1=1
+        AND X.STATUS = 'OPEN'
+        GROUP BY X.POST_ID
+        ) R
+        JOIN T_STOCK_POST P ON P.ID = R.POST_ID
+        JOIN T_STOCK      S ON S.ID = P.STOCK_ID
+        JOIN T_USER       U ON U.ID = P.USER_ID
+        ORDER BY R.REPORT_COUNT DESC, R.FIRST_REPORT_AT
+        LIMIT  100
+    </select>
+
+    <!-- 관리자: 처리할 신고 수 (관리자 탭 숫자) -->
+    <select id="countReportedPosts"
+            resultType="int">
+        SELECT  COUNT(DISTINCT POST_ID)
+        FROM T_STOCK_POST_REPORT
+        WHERE 1=1
+        AND STATUS = 'OPEN'
+    </select>
+
+    <!-- 관리자: 그 글의 처리 안 된 신고를 한꺼번에 처리 -->
+    <update id="handleReports"
+            parameterType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        UPDATE T_STOCK_POST_REPORT
+        SET     STATUS      = #{status}
+        ,HANDLED_BY  = #{userId}
+        ,HANDLED_DAY = NOW()
+        WHERE 1=1
+        AND POST_ID = #{postId}
+        AND STATUS  = 'OPEN'
+    </update>
+
+    <!-- 관리자: 글 정보 (삭제된 글 포함, 신고 처리용) -->
+    <select id="selectPostAny"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockBoardVO">
+        SELECT  P.ID                    AS POST_ID
+        ,P.STOCK_ID
+        ,P.USER_ID
+        ,(P.DEL_DAY IS NOT NULL)  AS DELETED
+        FROM T_STOCK_POST P
+        WHERE 1=1
+        AND P.ID = #{postId}
+    </select>
 
 </mapper>

@@ -23,6 +23,7 @@ import AdminImprovePage from './pages/admin/AdminImprovePage'
 import AdminQaPage from './pages/admin/AdminQaPage'
 import LeaguePage from './pages/league/LeaguePage'
 import PredictPage from './pages/predict/PredictPage'
+import PersonaPage from './pages/persona/PersonaPage'
 import LottoPage from './pages/lotto/LottoPage'
 import BeautyLabPage from './pages/beauty/BeautyLabPage'
 
@@ -39,6 +40,7 @@ function App() {
         <Route path="/mock" element={<MockTradePage />} />              {/* 모의투자 */}
         <Route path="/league" element={<LeaguePage />} />                {/* 🤖 AI vs 사람 투자 리그 */}
         <Route path="/predict" element={<PredictPage />} />              {/* 🎯 오를까 내릴까 (매일 예측 게임) */}
+        <Route path="/persona" element={<PersonaPage />} />              {/* 🧭 투자 성향 테스트 */}
         <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
         <Route path="/admin" element={<AdminOpsPage />} />               {/* 관리자: 운영 상태 (기본) */}
         <Route path="/admin/ops" element={<AdminOpsPage />} />           {/* 관리자: 운영 상태 (메일 속 링크) */}

@@ -1,0 +1,176 @@
+/* ============================================
+   🧭 투자 성향 테스트 (/persona)
+   ============================================ */
+.ps-page {
+  --ps-muted: color-mix(in srgb, var(--text) 58%, transparent);
+  --ps-soft: color-mix(in srgb, var(--text) 4%, transparent);
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+.ps-intro { text-align: center; }
+.ps-intro h1 { margin: 12px 0 8px; font-size: 30px; letter-spacing: -0.5px; }
+.ps-icon { display: block; font-size: 64px; line-height: 1; }
+.ps-desc { margin: 0; color: var(--ps-muted); font-size: 15px; line-height: 1.7; }
+.ps-preview {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0;
+  font-size: 28px;
+}
+.ps-note {
+  margin: 16px 0 0;
+  color: var(--ps-muted);
+  font-size: 12px;
+  text-align: center;
+}
+.ps-eyebrow {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ----- 문항 ----- */
+.ps-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ps-soft);
+}
+.ps-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.25s;
+}
+.ps-step { margin: 20px 0 6px; color: var(--primary); font-size: 14px; font-weight: 700; }
+.ps-q { margin: 0 0 20px; font-size: 24px; line-height: 1.4; letter-spacing: -0.3px; }
+.ps-options { display: flex; flex-direction: column; gap: 10px; }
+.ps-option {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+/* 마우스가 있는 기기에서만 (휴대폰은 누른 자리에 다음 문항 선택지가 강조돼 보이는 문제 방지) */
+@media (hover: hover) {
+  .ps-option:hover { border-color: var(--primary); }
+}
+.ps-option-on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.ps-back {
+  margin-top: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ps-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ----- 결과 ----- */
+.ps-result {
+  padding: 28px 20px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 18%, transparent), var(--ps-soft));
+  text-align: center;
+}
+.ps-result h1 { margin: 10px 0 4px; font-size: 30px; }
+.ps-short { margin: 0 0 12px; color: var(--primary); font-weight: 700; }
+.ps-stat { margin: 14px 0 0; font-size: 14px; }
+
+.ps-card {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.ps-card h2 { margin: 0 0 10px; font-size: 16px; }
+.ps-card p { margin: 0; font-size: 14px; line-height: 1.7; }
+.ps-card ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.8; }
+.ps-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ps-two .ps-card { margin-top: 14px; }
+
+.ps-axis {
+  display: grid;
+  grid-template-columns: 76px 1fr 76px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ps-muted);
+}
+.ps-axis span:last-child { text-align: right; }
+.ps-axis-on { color: var(--text); font-weight: 700; }
+.ps-axis-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ps-soft);
+}
+.ps-axis-bar span {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  transform: translate(-50%, -50%);
+}
+
+.ps-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.ps-link {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ps-link:hover { border-color: var(--primary); }
+
+.ps-dist { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0 !important; list-style: none; }
+.ps-dist li {
+  display: grid;
+  grid-template-columns: 140px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.ps-dist b { text-align: right; font-variant-numeric: tabular-nums; }
+.ps-dist-bar { height: 8px; border-radius: 999px; background: var(--ps-soft); overflow: hidden; }
+.ps-dist-bar span { display: block; height: 100%; background: color-mix(in srgb, var(--text) 30%, transparent); }
+.ps-dist-me { font-weight: 700; }
+.ps-dist-me .ps-dist-bar span { background: var(--primary); }
+
+.ps-actions { display: flex; gap: 8px; margin-top: 20px; }
+.ps-btn {
+  flex: 1;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ps-btn-primary { border-color: var(--primary); background: var(--primary); color: var(--primary-text); }
+.ps-start { width: 100%; max-width: 320px; }
+
+@media (max-width: 560px) {
+  .ps-two { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .ps-q { font-size: 21px; }
+  .ps-dist li { grid-template-columns: 116px 1fr 44px; }
+}

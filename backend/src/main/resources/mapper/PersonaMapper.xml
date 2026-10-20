@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🧭 투자 성향 테스트 결과
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.persona.dao.PersonaDao">
+
+    <insert id="insertResult">
+        INSERT INTO T_PERSONA_RESULT (
+               USER_ID
+              ,TYPE_CODE
+              ,RISK
+              ,HORIZON
+              ,BASIS
+              ,DISCIPLINE
+        ) VALUES (
+               #{userId, jdbcType=BIGINT}
+              ,#{typeCode}
+              ,#{risk}
+              ,#{horizon}
+              ,#{basis}
+              ,#{discipline}
+        )
+    </insert>
+
+    <select id="selectTypeCounts"
+            resultType="java.util.HashMap">
+        SELECT  TYPE_CODE   AS "typeCode"
+               ,COUNT(*)::INT AS "count"
+          FROM T_PERSONA_RESULT
+         GROUP BY TYPE_CODE
+    </select>
+</mapper>

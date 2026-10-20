@@ -36,6 +36,8 @@ const SHORTCUTS = [
   { icon: '🏭', label: '기업 정보', to: `/ai?q=${encodeURIComponent('')}` },
   { icon: '🧭', label: '투자 성향', to: '/persona' },
   { icon: '📰', label: '뉴스 퀴즈', to: '/quiz' },
+  { icon: '⚔️', label: '친구 대결', to: '/duel' },
+  { icon: '🏅', label: '내 활동', to: '/activity' },
 ]
 
 // 오른쪽 아래 "지금 토론 중"에 보여줄 글 개수

@@ -144,4 +144,92 @@
            AND USER_ID = #{userId}
            AND INS_DAY <![CDATA[>=]]> (#{day}::TIMESTAMP AT TIME ZONE 'Asia/Seoul')
     </select>
+    <!-- ===== 기간 숫자 (🤖 주간 코치 · ⚔️ 대결 · 📸 공유 카드) : from ~ to (둘 다 포함, 한국 날짜) ===== -->
+    <select id="selectRangeStats" resultType="java.util.LinkedHashMap">
+        SELECT  (SELECT COUNT(*) FROM T_MOCK_TRADE T WHERE T.USER_ID = #{userId} AND T.INS_DAY >= (#{from}::TIMESTAMP AT TIME ZONE 'Asia/Seoul') AND T.INS_DAY &lt; ((#{to}::DATE + 1)::TIMESTAMP AT TIME ZONE 'Asia/Seoul'))::INT AS "trades"
+               ,(SELECT COUNT(*)
+                   FROM T_PREDICT_VOTE V
+                   JOIN T_PREDICT_ITEM I ON I.ID = V.ITEM_ID
+                  WHERE V.USER_ID = #{userId}
+                    AND I.TRADE_DATE BETWEEN #{from} AND #{to})::INT                                    AS "predictVotes"
+               ,(SELECT COUNT(*)
+                   FROM T_PREDICT_VOTE V
+                   JOIN T_PREDICT_ITEM I ON I.ID = V.ITEM_ID
+                  WHERE V.USER_ID = #{userId}
+                    AND V.CORRECT IS NOT NULL
+                    AND I.TRADE_DATE BETWEEN #{from} AND #{to})::INT                                    AS "predictGraded"
+               ,(SELECT COUNT(*)
+                   FROM T_PREDICT_VOTE V
+                   JOIN T_PREDICT_ITEM I ON I.ID = V.ITEM_ID
+                  WHERE V.USER_ID = #{userId}
+                    AND V.CORRECT = TRUE
+                    AND I.TRADE_DATE BETWEEN #{from} AND #{to})::INT                                    AS "predictHits"
+               ,(SELECT COUNT(*) FROM T_NEWS_QUIZ_PLAY P
+                  WHERE P.USER_ID = #{userId} AND P.QUIZ_DATE BETWEEN #{from} AND #{to})::INT          AS "quizPlays"
+               ,(SELECT COALESCE(SUM(P.SCORE), 0) FROM T_NEWS_QUIZ_PLAY P
+                  WHERE P.USER_ID = #{userId} AND P.QUIZ_DATE BETWEEN #{from} AND #{to})::INT          AS "quizScore"
+               ,(SELECT COUNT(*) FROM T_STOCK_POST S
+                  WHERE S.USER_ID = #{userId} AND S.DEL_DAY IS NULL AND S.INS_DAY >= (#{from}::TIMESTAMP AT TIME ZONE 'Asia/Seoul') AND S.INS_DAY &lt; ((#{to}::DATE + 1)::TIMESTAMP AT TIME ZONE 'Asia/Seoul'))::INT            AS "boardPosts"
+               ,(SELECT COUNT(*) FROM T_STOCK_COMMENT C
+                  WHERE C.USER_ID = #{userId} AND C.DEL_DAY IS NULL AND C.INS_DAY >= (#{from}::TIMESTAMP AT TIME ZONE 'Asia/Seoul') AND C.INS_DAY &lt; ((#{to}::DATE + 1)::TIMESTAMP AT TIME ZONE 'Asia/Seoul'))::INT            AS "comments"
+               ,(SELECT COUNT(*) FROM T_ATTENDANCE A
+                  WHERE A.USER_ID = #{userId} AND A.DAY BETWEEN #{from} AND #{to})::INT                AS "attendDays"
+               ,(SELECT COUNT(*) FROM T_AI_CHAT_LOG L WHERE L.USER_ID = #{userId} AND L.INS_DAY >= (#{from}::TIMESTAMP AT TIME ZONE 'Asia/Seoul') AND L.INS_DAY &lt; ((#{to}::DATE + 1)::TIMESTAMP AT TIME ZONE 'Asia/Seoul'))::INT AS "aiChats"
+               ,(SELECT COUNT(*) FROM T_BEAUTY_LOG B WHERE B.USER_ID = #{userId} AND B.INS_DAY >= (#{from}::TIMESTAMP AT TIME ZONE 'Asia/Seoul') AND B.INS_DAY &lt; ((#{to}::DATE + 1)::TIMESTAMP AT TIME ZONE 'Asia/Seoul'))::INT  AS "beautyLogs"
+    </select>
+
+    <!-- 그 기간에 들어온 사람 (출석·예측·퀴즈·거래 중 하나라도) -->
+    <select id="selectActiveUsers" resultType="java.lang.Long">
+        SELECT USER_ID FROM (
+            SELECT A.USER_ID FROM T_ATTENDANCE A WHERE A.DAY BETWEEN #{from} AND #{to}
+            UNION
+            SELECT P.USER_ID FROM T_NEWS_QUIZ_PLAY P WHERE P.QUIZ_DATE BETWEEN #{from} AND #{to}
+            UNION
+            SELECT V.USER_ID FROM T_PREDICT_VOTE V JOIN T_PREDICT_ITEM I ON I.ID = V.ITEM_ID WHERE I.TRADE_DATE BETWEEN #{from} AND #{to}
+            UNION
+            SELECT T.USER_ID FROM T_MOCK_TRADE T WHERE T.INS_DAY >= (#{from}::TIMESTAMP AT TIME ZONE 'Asia/Seoul') AND T.INS_DAY &lt; ((#{to}::DATE + 1)::TIMESTAMP AT TIME ZONE 'Asia/Seoul')
+        ) X
+        JOIN T_USER U ON U.ID = X.USER_ID AND U.DEL_DAY IS NULL
+        ORDER BY USER_ID
+        LIMIT  #{limit}
+    </select>
+
+    <select id="selectNickname" resultType="java.lang.String">
+        SELECT NICKNAME FROM T_USER WHERE ID = #{userId}
+    </select>
+
+    <!-- ===== 🤖 AI 주간 코치 ===== -->
+    <select id="selectCoach" resultType="java.util.LinkedHashMap">
+        SELECT  STATS_JSON                                      AS "statsJson"
+               ,REPORT_JSON                                     AS "reportJson"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT    AS "insAt"
+          FROM T_WEEKLY_COACH
+         WHERE 1=1
+           AND USER_ID    = #{userId}
+           AND WEEK_START = #{weekStart}
+    </select>
+
+    <insert id="insertCoach">
+        INSERT INTO T_WEEKLY_COACH (USER_ID, WEEK_START, STATS_JSON, REPORT_JSON)
+        VALUES (#{userId}, #{weekStart}, #{statsJson}, #{reportJson})
+        ON CONFLICT (USER_ID, WEEK_START) DO NOTHING
+    </insert>
+
+    <!-- ===== 📸 공유 카드 ===== -->
+    <insert id="insertShare">
+        INSERT INTO T_SHARE_CARD (CODE, USER_ID, DATA_JSON)
+        VALUES (#{code}, #{userId}, #{dataJson})
+    </insert>
+
+    <select id="selectShare" resultType="java.lang.String">
+        SELECT DATA_JSON FROM T_SHARE_CARD WHERE CODE = #{code}
+    </select>
+
+    <select id="countSharesToday" resultType="int">
+        SELECT COUNT(*)
+          FROM T_SHARE_CARD
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND INS_DAY >= NOW() - INTERVAL '1 day'
+    </select>
 </mapper>

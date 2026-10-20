@@ -1,0 +1,35 @@
+/* ===== 📸 공유 카드 ===== */
+.sc-card {
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 7% 7.5%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #6d28d9 55%, #db2777 100%);
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+}
+.sc-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.sc-top strong { font-size: 18px; font-weight: 800; }
+.sc-top span { opacity: 0.8; }
+.sc-title { margin: 7% 0 0; font-size: clamp(22px, 7vw, 28px); font-weight: 800; line-height: 1.25; }
+.sc-streak { margin: 6px 0 0; color: #fde68a; font-size: 14px; font-weight: 700; }
+.sc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
+.sc-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.sc-stat span { font-size: 12px; opacity: 0.85; }
+.sc-stat b { font-size: clamp(18px, 5.6vw, 24px); font-variant-numeric: tabular-nums; }
+.sc-badges { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; font-size: 14px; font-weight: 700; }
+.sc-badge-icons { display: flex; gap: 6px; font-size: 22px; }
+.sc-badge-icons i { font-style: normal; }
+.sc-persona { margin: 6px 0 0; font-size: 13px; opacity: 0.9; }
+.sc-foot { margin: auto 0 0; padding-top: 10px; font-size: 12px; opacity: 0.7; }

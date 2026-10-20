@@ -248,6 +248,8 @@ public class JobRunService {
             Map.entry("QA_BOT", "AI QA 봇 화면 점검"),
             Map.entry("PREDICT_GRADE", "예측 게임 채점"),
             Map.entry("NEWS_QUIZ", "뉴스 퀴즈 출제"),
+            Map.entry("WEEKLY_COACH", "AI 주간 코치"),
+            Map.entry("DUEL_SETTLE", "친구 대결 정산"),
             Map.entry("WATCHDOG", "작업 감시")
     );
 

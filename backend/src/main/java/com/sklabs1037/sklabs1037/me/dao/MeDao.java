@@ -46,4 +46,24 @@ public interface MeDao {
     int countPredictItems(@Param("tradeDate") LocalDate tradeDate);
 
     int countBoardPostsToday(@Param("userId") Long userId, @Param("day") LocalDate day);
+
+    // ===== 기간 숫자 (🤖 주간 코치 · ⚔️ 대결 · 📸 공유 카드) =====
+    Map<String, Object> selectRangeStats(@Param("userId") Long userId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    List<Long> selectActiveUsers(@Param("from") LocalDate from, @Param("to") LocalDate to, @Param("limit") int limit);
+
+    String selectNickname(@Param("userId") Long userId);
+
+    // ===== 🤖 AI 주간 코치 =====
+    Map<String, Object> selectCoach(@Param("userId") Long userId, @Param("weekStart") LocalDate weekStart);
+
+    int insertCoach(@Param("userId") Long userId, @Param("weekStart") LocalDate weekStart,
+                    @Param("statsJson") String statsJson, @Param("reportJson") String reportJson);
+
+    // ===== 📸 공유 카드 =====
+    int insertShare(@Param("code") String code, @Param("userId") Long userId, @Param("dataJson") String dataJson);
+
+    String selectShare(@Param("code") String code);
+
+    int countSharesToday(@Param("userId") Long userId);
 }

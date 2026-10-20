@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    ⚔️ 친구 대결
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.duel.dao.DuelDao">
+
+    <sql id="duelColumns">
+        SELECT  D.ID                                                AS "id"
+               ,D.CODE                                              AS "code"
+               ,D.HOST_ID                                           AS "hostId"
+               ,H.NICKNAME                                          AS "hostName"
+               ,D.GUEST_ID                                          AS "guestId"
+               ,G.NICKNAME                                          AS "guestName"
+               ,D.STATUS                                            AS "status"
+               ,TO_CHAR(D.START_DATE, 'YYYY-MM-DD')                 AS "startDate"
+               ,TO_CHAR(D.END_DATE, 'YYYY-MM-DD')                   AS "endDate"
+               ,D.HOST_SCORE                                        AS "hostScore"
+               ,D.GUEST_SCORE                                       AS "guestScore"
+               ,D.WINNER_ID                                         AS "winnerId"
+               ,(EXTRACT(EPOCH FROM D.INS_DAY) * 1000)::BIGINT      AS "insAt"
+          FROM T_DUEL D
+          JOIN T_USER H ON H.ID = D.HOST_ID
+          LEFT JOIN T_USER G ON G.ID = D.GUEST_ID
+    </sql>
+
+    <insert id="insertDuel">
+        INSERT INTO T_DUEL (CODE, HOST_ID)
+        VALUES (#{code}, #{hostId})
+    </insert>
+
+    <select id="selectByCode" resultType="java.util.LinkedHashMap">
+        <include refid="duelColumns"/>
+         WHERE 1=1
+           AND D.CODE = #{code}
+    </select>
+
+    <select id="selectMine" resultType="java.util.LinkedHashMap">
+        <include refid="duelColumns"/>
+         WHERE 1=1
+           AND (D.HOST_ID = #{userId} OR D.GUEST_ID = #{userId})
+           AND NOT (D.STATUS = 'EXPIRED' AND D.GUEST_ID IS NULL AND D.INS_DAY &lt; NOW() - INTERVAL '14 days')
+         ORDER BY D.ID DESC
+         LIMIT  #{limit}
+    </select>
+
+    <select id="countOpen" resultType="int">
+        SELECT COUNT(*)
+          FROM T_DUEL
+         WHERE 1=1
+           AND (HOST_ID = #{userId} OR GUEST_ID = #{userId})
+           AND STATUS IN ('WAITING', 'ACTIVE')
+    </select>
+
+    <update id="accept">
+        UPDATE T_DUEL
+           SET GUEST_ID   = #{guestId}
+              ,STATUS     = 'ACTIVE'
+              ,START_DATE = #{start}
+              ,END_DATE   = #{end}
+              ,UPD_DAY    = NOW()
+         WHERE 1=1
+           AND CODE      = #{code}
+           AND STATUS    = 'WAITING'
+           AND GUEST_ID IS NULL
+           AND HOST_ID  &lt;&gt; #{guestId}
+           AND INS_DAY   > NOW() - INTERVAL '3 days'
+    </update>
+
+    <update id="cancel">
+        UPDATE T_DUEL
+           SET STATUS  = 'EXPIRED'
+              ,UPD_DAY = NOW()
+         WHERE 1=1
+           AND CODE    = #{code}
+           AND HOST_ID = #{hostId}
+           AND STATUS  = 'WAITING'
+    </update>
+
+    <select id="selectToSettle" resultType="java.util.LinkedHashMap">
+        <include refid="duelColumns"/>
+         WHERE 1=1
+           AND D.STATUS   = 'ACTIVE'
+           AND D.END_DATE &lt; #{today}
+         ORDER BY D.ID
+    </select>
+
+    <update id="settle">
+        UPDATE T_DUEL
+           SET STATUS      = 'DONE'
+              ,HOST_SCORE  = #{hostScore}
+              ,GUEST_SCORE = #{guestScore}
+              ,WINNER_ID   = #{winnerId}
+              ,UPD_DAY     = NOW()
+         WHERE 1=1
+           AND ID     = #{id}
+           AND STATUS = 'ACTIVE'
+    </update>
+
+    <update id="expireWaiting">
+        UPDATE T_DUEL
+           SET STATUS  = 'EXPIRED'
+              ,UPD_DAY = NOW()
+         WHERE 1=1
+           AND STATUS  = 'WAITING'
+           AND INS_DAY &lt; NOW() - INTERVAL '3 days'
+    </update>
+</mapper>

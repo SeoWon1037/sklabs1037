@@ -1,6 +1,8 @@
 package com.sklabs1037.sklabs1037.me.controller;
 
 import com.sklabs1037.sklabs1037.me.service.ActivityService;
+import com.sklabs1037.sklabs1037.me.service.CoachService;
+import com.sklabs1037.sklabs1037.me.service.ShareService;
 import com.sklabs1037.sklabs1037.me.service.NotificationService;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
 import com.sklabs1037.sklabs1037.user.vo.UserLoginVO;
@@ -23,6 +25,9 @@ import java.util.Map;
  *   GET  /api/me/notifications         🔔 알림 목록(최근 30개) + 안 읽은 수
  *   GET  /api/me/notifications/unread  🔔 안 읽은 수만 (상단 종, 60초마다)
  *   POST /api/me/notifications/read { id }   읽음 (id 없으면 전부)
+ *   GET  /api/me/coach                 🤖 이번 주 AI 코치 리포트 + 미션 진행률
+ *   POST /api/me/coach                 🤖 이번 주 리포트 지금 받기 (한 주에 한 번)
+ *   POST /api/me/share                 📸 내 성적 카드 만들기 → { code, card }
  */
 @Slf4j
 @RestController
@@ -34,6 +39,42 @@ public class MeController {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private CoachService coachService;
+
+    @Autowired
+    private ShareService shareService;
+
+    @GetMapping("/coach")
+    public ResponseEntity<Map<String, Object>> coach(HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 볼 수 있어요.");
+
+        return run("AI 코치", () -> coachService.view(userId));
+
+    }
+
+    @PostMapping("/coach")
+    public ResponseEntity<Map<String, Object>> createCoach(HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 받을 수 있어요.");
+
+        return run("AI 코치 리포트", () -> coachService.create(userId));
+
+    }
+
+    @PostMapping("/share")
+    public ResponseEntity<Map<String, Object>> share(HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 만들 수 있어요.");
+
+        return run("공유 카드", () -> shareService.create(userId));
+
+    }
 
     @GetMapping("/activity")
     public ResponseEntity<Map<String, Object>> activity(HttpServletRequest request) {
@@ -105,6 +146,10 @@ public class MeController {
             m.put("success", true);
 
             return ResponseEntity.ok(m);
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
 
         } catch (Exception e) {
 

@@ -5,6 +5,8 @@ import com.sklabs1037.sklabs1037.brief.service.MorningBriefService;
 import com.sklabs1037.sklabs1037.league.service.AiLeagueService;
 import com.sklabs1037.sklabs1037.predict.service.PredictService;
 import com.sklabs1037.sklabs1037.quiz.service.NewsQuizService;
+import com.sklabs1037.sklabs1037.me.service.CoachService;
+import com.sklabs1037.sklabs1037.duel.service.DuelService;
 import com.sklabs1037.sklabs1037.mock.service.IMockTradeService;
 import com.sklabs1037.sklabs1037.mock.service.MockMarketHours;
 import com.sklabs1037.sklabs1037.news.service.INewsCollectService;
@@ -36,7 +38,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE");
 
     @Autowired
     private JobRunService jobRunService;
@@ -67,6 +69,12 @@ public class OpsJobs {
 
     @Autowired
     private NewsQuizService newsQuizService;
+
+    @Autowired
+    private CoachService coachService;
+
+    @Autowired
+    private DuelService duelService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -155,6 +163,12 @@ public class OpsJobs {
 
             // 📰 오늘의 뉴스 퀴즈 출제 (오늘 것이 이미 있으면 건너뜀)
             case "NEWS_QUIZ" -> newsQuizService::generateToday;
+
+            // 🤖 AI 주간 코치 (지난주 들어온 사람마다 리포트 + 미션 3개, 이미 있으면 건너뜀)
+            case "WEEKLY_COACH" -> coachService::runWeekly;
+
+            // ⚔️ 친구 대결 정산 (끝난 대결 점수·승자·알림, 3일 지난 초대 만료)
+            case "DUEL_SETTLE" -> duelService::settleAll;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

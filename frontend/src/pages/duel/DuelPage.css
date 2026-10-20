@@ -1,0 +1,119 @@
+/* ============================================
+   ⚔️ 친구 대결 (/duel, /duel/:code)
+   ============================================ */
+.dl-page {
+  --dl-muted: color-mix(in srgb, var(--text) 58%, transparent);
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+.dl-muted { color: var(--dl-muted); font-size: 13px; }
+.dl-back { color: var(--dl-muted); font-size: 13px; text-decoration: none; }
+.dl-eyebrow { margin: 0; color: var(--primary); font-size: 13px; font-weight: 700; }
+.dl-hero { margin-top: 8px; text-align: center; }
+.dl-hero h1 { margin: 4px 0 8px; font-size: 28px; letter-spacing: -0.5px; word-break: keep-all; }
+.dl-desc { margin: 0; color: var(--dl-muted); font-size: 15px; line-height: 1.6; word-break: keep-all; }
+.dl-rules {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.dl-rules li {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: 150px;
+  padding: 12px 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 13px;
+}
+.dl-rules span { font-size: 22px; }
+.dl-rules b { color: var(--primary); }
+.dl-main-btn { margin-top: 18px; padding-inline: 28px; }
+.dl-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+.dl-error { margin: 12px 0 0; color: #e5484d; font-size: 13px; text-align: center; }
+.dl-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 50;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 13px;
+  transform: translateX(-50%);
+}
+
+/* 내 대결 목록 */
+.dl-list { margin-top: 32px; }
+.dl-list h2 { margin: 0 0 10px; font-size: 17px; }
+.dl-list ul { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.dl-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  text-decoration: none;
+}
+.dl-item:hover { background: var(--hover); }
+.dl-item-main { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.dl-item-main b { font-size: 14px; }
+.dl-item-main small { color: var(--dl-muted); font-size: 12px; }
+.dl-item-score { font-weight: 800; font-variant-numeric: tabular-nums; }
+.dl-chip {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+}
+.dl-active { background: color-mix(in srgb, var(--primary) 20%, transparent); color: var(--primary); }
+.dl-done { background: color-mix(in srgb, #f59e0b 20%, transparent); color: #f59e0b; }
+
+/* 점수판 */
+.dl-board { margin-top: 12px; text-align: center; }
+.dl-result { margin: 8px 0 0; font-size: 26px; }
+.dl-vs { display: flex; align-items: stretch; gap: 8px; margin-top: 16px; }
+.dl-vs-mark { align-self: center; color: var(--dl-muted); font-weight: 800; }
+.dl-side {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 8px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+.dl-lead {
+  border-color: color-mix(in srgb, #f59e0b 60%, var(--border));
+  background: color-mix(in srgb, #f59e0b 8%, transparent);
+}
+.dl-name { overflow: hidden; margin: 0; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.dl-name em {
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
+}
+.dl-score { margin: 6px 0; font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dl-break { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; color: var(--dl-muted); font-size: 12px; list-style: none; }
+.dl-note { margin: 14px 0 0; }
+
+@media (min-width: 641px) {
+  .dl-hero h1 { font-size: 32px; }
+  .dl-score { font-size: 48px; }
+  .dl-break { flex-direction: row; justify-content: center; gap: 10px; }
+}

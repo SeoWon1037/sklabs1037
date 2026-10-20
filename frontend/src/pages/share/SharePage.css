@@ -1,0 +1,8 @@
+/* ===== 📸 공유받은 성적 카드 (/s/:code) ===== */
+.sp-page { max-width: 520px; margin: 0 auto; padding: 24px 16px 64px; }
+.sp-muted { color: color-mix(in srgb, var(--text) 58%, transparent); font-size: 14px; }
+.sp-page > .sp-muted { text-align: center; }
+.sp-cta { margin-top: 28px; text-align: center; }
+.sp-cta h1 { margin: 0 0 6px; font-size: 22px; }
+.sp-cta p { margin: 0; }
+.sp-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }

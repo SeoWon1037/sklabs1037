@@ -1,0 +1,64 @@
+/* ===== 🤖 AI 주간 코치 ===== */
+.coach {
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  border-radius: 18px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 12%, transparent), transparent 70%);
+}
+.coach h2 { margin: 6px 0 8px; font-size: 19px; line-height: 1.4; word-break: keep-all; }
+.coach-eyebrow { margin: 0; color: var(--primary); font-size: 12px; font-weight: 700; }
+.coach-muted { margin: 0; color: color-mix(in srgb, var(--text) 58%, transparent); font-size: 13px; }
+.coach-make { margin-top: 14px; }
+.coach-error { margin: 10px 0 0; color: #e5484d; font-size: 13px; }
+.coach-review { margin: 0; font-size: 14px; line-height: 1.6; }
+.coach-notes { display: grid; gap: 8px; margin-top: 12px; }
+.coach-notes p {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.coach-notes b { font-size: 12px; }
+.coach-missions-head { display: flex; justify-content: space-between; margin: 16px 0 6px; font-size: 14px; }
+.coach-missions-head span { color: var(--primary); font-size: 13px; font-weight: 700; }
+.coach-missions { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.coach-mission {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+.coach-mission:hover { background: var(--hover); }
+.coach-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.coach-done .coach-icon { background: #22c55e; color: #fff; font-weight: 800; }
+.coach-mission-body { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
+.coach-mission-body b { font-size: 14px; }
+.coach-mission-body small { color: color-mix(in srgb, var(--text) 55%, transparent); font-size: 12px; }
+.coach-bar { height: 5px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--text) 8%, transparent); }
+.coach-bar span { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
+.coach-done .coach-bar span { background: #22c55e; }
+.coach-count { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.coach-clear { margin: 12px 0 0; font-weight: 800; text-align: center; }
+
+@media (min-width: 641px) {
+  .coach { padding: 22px 24px; }
+  .coach-notes { grid-template-columns: 1fr 1fr; }
+}

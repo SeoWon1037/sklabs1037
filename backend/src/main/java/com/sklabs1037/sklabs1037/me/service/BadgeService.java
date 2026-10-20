@@ -57,7 +57,10 @@ public class BadgeService {
             new Badge("AI_CHAT10", "🤖", "AI와 친구", "AI 비서와 대화 10번", "탐험", s -> s.aiChats() >= 10),
             new Badge("BEAUTY_FIRST", "🔬", "성분 탐정", "뷰티 랩 첫 분석", "탐험", s -> s.beautyLogs() >= 1),
             new Badge("WATCH_5", "⭐", "관심 많은 사람", "관심 종목 5개", "탐험", s -> s.watchCount() >= 5),
-            new Badge("ALERT_FIRST", "🔔", "기다리는 법", "첫 목표가 알림", "탐험", s -> s.alertCount() >= 1)
+            new Badge("ALERT_FIRST", "🔔", "기다리는 법", "첫 목표가 알림", "탐험", s -> s.alertCount() >= 1),
+            // 도전: 숫자로 판정하지 않고 그 일이 일어날 때 바로 줌 (awardOne)
+            new Badge("COACH_CLEAR", "🎖️", "미션 클리어", "AI 코치 주간 미션 3개 모두 달성", "도전", s -> false),
+            new Badge("DUEL_WIN", "⚔️", "대결 승리", "친구와 1:1 대결에서 승리", "도전", s -> false)
     );
 
     @Autowired
@@ -92,6 +95,17 @@ public class BadgeService {
         }
 
         return fresh;
+
+    }
+
+    // 이벤트로 바로 주는 배지 (미션 클리어, 대결 승리) → 새로 받았으면 true
+    public boolean awardOne(Long userId, String code) {
+
+        Badge b = find(code);
+        if (b == null || meDao.insertBadge(userId, code) == 0) return false;
+
+        notificationService.notify(userId, "BADGE", b.icon() + " 새 배지: " + b.name(), b.desc(), "/activity", "BADGE:" + code);
+        return true;
 
     }
 

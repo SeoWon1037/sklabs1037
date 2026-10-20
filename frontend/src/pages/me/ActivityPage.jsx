@@ -4,11 +4,13 @@
 // - 배지 22개: 조건을 채우면 이 화면을 열 때 서버가 확인해서 지급 (새로 받은 배지는 축하 + 🔔 알림)
 // - 백엔드: GET /api/me/activity
 // ============================================
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import CoachCard from '../../components/me/CoachCard'
+import ShareModal from '../../components/me/ShareModal'
 import './ActivityPage.css'
 
-const GROUPS = ['출석', '모의투자', '예측', '퀴즈', '커뮤니티', '탐험']
+const GROUPS = ['출석', '모의투자', '예측', '퀴즈', '커뮤니티', '탐험', '도전']
 
 const pct = (v) => (v == null ? '-' : `${v > 0 ? '+' : ''}${Number(v).toFixed(2)}%`)
 
@@ -44,6 +46,7 @@ function ActivityPage() {
   const [error, setError] = useState('')
   const [needLogin, setNeedLogin] = useState(false)
   const [showNew, setShowNew] = useState(true)
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     let ignore = false
@@ -63,6 +66,8 @@ function ActivityPage() {
       .catch(() => { if (!ignore) setError('서버에 연결할 수 없습니다.') })
     return () => { ignore = true }
   }, [])
+
+  const closeShare = useCallback(() => setSharing(false), [])
 
   const calendar = useMemo(() => {
     const set = new Set(data?.attend?.recent || [])
@@ -101,7 +106,14 @@ function ActivityPage() {
         <div className="act-progress" aria-label={`배지 ${data.earnedCount}개 획득`}>
           <span style={{ width: `${(data.earnedCount / badges.length) * 100}%` }} />
         </div>
+        <div className="act-actions">
+          <button type="button" className="btn btn-primary" onClick={() => setSharing(true)}>📸 내 성적 카드 만들기</button>
+          <Link to="/duel" className="btn btn-ghost">⚔️ 친구와 대결</Link>
+        </div>
       </header>
+
+      <CoachCard />
+      {sharing && <ShareModal onClose={closeShare} />}
 
       {showNew && fresh.length > 0 && (
         <div className="act-new" role="status">

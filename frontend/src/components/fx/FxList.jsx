@@ -5,6 +5,9 @@
 // ============================================
 import { useEffect, useState } from 'react'
 
+// 윈도우는 국기 이모지를 "US" 글자로 보여줘서, 통화 기호 동그라미로
+const SYMBOL = { USD: '$', JPY: '¥', EUR: '€', CNY: '元', GBP: '£' }
+
 const fmt = (v) => Number(v).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 // 최근 흐름 작은 선 (10일)
@@ -49,7 +52,7 @@ function FxList() {
           return (
             <li key={r.code}>
               <div className="home-quote fx-row">
-                <span className="home-quote-rank fx-flag" aria-hidden="true">{r.flag}</span>
+                <span className={`fx-sym fx-${r.code.toLowerCase()}`} aria-hidden="true">{SYMBOL[r.code] || r.code[0]}</span>
                 <span className="home-quote-name">
                   {r.code}
                   <small>{r.name}{r.unit > 1 ? ` ${r.unit}` : ''}</small>

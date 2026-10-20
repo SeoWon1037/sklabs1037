@@ -954,7 +954,21 @@
 .fx-row {
   grid-template-columns: 20px minmax(0, 1fr) 40px auto 64px;
 }
-.fx-flag { font-size: 15px; }
+.fx-sym {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.fx-usd { background: #16a34a; }
+.fx-jpy { background: #dc2626; }
+.fx-eur { background: #2563eb; }
+.fx-cny { background: #ea580c; }
+.fx-gbp { background: #7c3aed; }
 .fx-spark { width: 40px; height: 16px; color: color-mix(in srgb, var(--text) 40%, transparent); }
 .fx-spark.up { color: #e5484d; }
 .fx-spark.down { color: #3b82f6; }

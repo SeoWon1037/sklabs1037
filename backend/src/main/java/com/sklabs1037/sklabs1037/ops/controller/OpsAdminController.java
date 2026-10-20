@@ -55,6 +55,7 @@ public class OpsAdminController {
             new String[]{"AI_IMPROVE", "매일 04:10 (새 👎 3개 이상일 때)"},
             new String[]{"QA_BOT", "매일 08:30 + 배포 직후 (GitHub Actions)"},
             new String[]{"PREDICT_GRADE", "평일 21:10"},
+            new String[]{"NEWS_QUIZ", "매일 07:40"},
             new String[]{"MOCK_EXPIRE", "평일 15:35"},
             new String[]{"MOCK_SNAPSHOT", "평일 15:40"},
             new String[]{"MOCK_MATCH", "장중 1분마다 (실패만 기록)"},

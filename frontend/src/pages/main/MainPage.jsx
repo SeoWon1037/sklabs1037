@@ -23,7 +23,7 @@ import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import MockBanner from '../../components/mock/MockBanner'
 
 // 바로가기 아이콘
-// 바로가기 (위 상단 메뉴와 같은 순서 + 기업 정보 · 투자 성향)
+// 바로가기 (위 상단 메뉴와 같은 순서 + 기업 정보 · 투자 성향 · 뉴스 퀴즈)
 const SHORTCUTS = [
   { icon: '📈', label: '주식 종목', to: '/stock' },
   { icon: '💰', label: '모의투자', to: '/mock' },
@@ -34,6 +34,7 @@ const SHORTCUTS = [
   { icon: '🍀', label: '오늘의 숫자', to: '/lotto' },
   { icon: '🏭', label: '기업 정보', to: `/ai?q=${encodeURIComponent('')}` },
   { icon: '🧭', label: '투자 성향', to: '/persona' },
+  { icon: '📰', label: '뉴스 퀴즈', to: '/quiz' },
 ]
 
 // 오른쪽 아래 "지금 토론 중"에 보여줄 글 개수

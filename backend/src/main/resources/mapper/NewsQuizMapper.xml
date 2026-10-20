@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    📰 오늘의 뉴스 퀴즈
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.quiz.dao.NewsQuizDao">
+
+    <select id="selectRecentNews" resultType="java.util.LinkedHashMap">
+        SELECT  X.NEWS_ID       AS "newsId"
+               ,X.TITLE         AS "title"
+               ,X.LINK          AS "link"
+               ,X.PRESS         AS "press"
+               ,X.STOCK_NAME    AS "stockName"
+               ,TO_CHAR(X.PUB_DATE, 'MM-DD HH24:MI') AS "pubAt"
+          FROM (
+                SELECT  DISTINCT ON (N.TITLE)
+                        N.ID        AS NEWS_ID
+                       ,N.TITLE
+                       ,N.LINK
+                       ,N.PRESS
+                       ,S.NAME      AS STOCK_NAME
+                       ,N.PUB_DATE
+                  FROM T_NEWS N
+                  LEFT JOIN T_STOCK S ON S.ID = N.STOCK_ID
+                 WHERE 1=1
+                   AND N.CATEGORY <![CDATA[<>]]> 'SPORTS'
+                   AND N.PUB_DATE <![CDATA[>=]]> (NOW() AT TIME ZONE 'Asia/Seoul') - INTERVAL '1 hour' * #{hours}
+                 ORDER BY N.TITLE, N.PUB_DATE DESC
+               ) X
+         ORDER BY X.PUB_DATE DESC
+         LIMIT  #{limit}
+    </select>
+
+    <insert id="insertQuiz">
+        INSERT INTO T_NEWS_QUIZ (
+               QUIZ_DATE
+              ,QUESTIONS_JSON
+              ,NEWS_COUNT
+        ) VALUES (
+               #{quizDate}
+              ,#{questionsJson}
+              ,#{newsCount}
+        )
+        ON CONFLICT (QUIZ_DATE) DO NOTHING
+    </insert>
+
+    <select id="selectLatestQuiz" resultType="java.util.LinkedHashMap">
+        SELECT  QUIZ_DATE       AS "quizDate"
+               ,QUESTIONS_JSON  AS "questionsJson"
+          FROM T_NEWS_QUIZ
+         WHERE 1=1
+           AND QUIZ_DATE <![CDATA[<=]]> #{upTo}
+         ORDER BY QUIZ_DATE DESC
+         LIMIT  1
+    </select>
+
+    <select id="countQuiz" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_NEWS_QUIZ
+         WHERE 1=1
+           AND QUIZ_DATE = #{quizDate}
+    </select>
+
+    <select id="selectPlay" resultType="java.util.LinkedHashMap">
+        SELECT  SCORE           AS "score"
+               ,ANSWERS_JSON    AS "answersJson"
+          FROM T_NEWS_QUIZ_PLAY
+         WHERE 1=1
+           AND QUIZ_DATE = #{quizDate}
+           AND USER_ID   = #{userId}
+    </select>
+
+    <insert id="insertPlay">
+        INSERT INTO T_NEWS_QUIZ_PLAY (
+               QUIZ_DATE
+              ,USER_ID
+              ,SCORE
+              ,ANSWERS_JSON
+        ) VALUES (
+               #{quizDate}
+              ,#{userId}
+              ,#{score}
+              ,#{answersJson}
+        )
+        ON CONFLICT (QUIZ_DATE, USER_ID) DO NOTHING
+    </insert>
+
+    <select id="selectDayStats" resultType="java.util.LinkedHashMap">
+        SELECT  COUNT(*)::INT               AS "players"
+               ,ROUND(AVG(SCORE), 2)        AS "avgScore"
+          FROM T_NEWS_QUIZ_PLAY
+         WHERE 1=1
+           AND QUIZ_DATE = #{quizDate}
+    </select>
+
+    <select id="selectScoreCounts" resultType="java.util.LinkedHashMap">
+        SELECT  SCORE           AS "score"
+               ,COUNT(*)::INT   AS "count"
+          FROM T_NEWS_QUIZ_PLAY
+         WHERE 1=1
+           AND QUIZ_DATE = #{quizDate}
+         GROUP BY SCORE
+    </select>
+
+    <select id="selectWeekRanking" resultType="java.util.LinkedHashMap">
+        SELECT  U.NICKNAME          AS "nickname"
+               ,SUM(P.SCORE)::INT   AS "total"
+               ,COUNT(*)::INT       AS "days"
+          FROM T_NEWS_QUIZ_PLAY P
+          JOIN T_USER U ON U.ID = P.USER_ID
+         WHERE 1=1
+           AND P.QUIZ_DATE <![CDATA[>=]]> #{from}
+           AND U.DEL_DAY   IS NULL
+         GROUP BY P.USER_ID, U.NICKNAME
+         ORDER BY SUM(P.SCORE) DESC, COUNT(*) DESC, MIN(P.INS_DAY)
+         LIMIT  #{limit}
+    </select>
+
+    <select id="selectMyDates" resultType="java.time.LocalDate">
+        SELECT  QUIZ_DATE
+          FROM T_NEWS_QUIZ_PLAY
+         WHERE 1=1
+           AND USER_ID = #{userId}
+         ORDER BY QUIZ_DATE DESC
+         LIMIT  60
+    </select>
+</mapper>

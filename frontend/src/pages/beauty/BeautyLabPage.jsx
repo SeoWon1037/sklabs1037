@@ -15,6 +15,7 @@ import BriefTab from '../../components/beauty/BriefTab'
 import CompareTab from '../../components/beauty/CompareTab'
 import DictionaryTab from '../../components/beauty/DictionaryTab'
 import FormulaTab from '../../components/beauty/FormulaTab'
+import ShelfTab from '../../components/beauty/ShelfTab'
 import RegulationTab from '../../components/beauty/RegulationTab'
 import { formatDay } from '../../components/beauty/beautyUtils'
 import './BeautyLabPage.css'
@@ -22,6 +23,7 @@ import './BeautyLabPage.css'
 const TABS = [
   { value: 'analyze', label: '🔬 성분 분석' },
   { value: 'compare', label: '⚖️ 성분 비교' },
+  { value: 'shelf', label: '🧴 내 화장대' },
   { value: 'formula', label: '🧪 처방 검토' },
   { value: 'brief', label: '📝 기획 브리프' },
   { value: 'law', label: '📚 규제 Q&A' },
@@ -129,6 +131,7 @@ function BeautyLabPage() {
           {tab === 'law' && (
             <RegulationTab loggedIn={loggedIn} result={qa} onResult={(r) => { setQa(r); loadHistory() }} />
           )}
+          {tab === 'shelf' && <ShelfTab />}
           {tab === 'formula' && <FormulaTab />}
           {tab === 'dict' && <DictionaryTab />}
         </div>

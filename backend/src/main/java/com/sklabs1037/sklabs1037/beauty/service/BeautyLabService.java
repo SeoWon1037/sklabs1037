@@ -211,10 +211,7 @@ public class BeautyLabService {
 
         } else {
 
-            for (String part : SPLIT.split(stripLabel(text))) {
-                String name = cut(part.trim(), MAX_NAME);
-                if (!name.isEmpty()) items.add(new String[]{name, ""});
-            }
+            for (String name : splitIngredients(text)) items.add(new String[]{name, ""});
 
         }
 
@@ -724,8 +721,23 @@ public class BeautyLabService {
 
     }
 
+    // 붙여넣은 전성분 글 → 성분 이름 목록 (AI 호출 없음, 🧴 내 화장대에서도 같이 씀)
+    static List<String> splitIngredients(String text) {
+
+        List<String> names = new ArrayList<>();
+
+        for (String part : SPLIT.split(stripLabel(text))) {
+            String name = part.trim();
+            if (name.length() > MAX_NAME) name = name.substring(0, MAX_NAME);
+            if (!name.isEmpty()) names.add(name);
+        }
+
+        return names;
+
+    }
+
     // "[전성분]", "전성분:" 같은 머리말 빼기
-    private String stripLabel(String text) {
+    private static String stripLabel(String text) {
 
         if (text == null) return "";
 

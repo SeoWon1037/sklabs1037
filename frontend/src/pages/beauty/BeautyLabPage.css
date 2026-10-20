@@ -1090,3 +1090,106 @@
     padding: 0 8px;
   }
 }
+
+/* ============================================
+   🧴 내 화장대
+   ============================================ */
+.sh-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.sh-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bl-soft);
+}
+.sh-step { font-size: 20px; }
+.sh-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.sh-body b {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sh-add {
+  width: 100%;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--text) 25%, transparent);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sh-add:hover { border-color: var(--primary); color: var(--primary); }
+.sh-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.sh-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.sh-routines {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.sh-routine {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sh-routine li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.sh-routine b { flex: 1; min-width: 0; }
+.sh-no {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.sh-products {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.sh-chips { margin-top: 6px; }
+
+@media (max-width: 640px) {
+  .sh-routines { grid-template-columns: minmax(0, 1fr); }
+}

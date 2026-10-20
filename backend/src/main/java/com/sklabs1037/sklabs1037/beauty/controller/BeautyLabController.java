@@ -3,6 +3,7 @@ package com.sklabs1037.sklabs1037.beauty.controller;
 import com.sklabs1037.sklabs1037.beauty.service.BeautyLabService;
 import com.sklabs1037.sklabs1037.beauty.service.FormulaCheckService;
 import com.sklabs1037.sklabs1037.beauty.service.IngredientDictionary;
+import com.sklabs1037.sklabs1037.beauty.service.ShelfService;
 import com.sklabs1037.sklabs1037.beauty.vo.IngredientVO;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,6 +49,9 @@ public class BeautyLabController {
 
     @Autowired
     private FormulaCheckService formulaCheckService;
+
+    @Autowired
+    private ShelfService shelfService;
 
     @Autowired
     private JsonMapper jsonMapper;
@@ -295,6 +299,53 @@ public class BeautyLabController {
 
             log.error("처방 검토 오류", e);
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "처방을 검토하지 못했습니다.");
+
+        }
+
+    }
+
+    // ============================================
+    // 🧴 내 화장대 · 성분 궁합 (AI 없이 사전 + 규칙, 로그인 없이 누구나)
+    // POST /api/beauty/shelf/check
+    //   { products: [{ name, ingredients, step: CLEANSER|TONER|SERUM|CREAM|SUNSCREEN, time: AM|PM|BOTH }], skinType }
+    //   → { products(활성 성분·착향제·주의), routines {AM, PM}, findings }
+    // ============================================
+    @PostMapping("/shelf/check")
+    public ResponseEntity<Map<String, Object>> shelfCheck(@RequestBody Map<String, Object> req) {
+
+        try {
+
+            List<ShelfService.Product> products = new ArrayList<>();
+
+            if (req.get("products") instanceof List<?> list) {
+                for (Object o : list) {
+                    if (!(o instanceof Map<?, ?> m)) continue;
+                    String ingredients = m.get("ingredients") == null ? "" : String.valueOf(m.get("ingredients"));
+                    if (ingredients.length() > MAX_TEXT) throw new IllegalArgumentException("전성분은 " + MAX_TEXT + "자까지 넣을 수 있어요.");
+                    products.add(new ShelfService.Product(
+                            m.get("name") == null ? "" : String.valueOf(m.get("name")),
+                            ingredients,
+                            String.valueOf(m.get("step")),
+                            String.valueOf(m.get("time"))));
+                }
+            }
+
+            String skinType = req.get("skinType") == null ? null : String.valueOf(req.get("skinType"));
+            if (skinType != null && !BeautyLabService.SKIN_TYPES.contains(skinType)) skinType = null;
+
+            Map<String, Object> body = new HashMap<>(shelfService.check(products, skinType));
+            body.put("success", true);
+
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        } catch (Exception e) {
+
+            log.error("화장대 궁합 검사 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "검사하지 못했습니다.");
 
         }
 

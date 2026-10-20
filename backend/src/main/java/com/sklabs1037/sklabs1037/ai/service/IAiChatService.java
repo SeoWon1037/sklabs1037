@@ -12,4 +12,7 @@ public interface IAiChatService {
 
     // 답변 피드백 저장 (👍 UP / 👎 DOWN)
     boolean saveRating(AiChatVO vo);
+
+    // 🔁 프롬프트 개선 채점용: 주어진 시스템 프롬프트로 답만 받기 (대화 기록 저장 안 함) → { answer, tools }
+    java.util.Map<String, Object> answerWith(String systemPrompt, String question, Long userId);
 }

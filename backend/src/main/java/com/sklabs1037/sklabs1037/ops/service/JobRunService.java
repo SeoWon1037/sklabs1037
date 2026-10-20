@@ -244,6 +244,7 @@ public class JobRunService {
             Map.entry("ALERT_CHECK", "가격 알림 확인"),
             Map.entry("MORNING_BRIEF", "아침 브리핑 메일"),
             Map.entry("AI_LEAGUE", "AI 투자 리그 매매"),
+            Map.entry("AI_IMPROVE", "AI 비서 자기 개선"),
             Map.entry("WATCHDOG", "작업 감시")
     );
 

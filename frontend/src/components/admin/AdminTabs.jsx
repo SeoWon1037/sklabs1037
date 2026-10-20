@@ -9,6 +9,7 @@ import './AdminTabs.css'
 const TABS = [
   { to: '/admin/ops', label: '🛠 운영 상태' },
   { to: '/admin/reports', label: '🚩 신고 관리', badge: true },
+  { to: '/admin/ai-improve', label: '🔁 AI 자기 개선' },
   { to: '/admin/feedback', label: '💬 AI 피드백' },
 ]
 

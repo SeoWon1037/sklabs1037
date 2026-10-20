@@ -45,8 +45,9 @@ public class AiChatServiceImpl implements IAiChatService {
     // 도구 반복 최대 횟수 (무한 반복 + 비용 폭주 방지)
     private static final int MAX_TURNS = 5;
 
-    // AI의 역할과 규칙
-    private static final String SYSTEM_PROMPT = """
+    // AI의 역할과 규칙 (기본 = 버전 0)
+    // - 실제로 쓰는 프롬프트는 PromptStore가 정함: 관리자가 적용한 개선 버전이 있으면 그것, 없으면 이것
+    static final String BASE_PROMPT = """
             너는 SKLabs의 한국 주식 분석 도우미야.
             규칙:
             - 주가, 날짜, 거래량 같은 숫자는 반드시 도구로 조회한 값만 사용해. 절대 지어내지 마.
@@ -114,6 +115,9 @@ public class AiChatServiceImpl implements IAiChatService {
     private ClaudeApiClient claudeApiClient;
 
     @Autowired
+    private PromptStore promptStore;
+
+    @Autowired
     private TossApiClient tossApiClient;
 
     @Autowired
@@ -130,19 +134,48 @@ public class AiChatServiceImpl implements IAiChatService {
     // Agent 반복
     // ============================================
     @Override
-    @SuppressWarnings("unchecked")
     public AiChatVO chat(AiChatVO vo) throws Exception {
+
+        PromptStore.Active prompt = promptStore.active();
+        vo.setPromptVersion(prompt.version());
+
+        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId());
+
+        return finish(vo, r.answer(), r.toolsUsed());
+
+    }
+
+    // 🔁 프롬프트 개선 채점용: 주어진 프롬프트로 답만 받기 (기록 저장 안 함)
+    @Override
+    public Map<String, Object> answerWith(String systemPrompt, String question, Long userId) {
+
+        AgentResult r = runAgent(systemPrompt, question, userId);
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("answer", r.answer());
+        m.put("tools", String.join(", ", r.toolsUsed()));
+
+        return m;
+
+    }
+
+    record AgentResult(String answer, List<String> toolsUsed) {
+    }
+
+    // 질문 하나를 Claude + 도구 반복으로 답하기
+    @SuppressWarnings("unchecked")
+    private AgentResult runAgent(String systemPrompt, String question, Long userId) {
 
         // 대화 기록 (질문 → 도구 요청 → 도구 결과 → ... 순서로 쌓임)
         List<Map<String, Object>> messages = new ArrayList<>();
-        messages.add(Map.of("role", "user", "content", vo.getMessage()));
+        messages.add(Map.of("role", "user", "content", question));
 
         List<String> toolsUsed = new ArrayList<>();
 
         for (int turn = 0; turn < MAX_TURNS; turn++) {
 
             // 1. Claude 호출
-            Map<String, Object> response = claudeApiClient.createMessage(SYSTEM_PROMPT, TOOLS, messages);
+            Map<String, Object> response = claudeApiClient.createMessage(systemPrompt, TOOLS, messages);
             List<Map<String, Object>> content = (List<Map<String, Object>>) response.get("content");
 
             // Claude의 응답도 대화 기록에 추가 (다음 호출 때 "내가 이 도구를 요청했었지"를 알 수 있게)
@@ -155,11 +188,11 @@ public class AiChatServiceImpl implements IAiChatService {
 
                 // 답변 길이 제한에 걸려 중간에 끊긴 경우 → 끊긴 걸 그대로 보여주지 않고 안내 문구 추가
                 if ("max_tokens".equals(response.get("stop_reason"))) {
-                    log.warn("AI 답변 길이 초과로 잘림: {}", vo.getMessage());
+                    log.warn("AI 답변 길이 초과로 잘림: {}", question);
                     answer += "\n\n(답변이 길어 일부가 생략되었습니다. 궁금한 부분을 나눠서 질문해주세요.)";
                 }
 
-                return finish(vo, answer, toolsUsed);
+                return new AgentResult(answer, toolsUsed);
 
             }
 
@@ -182,7 +215,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
                 try {
 
-                    result.put("content", jsonMapper.writeValueAsString(runTool(toolName, input, vo.getUserId())));
+                    result.put("content", jsonMapper.writeValueAsString(runTool(toolName, input, userId)));
 
                 } catch (Exception e) {
 
@@ -202,7 +235,7 @@ public class AiChatServiceImpl implements IAiChatService {
         }
 
         // 최대 횟수 안에 답을 못 끝낸 경우
-        return finish(vo, "질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed);
+        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed);
 
     }
 

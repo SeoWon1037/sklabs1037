@@ -1,0 +1,249 @@
+/* ===== 관리자: 🔁 AI 비서 자기 개선 ===== */
+.imp-muted { color: color-mix(in srgb, var(--text) 55%, transparent); }
+.imp-better { color: #16a34a; }
+.imp-worse { color: #e5484d; }
+
+.imp-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 32px;
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.imp-now > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.imp-now strong { font-size: 20px; }
+.imp-now small,
+.imp-now-label {
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  font-size: 12px;
+}
+.imp-now .ops-btn { margin-left: auto; }
+
+.imp-stats { overflow-x: auto; }
+.imp-stats table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.imp-stats th,
+.imp-stats td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+.imp-stats th:first-child,
+.imp-stats td:first-child { text-align: left; }
+.imp-row-on td { font-weight: 700; }
+
+.imp-card { margin-top: 16px; }
+.imp-card h3 {
+  margin: 16px 0 8px;
+  font-size: 14px;
+}
+.imp-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.imp-card-head h2 {
+  margin: 0;
+  margin-right: auto;
+  font-size: 18px;
+}
+.imp-card-head small {
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+}
+.imp-status {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.imp-st-wait { background: rgba(245, 158, 11, 0.16); color: #d97706; }
+.imp-st-on { background: rgba(34, 197, 94, 0.16); color: #16a34a; }
+.imp-st-off { background: color-mix(in srgb, var(--text) 8%, transparent); color: color-mix(in srgb, var(--text) 60%, transparent); }
+.imp-st-no { background: rgba(229, 72, 77, 0.12); color: #e5484d; }
+.imp-st-rec { background: var(--primary); color: var(--primary-text); }
+
+.imp-score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+.imp-score b {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.imp-patterns,
+.imp-changes,
+.imp-evals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.imp-patterns li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.imp-changes li::before { content: '· '; }
+.imp-fix {
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+  font-size: 11px;
+  font-weight: 700;
+}
+.imp-fix-no {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+
+.imp-eval {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.imp-eval-error {
+  padding: 10px 12px;
+  color: #e5484d;
+}
+.imp-eval-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.imp-kind {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.imp-kind-down { background: rgba(229, 72, 77, 0.12); color: #e5484d; }
+.imp-kind-up { background: rgba(34, 197, 94, 0.14); color: #16a34a; }
+.imp-q {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.imp-scores {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.imp-eval-body { padding: 0 12px 12px; }
+.imp-reason { margin: 0 0 8px; }
+.imp-answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.imp-answers > div {
+  padding: 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+.imp-answers h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+.imp-answers h4 small {
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  font-weight: 500;
+}
+.imp-answers p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.imp-diff {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.imp-diff-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+}
+.imp-link {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.imp-diff-body {
+  max-height: 360px;
+  margin: 0;
+  padding: 8px 0;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.imp-line {
+  display: block;
+  padding: 0 12px;
+}
+.imp-line-add { background: rgba(34, 197, 94, 0.14); }
+.imp-line-del {
+  background: rgba(229, 72, 77, 0.12);
+  text-decoration: line-through;
+  text-decoration-color: rgba(229, 72, 77, 0.5);
+}
+
+.imp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.imp-apply {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+@media (max-width: 640px) {
+  .imp-answers { grid-template-columns: minmax(0, 1fr); }
+  .imp-now .ops-btn { margin-left: 0; }
+}

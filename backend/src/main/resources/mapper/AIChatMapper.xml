@@ -88,11 +88,13 @@
         ,QUESTION
         ,ANSWER
         ,TOOLS_USED
+        ,PROMPT_VERSION
         ) VALUES (
         #{userId}
         ,#{message}
         ,#{answer}
         ,#{toolsText}
+        ,COALESCE(#{promptVersion}, 0)
         )
     </insert>
 

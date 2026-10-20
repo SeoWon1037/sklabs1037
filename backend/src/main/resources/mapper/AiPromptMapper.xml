@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🔁 스스로 고치는 AI 비서: 프롬프트 버전 + 개선 재료(평가된 대화)
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.ai.dao.AiPromptDao">
+
+    <sql id="promptColumns">
+        P.ID                                                AS PROMPT_ID
+       ,P.VERSION
+       ,P.BASE_VERSION
+       ,P.CONTENT
+       ,P.STATUS
+       ,P.ANALYSIS_JSON
+       ,P.CHANGES_JSON
+       ,P.EVAL_JSON
+       ,P.SCORE_OLD
+       ,P.SCORE_NEW
+       ,P.RECOMMEND_YN
+       ,P.DOWN_COUNT
+       ,P.DECIDED_BY
+       ,(EXTRACT(EPOCH FROM P.DECIDED_DAY) * 1000)::BIGINT  AS DECIDED_AT
+       ,(EXTRACT(EPOCH FROM P.INS_DAY) * 1000)::BIGINT      AS INS_AT
+    </sql>
+
+    <select id="selectActive"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        SELECT  <include refid="promptColumns"/>
+          FROM T_AI_PROMPT P
+         WHERE 1=1
+           AND P.STATUS = 'ACTIVE'
+    </select>
+
+    <select id="selectByVersion"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        SELECT  <include refid="promptColumns"/>
+          FROM T_AI_PROMPT P
+         WHERE 1=1
+           AND P.VERSION = #{version}
+    </select>
+
+    <select id="selectMaxVersion"
+            resultType="int">
+        SELECT  COALESCE(MAX(VERSION), 0)
+          FROM T_AI_PROMPT
+    </select>
+
+    <select id="selectPrompts"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        SELECT  <include refid="promptColumns"/>
+          FROM T_AI_PROMPT P
+         ORDER BY P.VERSION DESC
+         LIMIT  #{limit}
+    </select>
+
+    <select id="selectLastRunAt"
+            resultType="java.lang.Long">
+        SELECT  (EXTRACT(EPOCH FROM MAX(INS_DAY)) * 1000)::BIGINT
+          FROM T_AI_PROMPT
+    </select>
+
+    <insert id="insertPrompt"
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        INSERT INTO T_AI_PROMPT (
+               VERSION
+              ,BASE_VERSION
+              ,CONTENT
+              ,STATUS
+              ,ANALYSIS_JSON
+              ,CHANGES_JSON
+              ,EVAL_JSON
+              ,SCORE_OLD
+              ,SCORE_NEW
+              ,RECOMMEND_YN
+              ,DOWN_COUNT
+        ) VALUES (
+               #{version}
+              ,#{baseVersion}
+              ,#{content}
+              ,#{status}
+              ,#{analysisJson}
+              ,#{changesJson}
+              ,#{evalJson}
+              ,#{scoreOld}
+              ,#{scoreNew}
+              ,#{recommendYn}
+              ,#{downCount}
+        )
+    </insert>
+
+    <update id="retireActive"
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        UPDATE T_AI_PROMPT
+           SET  STATUS      = 'RETIRED'
+         WHERE 1=1
+           AND STATUS = 'ACTIVE'
+    </update>
+
+    <update id="updateStatus"
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        UPDATE T_AI_PROMPT
+           SET  STATUS      = #{status}
+               ,DECIDED_BY  = #{decidedBy}
+               ,DECIDED_DAY = NOW()
+         WHERE 1=1
+           AND VERSION = #{version}
+    </update>
+
+    <!-- 👎 받은 대화 (개선 재료) -->
+    <select id="selectDownChats"
+            parameterType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        SELECT  L.ID            AS CHAT_ID
+               ,L.USER_ID
+               ,L.QUESTION
+               ,L.ANSWER
+               ,L.TOOLS_USED
+               ,L.RATING
+          FROM T_AI_CHAT_LOG L
+         WHERE 1=1
+           AND L.RATING = 'DOWN'
+        <if test="sinceAt != null">
+           AND L.FEEDBACK_DAY <![CDATA[>]]> TO_TIMESTAMP(#{sinceAt} / 1000.0)
+        </if>
+         ORDER BY L.ID DESC
+         LIMIT  #{limit}
+    </select>
+
+    <!-- 👍 받은 대화 (새 프롬프트가 잘 되던 걸 망치지 않는지 확인용) -->
+    <select id="selectUpChats"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        SELECT  L.ID            AS CHAT_ID
+               ,L.USER_ID
+               ,L.QUESTION
+               ,L.ANSWER
+               ,L.TOOLS_USED
+               ,L.RATING
+          FROM T_AI_CHAT_LOG L
+         WHERE 1=1
+           AND L.RATING = 'UP'
+         ORDER BY L.ID DESC
+         LIMIT  #{limit}
+    </select>
+
+    <!-- 버전별 성적 (최근 90일) -->
+    <select id="selectVersionStats"
+            resultType="com.sklabs1037.sklabs1037.ai.vo.AiPromptVO">
+        SELECT  L.PROMPT_VERSION                                 AS VERSION
+               ,COUNT(*)::INT                                    AS CHAT_COUNT
+               ,COUNT(L.RATING)::INT                             AS RATED_COUNT
+               ,COUNT(*) FILTER (WHERE L.RATING = 'UP')::INT     AS UP_COUNT
+               ,COUNT(*) FILTER (WHERE L.RATING = 'DOWN')::INT   AS DOWN_RATED_COUNT
+          FROM T_AI_CHAT_LOG L
+         WHERE 1=1
+           AND L.INS_DAY <![CDATA[>=]]> NOW() - INTERVAL '90 days'
+         GROUP BY L.PROMPT_VERSION
+         ORDER BY L.PROMPT_VERSION DESC
+    </select>
+</mapper>

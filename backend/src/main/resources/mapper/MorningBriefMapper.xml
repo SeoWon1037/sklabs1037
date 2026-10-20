@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    아침 브리핑 메일 SQL
+    namespace: 이 SQL을 쓸 Dao의 전체 경로
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.brief.dao.MorningBriefDao">
+
+    <!-- 내 신청 상태 + 이메일 (신청한 적 없으면 ENABLED_YN이 null) -->
+    <select id="selectMyBrief"
+            parameterType="long"
+            resultType="com.sklabs1037.sklabs1037.brief.vo.MorningBriefVO">
+        SELECT  U.ID          AS USER_ID
+               ,U.EMAIL
+               ,U.NICKNAME
+               ,B.ENABLED_YN
+               ,B.LAST_SENT_DAY
+          FROM T_USER U
+          LEFT JOIN T_MORNING_BRIEF B ON B.USER_ID = U.ID
+         WHERE 1=1
+           AND U.ID      = #{userId}
+           AND U.DEL_DAY IS NULL
+    </select>
+
+    <!-- 켜기 / 끄기 -->
+    <insert id="upsertEnabled"
+            parameterType="com.sklabs1037.sklabs1037.brief.vo.MorningBriefVO">
+        INSERT INTO T_MORNING_BRIEF (
+               USER_ID
+              ,ENABLED_YN
+        ) VALUES (
+               #{userId}
+              ,#{enabledYn}
+        )
+        ON CONFLICT (USER_ID) DO UPDATE
+           SET ENABLED_YN = EXCLUDED.ENABLED_YN
+              ,UPD_DAY    = NOW()
+    </insert>
+
+    <!-- 오늘 아직 안 받은 신청자 -->
+    <select id="selectTargets"
+            parameterType="com.sklabs1037.sklabs1037.brief.vo.MorningBriefVO"
+            resultType="com.sklabs1037.sklabs1037.brief.vo.MorningBriefVO">
+        SELECT  B.USER_ID
+               ,U.EMAIL
+               ,U.NICKNAME
+          FROM T_MORNING_BRIEF B
+          JOIN T_USER U ON U.ID = B.USER_ID
+         WHERE 1=1
+           AND B.ENABLED_YN = 'Y'
+           AND U.EMAIL LIKE '%@%'
+           AND U.DEL_DAY IS NULL
+           AND (B.LAST_SENT_DAY IS NULL OR B.LAST_SENT_DAY &lt; #{today})
+         ORDER BY B.USER_ID
+    </select>
+
+    <!-- 오늘 보냄으로 먼저 표시 (이미 오늘이면 0) -->
+    <update id="markSent"
+            parameterType="com.sklabs1037.sklabs1037.brief.vo.MorningBriefVO">
+        UPDATE T_MORNING_BRIEF
+           SET LAST_SENT_DAY = #{today}
+              ,UPD_DAY       = NOW()
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND (LAST_SENT_DAY IS NULL OR LAST_SENT_DAY &lt; #{today})
+    </update>
+
+    <!-- 메일 실패 → 되돌리기 -->
+    <update id="revertSent"
+            parameterType="com.sklabs1037.sklabs1037.brief.vo.MorningBriefVO">
+        UPDATE T_MORNING_BRIEF
+           SET LAST_SENT_DAY = #{lastSentDay}
+              ,UPD_DAY       = NOW()
+         WHERE 1=1
+           AND USER_ID       = #{userId}
+           AND LAST_SENT_DAY = #{today}
+    </update>
+
+</mapper>

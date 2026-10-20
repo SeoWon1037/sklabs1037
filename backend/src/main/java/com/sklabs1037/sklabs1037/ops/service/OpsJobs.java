@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.ops.service;
 
+import com.sklabs1037.sklabs1037.brief.service.MorningBriefService;
 import com.sklabs1037.sklabs1037.mock.service.IMockTradeService;
 import com.sklabs1037.sklabs1037.mock.service.MockMarketHours;
 import com.sklabs1037.sklabs1037.news.service.INewsCollectService;
@@ -31,7 +32,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF");
 
     @Autowired
     private JobRunService jobRunService;
@@ -47,6 +48,9 @@ public class OpsJobs {
 
     @Autowired
     private IMockTradeService mockTradeService;
+
+    @Autowired
+    private MorningBriefService morningBriefService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -120,6 +124,9 @@ public class OpsJobs {
                 int saved = mockTradeService.snapshotAll(MockMarketHours.now().toLocalDate());
                 return JobOutcome.of(saved, 0, saved + "계좌 기록");
             };
+
+            // 오늘 아직 안 받은 신청자에게만 (여러 번 눌러도 한 사람에게 하루 한 통)
+            case "MORNING_BRIEF" -> morningBriefService::sendAll;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

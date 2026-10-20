@@ -42,7 +42,7 @@ public class IngredientDictionary {
         if (hit != null) return hit;
 
         // "병풀추출물(50,000ppm)", "나이아신아마이드 5%" 처럼 뒤에 붙은 함량 표시 빼고 한 번 더
-        String trimmed = normalize(name.replaceAll("[\\(\\[].*$", "").replaceAll("\\d+(\\.\\d+)?\\s*(%|ppm|ppb)", ""));
+        String trimmed = normalize(name.replaceAll("[\\(\\[].*$", "").replaceAll("\\d[\\d,]*(\\.\\d+)?\\s*(%|ppm|ppb)", ""));
 
         return trimmed.isEmpty() ? null : map.get(trimmed);
 

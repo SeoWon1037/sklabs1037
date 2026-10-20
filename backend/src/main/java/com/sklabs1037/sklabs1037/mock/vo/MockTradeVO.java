@@ -57,6 +57,7 @@ public class MockTradeVO {
     // ===== 랭킹 / 일별 기록 =====
     private String nickname;
     private Integer tradeCount;
+    private String aiCode;              // AI 투자 리그 참가자면 NEWS / MOMENTUM / STEADY (사람은 null)
     private LocalDate weekStart;        // 이번 주 월요일 (조건)
     private BigDecimal weekBase;        // 이번 주 수익률 기준 총자산
     private LocalDate snapDate;         // 기록한 거래일

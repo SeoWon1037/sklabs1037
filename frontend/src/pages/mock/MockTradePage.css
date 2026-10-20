@@ -1089,3 +1089,26 @@
     font-size: 20px;
   }
 }
+
+/* ===== 🤖 AI 투자 리그 참가자 표시 ===== */
+.mock-rank-ai {
+  color: inherit;
+  text-decoration: none;
+}
+.mock-rank-ai:hover {
+  color: var(--primary);
+}
+.mock-league-link {
+  display: block;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.mock-league-link:hover {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}

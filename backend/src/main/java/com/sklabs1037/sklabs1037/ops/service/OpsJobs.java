@@ -1,6 +1,7 @@
 package com.sklabs1037.sklabs1037.ops.service;
 
 import com.sklabs1037.sklabs1037.brief.service.MorningBriefService;
+import com.sklabs1037.sklabs1037.league.service.AiLeagueService;
 import com.sklabs1037.sklabs1037.mock.service.IMockTradeService;
 import com.sklabs1037.sklabs1037.mock.service.MockMarketHours;
 import com.sklabs1037.sklabs1037.news.service.INewsCollectService;
@@ -32,7 +33,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE");
 
     @Autowired
     private JobRunService jobRunService;
@@ -51,6 +52,9 @@ public class OpsJobs {
 
     @Autowired
     private MorningBriefService morningBriefService;
+
+    @Autowired
+    private AiLeagueService aiLeagueService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -127,6 +131,9 @@ public class OpsJobs {
 
             // 오늘 아직 안 받은 신청자에게만 (여러 번 눌러도 한 사람에게 하루 한 통)
             case "MORNING_BRIEF" -> morningBriefService::sendAll;
+
+            // 🤖 AI 투자자들 하루 한 번 매매 (이미 한 AI는 건너뜀)
+            case "AI_LEAGUE" -> aiLeagueService::runAll;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

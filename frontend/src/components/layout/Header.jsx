@@ -16,6 +16,7 @@ const MENUS = [
   { to: '/', label: '뉴스', end: true },     // end: 정확히 "/"일 때만 선택 표시 (안 그러면 모든 주소에서 선택됨)
   { to: '/stock', label: '주식 종목' },
   { to: '/mock', label: '모의투자' },
+  { to: '/league', label: 'AI 리그' },
   { to: '/ai', label: 'AI 비서' },
   { to: '/beauty', label: '뷰티 랩' },
   { to: '/lotto', label: '오늘의 숫자' },

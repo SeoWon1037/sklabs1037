@@ -613,6 +613,8 @@ public class MockTradeServiceImpl implements IMockTradeService {
             row.put("totalAsset", a.getTotalAsset());
             row.put("returnRate", rate(a.getTotalAsset().subtract(base), base));
             row.put("tradeCount", a.getTradeCount());
+            row.put("ai", a.getAiCode() != null);           // 🤖 AI 투자 리그 참가자
+            row.put("aiCode", a.getAiCode());
             row.put("me", a.getUserId().equals(userId));
             rows.add(row);
 

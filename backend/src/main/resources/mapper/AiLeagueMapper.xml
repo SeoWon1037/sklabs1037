@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🤖 AI 투자 리그 SQL
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.league.dao.AiLeagueDao">
+
+    <!-- 매매하는 AI 투자자들 (코드 순) -->
+    <select id="selectTraders"
+            resultType="com.sklabs1037.sklabs1037.league.vo.AiLeagueVO">
+        SELECT  T.USER_ID
+               ,T.CODE
+               ,U.NICKNAME
+          FROM T_AI_TRADER T
+          JOIN T_USER U ON U.ID = T.USER_ID
+         WHERE 1=1
+           AND T.ACTIVE_YN = 'Y'
+           AND U.DEL_DAY IS NULL
+         ORDER BY T.CODE
+    </select>
+
+    <select id="countLog"
+            parameterType="com.sklabs1037.sklabs1037.league.vo.AiLeagueVO"
+            resultType="int">
+        SELECT  COUNT(*)
+          FROM T_AI_TRADE_LOG
+         WHERE 1=1
+           AND USER_ID    = #{userId}
+           AND TRADE_DATE = #{tradeDate}
+    </select>
+
+    <insert id="insertLog"
+            parameterType="com.sklabs1037.sklabs1037.league.vo.AiLeagueVO">
+        INSERT INTO T_AI_TRADE_LOG (
+               USER_ID
+              ,TRADE_DATE
+              ,STATUS
+              ,MARKET_VIEW
+              ,DIARY
+              ,ORDERS_JSON
+              ,TOTAL_ASSET
+              ,MESSAGE
+        ) VALUES (
+               #{userId}
+              ,#{tradeDate}
+              ,#{status}
+              ,#{marketView}
+              ,#{diary}
+              ,#{ordersJson}
+              ,#{totalAsset}
+              ,#{message}
+        )
+        ON CONFLICT (USER_ID, TRADE_DATE) DO NOTHING
+    </insert>
+
+    <!-- 최근 일지 (실패는 사용자 화면에 안 보여줌) -->
+    <select id="selectRecentLogs"
+            resultType="com.sklabs1037.sklabs1037.league.vo.AiLeagueVO">
+        SELECT  L.ID                                            AS LOG_ID
+               ,L.USER_ID
+               ,T.CODE
+               ,U.NICKNAME
+               ,L.TRADE_DATE
+               ,L.STATUS
+               ,L.MARKET_VIEW
+               ,L.DIARY
+               ,L.ORDERS_JSON
+               ,L.TOTAL_ASSET
+               ,(EXTRACT(EPOCH FROM L.INS_DAY) * 1000)::BIGINT  AS INS_AT
+          FROM T_AI_TRADE_LOG L
+          JOIN T_AI_TRADER T ON T.USER_ID = L.USER_ID
+          JOIN T_USER      U ON U.ID      = L.USER_ID
+         WHERE 1=1
+           AND L.STATUS <![CDATA[<>]]> 'FAIL'
+         ORDER BY L.TRADE_DATE DESC, T.CODE
+         LIMIT  #{limit}
+    </select>
+
+    <!--
+        후보 종목: 주식(ETF 제외) 시가총액 상위
+        - 최근 45일 안의 종가로 5거래일·20거래일 수익률, 일간 로그수익률 표준편차 × √252 (연환산 변동성)
+    -->
+    <select id="selectUniverse"
+            resultType="com.sklabs1037.sklabs1037.league.vo.AiLeagueVO">
+        WITH U AS (
+            SELECT  S.ID
+                   ,S.SYMBOL
+                   ,S.NAME
+                   ,S.MARKET
+                   ,ROUND(S.LAST_CLOSE * S.SHARES_OUTSTANDING / 100000000)::BIGINT AS CAP_EOK
+              FROM T_STOCK S
+             WHERE 1=1
+               AND S.USE_YN        = 'Y'
+               AND S.DEL_DAY       IS NULL
+               AND S.SECURITY_TYPE = 'STOCK'
+               AND S.LAST_CLOSE         IS NOT NULL
+               AND S.SHARES_OUTSTANDING IS NOT NULL
+             ORDER BY S.LAST_CLOSE * S.SHARES_OUTSTANDING DESC
+             LIMIT  #{limit}
+        ),
+        R AS (
+            SELECT  P.STOCK_ID
+                   ,P.CLOSE_PRICE
+                   ,ROW_NUMBER() OVER (PARTITION BY P.STOCK_ID ORDER BY P.TRADE_DATE DESC) AS RN
+              FROM T_STOCK_PRICE P
+              JOIN U ON U.ID = P.STOCK_ID
+             WHERE 1=1
+               AND P.TRADE_DATE <![CDATA[>=]]> CURRENT_DATE - 45
+        ),
+        D AS (
+            SELECT  R.STOCK_ID
+                   ,R.RN
+                   ,R.CLOSE_PRICE
+                   ,LN(R.CLOSE_PRICE / NULLIF(LEAD(R.CLOSE_PRICE) OVER (PARTITION BY R.STOCK_ID ORDER BY R.RN), 0)) AS LR
+              FROM R
+             WHERE 1=1
+               AND R.RN <![CDATA[<=]]> 21
+               AND R.CLOSE_PRICE > 0
+        )
+        SELECT  U.ID                                                                        AS STOCK_ID
+               ,U.SYMBOL
+               ,U.NAME
+               ,U.MARKET
+               ,U.CAP_EOK
+               ,MAX(CASE WHEN D.RN = 1 THEN D.CLOSE_PRICE END)                             AS CLOSE_PRICE
+               ,ROUND((MAX(CASE WHEN D.RN = 1 THEN D.CLOSE_PRICE END)
+                     / NULLIF(MAX(CASE WHEN D.RN = 6 THEN D.CLOSE_PRICE END), 0) - 1) * 100, 2)  AS RET5
+               ,ROUND((MAX(CASE WHEN D.RN = 1 THEN D.CLOSE_PRICE END)
+                     / NULLIF(MAX(CASE WHEN D.RN = 21 THEN D.CLOSE_PRICE END), 0) - 1) * 100, 2) AS RET20
+               ,ROUND((STDDEV_SAMP(D.LR) * SQRT(252) * 100)::NUMERIC, 1)                    AS VOL_ANNUAL
+          FROM U
+          JOIN D ON D.STOCK_ID = U.ID
+         GROUP BY U.ID, U.SYMBOL, U.NAME, U.MARKET, U.CAP_EOK
+        HAVING MAX(CASE WHEN D.RN = 1 THEN D.CLOSE_PRICE END) IS NOT NULL
+         ORDER BY U.CAP_EOK DESC
+    </select>
+
+    <!-- 최근 36시간 종목 뉴스 (같은 제목은 한 번) -->
+    <select id="selectStockNews"
+            resultType="com.sklabs1037.sklabs1037.league.vo.AiLeagueVO">
+        SELECT  X.SYMBOL
+               ,X.NAME
+               ,X.TITLE
+               ,TO_CHAR(X.PUB_DATE, 'MM-DD HH24:MI') AS PUB_AT
+          FROM (
+                SELECT  DISTINCT ON (N.TITLE)
+                        S.SYMBOL
+                       ,S.NAME
+                       ,N.TITLE
+                       ,N.PUB_DATE
+                  FROM T_NEWS N
+                  JOIN T_STOCK S ON S.ID = N.STOCK_ID
+                 WHERE 1=1
+                   AND N.PUB_DATE <![CDATA[>=]]> (NOW() AT TIME ZONE 'Asia/Seoul') - INTERVAL '36 hours'
+                 ORDER BY N.TITLE, N.PUB_DATE DESC
+               ) X
+         ORDER BY X.PUB_DATE DESC
+         LIMIT  #{limit}
+    </select>
+
+    <!-- 최근 36시간 시장 뉴스 -->
+    <select id="selectMarketNews"
+            resultType="com.sklabs1037.sklabs1037.league.vo.AiLeagueVO">
+        SELECT  X.TITLE
+               ,TO_CHAR(X.PUB_DATE, 'MM-DD HH24:MI') AS PUB_AT
+          FROM (
+                SELECT  DISTINCT ON (N.TITLE)
+                        N.TITLE
+                       ,N.PUB_DATE
+                  FROM T_NEWS N
+                 WHERE 1=1
+                   AND N.CATEGORY = 'MARKET'
+                   AND N.PUB_DATE <![CDATA[>=]]> (NOW() AT TIME ZONE 'Asia/Seoul') - INTERVAL '36 hours'
+                 ORDER BY N.TITLE, N.PUB_DATE DESC
+               ) X
+         ORDER BY X.PUB_DATE DESC
+         LIMIT  #{limit}
+    </select>
+</mapper>

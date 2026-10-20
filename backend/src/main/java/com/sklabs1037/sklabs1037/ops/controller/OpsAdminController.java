@@ -51,6 +51,7 @@ public class OpsAdminController {
             new String[]{"NEWS_COLLECT", "30분마다"},
             new String[]{"NEWS_SUMMARY", "매일 07:30, 16:30"},
             new String[]{"MORNING_BRIEF", "평일 08:00"},
+            new String[]{"AI_LEAGUE", "평일 09:10"},
             new String[]{"MOCK_EXPIRE", "평일 15:35"},
             new String[]{"MOCK_SNAPSHOT", "평일 15:40"},
             new String[]{"MOCK_MATCH", "장중 1분마다 (실패만 기록)"},

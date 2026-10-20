@@ -243,6 +243,7 @@ public class JobRunService {
             Map.entry("MOCK_MATCH", "지정가 체결 확인"),
             Map.entry("ALERT_CHECK", "가격 알림 확인"),
             Map.entry("MORNING_BRIEF", "아침 브리핑 메일"),
+            Map.entry("AI_LEAGUE", "AI 투자 리그 매매"),
             Map.entry("WATCHDOG", "작업 감시")
     );
 

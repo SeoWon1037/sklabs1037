@@ -19,6 +19,7 @@ import MockTradePage from './pages/mock/MockTradePage'
 import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
 import AdminOpsPage from './pages/admin/AdminOpsPage'
 import AdminReportsPage from './pages/admin/AdminReportsPage'
+import LeaguePage from './pages/league/LeaguePage'
 import LottoPage from './pages/lotto/LottoPage'
 import BeautyLabPage from './pages/beauty/BeautyLabPage'
 
@@ -33,6 +34,7 @@ function App() {
         <Route path="/" element={<MainPage />} />                        {/* 메인 (오늘의 뉴스) */}
         <Route path="/stock" element={<StockPage />} />                  {/* 주식 종목 */}
         <Route path="/mock" element={<MockTradePage />} />              {/* 모의투자 */}
+        <Route path="/league" element={<LeaguePage />} />                {/* 🤖 AI vs 사람 투자 리그 */}
         <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
         <Route path="/admin" element={<AdminOpsPage />} />               {/* 관리자: 운영 상태 (기본) */}
         <Route path="/admin/ops" element={<AdminOpsPage />} />           {/* 관리자: 운영 상태 (메일 속 링크) */}

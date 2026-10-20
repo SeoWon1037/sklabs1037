@@ -459,6 +459,12 @@
                      WHERE 1=1
                        AND T.USER_ID = A.USER_ID
                 )                                           AS TRADE_COUNT
+               ,(
+                    SELECT  X.CODE
+                      FROM T_AI_TRADER X
+                     WHERE 1=1
+                       AND X.USER_ID = A.USER_ID
+                )                                           AS AI_CODE          -- AI 투자자면 성격 코드 (사람은 NULL)
           FROM T_MOCK_ACCOUNT A
           JOIN T_USER U ON U.ID = A.USER_ID
          WHERE 1=1

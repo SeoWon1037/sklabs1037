@@ -368,7 +368,10 @@ function MockTradePage() {
           {ranking.ranking.map((r, i) => (
             <li key={`${r.rank}-${r.nickname}-${i}`} className={`mock-rank-item ${r.me ? 'mock-rank-me' : ''}`}>
               <span className="mock-rank-no">{rankMark(r.rank)}</span>
-              <span className="mock-rank-name">{r.nickname}{r.me && <em>나</em>}</span>
+              <span className="mock-rank-name">
+                {r.ai ? <Link to="/league" className="mock-rank-ai" title="AI 투자 리그 참가자">🤖 {r.nickname}</Link> : r.nickname}
+                {r.me && <em>나</em>}
+              </span>
               <span className="mock-rank-value">
                 <strong className={tone(r.returnRate)}>{signedRate(r.returnRate)}</strong>
                 <small>{won(r.totalAsset)}원</small>
@@ -387,6 +390,7 @@ function MockTradePage() {
           )}
         </ol>
       )}
+      <Link to="/league" className="mock-league-link">🤖 AI 투자자 3명도 같은 규칙으로 참가 중 · 매매 일지 보기 →</Link>
       <p className="mock-note">
         {rankPeriod === 'WEEK'
           ? '이번 주 수익률 = 지난주 마지막 장 마감 기록 대비 (이번 주에 시작했으면 1,000만 원 대비)'

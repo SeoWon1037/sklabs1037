@@ -1,9 +1,11 @@
 package com.sklabs1037.sklabs1037.couple.controller;
 
+import com.sklabs1037.sklabs1037.couple.service.CouplePhotoService;
 import com.sklabs1037.sklabs1037.couple.service.CoupleService;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
 import com.sklabs1037.sklabs1037.user.vo.UserLoginVO;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,10 @@ import java.util.Map;
  *   POST /api/couple/{id}/accept | decline | cancel
  *   POST /api/couple/end                 커플 끊기
  *   POST /api/couple/heart               💗 하트 날리기 (커플끼리만) → { sent: {total, today} }
+ *   GET  /api/couple/photos              📸 기념일 앨범 (칸 + 사진 목록)
+ *   POST /api/couple/photos { milestone, caption, image(base64) }   사진 올리기
+ *   POST /api/couple/photos/{id}/delete  사진 지우기
+ *   GET  /api/couple/photos/{id}/image   사진 (같은 커플만)
  */
 @Slf4j
 @RestController
@@ -31,6 +37,59 @@ public class CoupleController {
 
     @Autowired
     private CoupleService coupleService;
+
+    @Autowired
+    private CouplePhotoService couplePhotoService;
+
+    // ===== 📸 기념일 앨범 =====
+    @GetMapping("/photos")
+    public ResponseEntity<Map<String, Object>> album(HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+
+        return run("앨범", () -> couplePhotoService.album(userId));
+
+    }
+
+    @PostMapping("/photos")
+    public ResponseEntity<Map<String, Object>> upload(@RequestBody Map<String, Object> req, HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+
+        return run("사진 올리기", () -> couplePhotoService.upload(userId, str(req, "milestone"), str(req, "caption"), str(req, "image")));
+
+    }
+
+    @PostMapping("/photos/{photoId}/delete")
+    public ResponseEntity<Map<String, Object>> deletePhoto(@PathVariable Long photoId, HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+
+        return run("사진 지우기", () -> couplePhotoService.delete(userId, photoId));
+
+    }
+
+    // 사진 그림 (같은 커플이 아니면 404, 브라우저에만 하루 저장)
+    @GetMapping("/photos/{photoId}/image")
+    public void image(@PathVariable Long photoId, HttpServletRequest request, HttpServletResponse response) throws java.io.IOException {
+
+        Long userId = userId(request);
+        Map<String, Object> p = userId == null ? null : couplePhotoService.image(userId, photoId);
+
+        if (p == null || !(p.get("data") instanceof byte[] data)) {
+            response.setStatus(404);
+            return;
+        }
+
+        response.setContentType(String.valueOf(p.get("contentType")));
+        response.setHeader("Cache-Control", "private, max-age=86400");
+        response.setContentLength(data.length);
+        response.getOutputStream().write(data);
+
+    }
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> mine(HttpServletRequest request) {

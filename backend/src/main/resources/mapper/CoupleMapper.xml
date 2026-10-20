@@ -173,4 +173,46 @@
            AND KIND    = 'HEART'
            AND READ_YN = 'N'
     </delete>
+
+    <!-- ===== 📸 기념일 앨범 ===== -->
+    <insert id="insertPhoto" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_COUPLE_PHOTO (COUPLE_ID, UPLOADER_ID, MILESTONE, CAPTION, CONTENT_TYPE, BYTES, DATA)
+        VALUES (#{coupleId}, #{uploaderId}, #{milestone}, #{caption}, #{contentType}, #{bytes}, #{data})
+    </insert>
+
+    <select id="selectPhotos" resultType="java.util.LinkedHashMap">
+        SELECT  ID                                          AS "id"
+               ,UPLOADER_ID                                 AS "uploaderId"
+               ,MILESTONE                                   AS "milestone"
+               ,CAPTION                                     AS "caption"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT AS "insAt"
+          FROM T_COUPLE_PHOTO
+         WHERE COUPLE_ID = #{coupleId}
+         ORDER BY ID
+    </select>
+
+    <select id="selectPhotoData" resultType="java.util.LinkedHashMap">
+        SELECT  COUPLE_ID       AS "coupleId"
+               ,CONTENT_TYPE    AS "contentType"
+               ,DATA            AS "data"
+          FROM T_COUPLE_PHOTO
+         WHERE ID = #{id}
+    </select>
+
+    <select id="countPhotos" resultType="int">
+        SELECT COUNT(*)
+          FROM T_COUPLE_PHOTO
+         WHERE 1=1
+           AND COUPLE_ID = #{coupleId}
+        <if test="milestone != null">
+           AND MILESTONE = #{milestone}
+        </if>
+    </select>
+
+    <delete id="deletePhoto">
+        DELETE FROM T_COUPLE_PHOTO
+         WHERE 1=1
+           AND ID        = #{id}
+           AND COUPLE_ID = #{coupleId}
+    </delete>
 </mapper>

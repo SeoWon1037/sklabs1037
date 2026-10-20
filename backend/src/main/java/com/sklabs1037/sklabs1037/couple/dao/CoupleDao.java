@@ -55,4 +55,17 @@ public interface CoupleDao {
 
     // 상대가 아직 안 읽은 하트 알림은 지우고 새로 1줄 (알림함이 하트로 가득 차지 않게)
     int deleteUnreadHeartNotifications(@Param("userId") Long userId);
+
+    // ===== 📸 기념일 앨범 =====
+    int insertPhoto(Map<String, Object> photo);   // coupleId, uploaderId, milestone, caption, contentType, bytes, data(byte[])
+
+    // 사진 목록 (그림 데이터 빼고)
+    List<Map<String, Object>> selectPhotos(@Param("coupleId") Long coupleId);
+
+    // 그림 데이터 1장 { coupleId, contentType, data }
+    Map<String, Object> selectPhotoData(@Param("id") Long id);
+
+    int countPhotos(@Param("coupleId") Long coupleId, @Param("milestone") String milestone);
+
+    int deletePhoto(@Param("id") Long id, @Param("coupleId") Long coupleId);
 }

@@ -7,6 +7,7 @@
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import CoupleAlbum from './CoupleAlbum'
 import './CouplePage.css'
 
 const dot = (d) => d.replaceAll('-', '.')
@@ -141,7 +142,11 @@ function CouplePage() {
             </div>
           )}
         </section>
-      ) : (
+      ) : null}
+
+      {c && <CoupleAlbum key={c.id} />}
+
+      {!c && (
         <>
           {data.received.length > 0 && (
             <section className="cp-box">

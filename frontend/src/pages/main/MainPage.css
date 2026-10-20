@@ -828,15 +828,14 @@
     font-size: 16px;   /* 16px보다 작으면 아이폰이 입력할 때 화면을 확대함 */
   }
 
-  /* 바로가기 4개를 한 줄에 */
+  /* 바로가기: 한 줄에 4개씩 (7개 → 2줄) */
   .home-shortcuts {
-    flex-wrap: nowrap;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     width: 100%;
-    gap: 4px;
+    gap: 10px 4px;
   }
   .home-shortcut {
-    flex: 1;
     width: auto;
   }
   .home-shortcut-icon {

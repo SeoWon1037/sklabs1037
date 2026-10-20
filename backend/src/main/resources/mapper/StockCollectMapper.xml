@@ -35,6 +35,26 @@
         ORDER BY ID
     </select>
 
+    <!--
+        최신 시세가 기준 거래일보다 오래된 종목 (정기 수집을 놓친 종목)
+        - 주요 종목 → 시가총액 큰 순
+    -->
+    <select id="selectStaleStocks"
+            parameterType="java.time.LocalDate"
+            resultType="com.sklabs1037.sklabs1037.stock.vo.StockCollectVO">
+        SELECT  ID AS STOCK_ID
+        ,SYMBOL
+        ,NAME
+        FROM T_STOCK
+        WHERE 1=1
+        AND USE_YN = 'Y'
+        AND DEL_DAY IS NULL
+        AND (LAST_TRADE_DATE IS NULL OR LAST_TRADE_DATE &lt; #{expected})
+        ORDER BY (FEATURED_YN = 'Y') DESC
+                ,LAST_CLOSE * SHARES_OUTSTANDING DESC NULLS LAST
+                ,ID
+    </select>
+
     <!-- 시세 전체 건수 -->
     <select id="countPrices"
             resultType="int">

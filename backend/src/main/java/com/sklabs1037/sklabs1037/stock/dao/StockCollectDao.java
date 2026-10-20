@@ -3,6 +3,7 @@ package com.sklabs1037.sklabs1037.stock.dao;
 import com.sklabs1037.sklabs1037.stock.vo.StockCollectVO;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -17,6 +18,9 @@ public interface StockCollectDao {
 
     // 아직 종가가 없는 종목
     List<StockCollectVO> selectStocksWithoutPrice();
+
+    // 최신 시세가 기준 거래일보다 오래된 종목
+    List<StockCollectVO> selectStaleStocks(LocalDate expected);
 
     // 시세 전체 건수
     int countPrices();

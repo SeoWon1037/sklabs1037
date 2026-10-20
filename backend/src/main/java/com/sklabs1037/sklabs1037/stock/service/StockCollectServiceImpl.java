@@ -257,6 +257,44 @@ public class StockCollectServiceImpl implements IStockCollectService {
     }
 
     // ============================================
+    // 6. 놓친 수집 따라잡기
+    // ============================================
+    @Override
+    public int collectStale(int count) {
+
+        if (!tossApiClient.isConfigured()) return 0;
+
+        LocalDate expected = lastClosedTradingDay();
+        List<StockCollectVO> targets = stockCollectDao.selectStaleStocks(expected);
+
+        if (targets.isEmpty()) {
+            log.info("놓친 시세 수집: 없음 (기준 {})", expected);
+            return 0;
+        }
+
+        log.info("놓친 시세 수집: {}종목 (기준 {}, 최근 {}일치)", targets.size(), expected, count);
+
+        return collectStocks(targets, count);
+
+    }
+
+    // 장 마감(15:30) 기준 가장 최근 거래일 (주말 제외, 공휴일은 모름 → 공휴일엔 받아도 새 데이터가 없을 뿐)
+    private LocalDate lastClosedTradingDay() {
+
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
+        LocalDate day = now.toLocalDate();
+
+        if (now.toLocalTime().isBefore(java.time.LocalTime.of(15, 40))) day = day.minusDays(1);
+
+        while (day.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || day.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            day = day.minusDays(1);
+        }
+
+        return day;
+
+    }
+
+    // ============================================
     // 5. 종가가 없는 종목에 현재가 임시로 (200개씩)
     // ============================================
     @Override

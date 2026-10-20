@@ -23,6 +23,7 @@ public class StockMainVO {
     private List<Long> stockIds;     // 미니 차트를 그릴 종목들
     private String marketFilter;     // 목록 탭: ALL / KOSPI / KOSDAQ / ETF
     private Integer offset;          // 목록 더보기 시작 위치
+    private String sortKey;          // 목록 정렬: CAP / UP / DOWN / VALUE
 
     // ===== 종목 =====
     private Long stockId;

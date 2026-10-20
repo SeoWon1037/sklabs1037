@@ -41,10 +41,11 @@ public class StockMainServiceImpl implements IStockMainService {
     }
 
     @Override
-    public Map<String, Object> getPage(String market, int offset, int limit, int days) {
+    public Map<String, Object> getPage(String market, String sort, int offset, int limit, int days) {
 
         StockMainVO param = new StockMainVO();
         param.setMarketFilter(market);
+        param.setSortKey(sort);
         param.setOffset(offset);
         param.setLimit(limit);
 

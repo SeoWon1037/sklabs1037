@@ -88,6 +88,41 @@
   color: var(--text);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
+/* 목록 위쪽 칸들은 줄어들지 않게 (목록만 스크롤) */
+.stock-search,
+.stock-market-tabs,
+.stock-sort,
+.stock-list-head {
+  flex-shrink: 0;
+}
+/* 목록 정렬: 시총 / 상승률 / 하락률 / 거래대금 */
+.stock-sort {
+  display: flex;
+  gap: 4px;
+  margin: 8px 10px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.stock-sort::-webkit-scrollbar {
+  display: none;
+}
+.stock-sort-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.stock-sort-btn-active {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+}
 /* 더보기 */
 .stock-more {
   width: 100%;

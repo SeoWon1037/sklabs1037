@@ -5,7 +5,7 @@
 // - 오른쪽: 종목 헤더 + 탭 (차트·시세 / 종목정보 / 뉴스 / 토론)
 // - 주소로 바로 열기: /stock?symbol=005930&tab=board (메인 화면 💬 토론 탭에서 넘어올 때)
 // - 백엔드 API
-//   GET /api/stock/list?market=ALL&page=1      목록 탭 (전체·코스피·코스닥·ETF, 시가총액 순 50개씩 + 미니 차트)
+//   GET /api/stock/list?market=ALL&sort=CAP&page=1  목록 탭 (전체·코스피·코스닥·ETF × 시총·상승·하락·거래대금, 50개씩 + 미니 차트)
 //   목록 끝까지 내리면 다음 50개를 자동으로 (무한 스크롤)
 //   GET /api/stock/search?q=카카오             종목 검색 (최대 20개)
 //   GET /api/stock/detail?symbol=005930     종목 정보 + 일봉
@@ -33,6 +33,22 @@ const MARKET_TABS = [
   { value: 'KOSDAQ', label: '코스닥' },
   { value: 'ETF', label: 'ETF' },
 ]
+
+// 목록 정렬
+const SORT_TABS = [
+  { value: 'CAP', label: '시총', title: '시가총액 순' },
+  { value: 'UP', label: '상승률', title: '상승률 순' },
+  { value: 'DOWN', label: '하락률', title: '하락률 순' },
+  { value: 'VALUE', label: '거래대금', title: '거래대금 순' },
+]
+
+// 한국 시간 기준 오늘 날짜 'YYYY-MM-DD'와 시:분 (장중 표시용)
+const kstNow = () => {
+  const parts = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date())
+  return { date: parts.slice(0, 10), time: parts.slice(11, 16) }
+}
 
 const TABS = [
   { value: 'chart', label: '차트 · 시세' },
@@ -111,9 +127,12 @@ function StockPage() {
   const [stocks, setStocks] = useState([])
   const [listError, setListError] = useState('')
   const [market, setMarket] = useState('ALL')   // 목록 탭
+  const [sort, setSort] = useState('CAP')       // 목록 정렬
+  const listKey = `${market}:${sort}`
   const [listInfo, setListInfo] = useState({ key: '', page: 1, total: 0, hasMore: false })
   const [loadingMore, setLoadingMore] = useState(false)
   const shownParam = useRef(undefined)   // 마지막으로 반영한 주소 종목
+  const [today] = useState(kstNow)        // 장중 표시 (페이지를 연 시각 기준)
   const [selectedSymbol, setSelectedSymbol] = useState(null)
 
   // ===== 검색 =====
@@ -132,16 +151,17 @@ function StockPage() {
   const [watchMsg, setWatchMsg] = useState('')
   const [alertOpen, setAlertOpen] = useState(false)   // 목표가 알림 창
 
-  // 목록 탭이 바뀔 때마다: 1페이지 (시가총액 순 30개)
+  // 목록 탭·정렬이 바뀔 때마다: 1페이지 (50개)
   useEffect(() => {
     let ignore = false
-    fetch(`/api/stock/list?market=${market}&page=1`)
+    fetch(`/api/stock/list?market=${market}&sort=${sort}&page=1`)
       .then((res) => res.json())
       .then((data) => {
         if (ignore) return
         if (data.success) {
           setStocks(data.stocks)
-          setListInfo({ key: market, page: 1, total: data.total, hasMore: data.hasMore })
+          setListError('')
+          setListInfo({ key: `${market}:${sort}`, page: 1, total: data.total, hasMore: data.hasMore })
           // 주소의 종목이 새로 바뀌었으면 그 종목 (목록에 없는 종목도 OK)
           // 탭만 바꾼 거면 보던 종목 그대로, 처음이면 첫 종목
           const paramChanged = shownParam.current !== paramSymbol
@@ -153,20 +173,20 @@ function StockPage() {
       })
       .catch(() => { if (!ignore) setListError('서버에 연결할 수 없습니다.') })
     return () => { ignore = true }
-  }, [market, paramSymbol])
+  }, [market, sort, paramSymbol])
 
   // 목록 더보기 (50개씩)
   const loadMore = () => {
     if (loadingMore || !listInfo.hasMore) return
     const next = listInfo.page + 1
     setLoadingMore(true)
-    fetch(`/api/stock/list?market=${market}&page=${next}`)
+    fetch(`/api/stock/list?market=${market}&sort=${sort}&page=${next}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.success) return
         // 그사이 순위가 바뀌어 겹치는 종목은 빼고 이어 붙임
         setStocks((prev) => [...prev, ...data.stocks.filter((s) => !prev.some((p) => p.stockId === s.stockId))])
-        setListInfo({ key: market, page: next, total: data.total, hasMore: data.hasMore })
+        setListInfo({ key: listKey, page: next, total: data.total, hasMore: data.hasMore })
       })
       .catch(() => {})
       .finally(() => setLoadingMore(false))
@@ -187,6 +207,13 @@ function StockPage() {
     observer.observe(el)
     return () => observer.disconnect()
   }, [listInfo.hasMore, listInfo.page, listInfo.key, query])
+
+  const changeSort = (value) => {
+    if (value === sort) return
+    setSort(value)
+    setStocks([])
+    setListInfo({ key: '', page: 1, total: 0, hasMore: false })
+  }
 
   const changeMarket = (value) => {
     if (value === market) return
@@ -329,10 +356,6 @@ function StockPage() {
     return { ...c, change: before ? c.close - before.close : null, rate: before ? ((c.close - before.close) / before.close) * 100 : null }
   }).slice(1).reverse()
 
-  if (listError) {
-    return <main className="stock-page"><p className="stock-status stock-error">{listError}</p></main>
-  }
-
   return (
     <main className="stock-page">
       <div className="stock-layout">
@@ -365,15 +388,32 @@ function StockPage() {
               ))}
             </div>
           )}
+          {!searching && (
+            <div className="stock-sort" role="group" aria-label="정렬">
+              {SORT_TABS.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  aria-pressed={sort === t.value}
+                  className={`stock-sort-btn ${sort === t.value ? 'stock-sort-btn-active' : ''}`}
+                  onClick={() => changeSort(t.value)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="stock-list-head">
-            <span>{searching ? '검색 결과' : '시가총액 순'}</span>
+            <span>{searching ? '검색 결과' : SORT_TABS.find((t) => t.value === sort)?.title}</span>
             <span className="stock-list-count">
               {searching
                 ? (results.key === trimmed ? results.items.length : '…')
-                : listInfo.key === market ? `${stocks.length.toLocaleString()} / ${listInfo.total.toLocaleString()}` : '…'}
+                : listInfo.key === listKey ? `${stocks.length.toLocaleString()} / ${listInfo.total.toLocaleString()}` : '…'}
             </span>
           </div>
-          {!searching && listInfo.key === market && stocks.length === 0 && (
+          {/* 목록을 못 불러와도 검색창·상세는 그대로 쓸 수 있게 목록 칸 안에만 표시 */}
+          {!searching && listError && <p className="stock-list-empty stock-error">{listError}</p>}
+          {!searching && !listError && listInfo.key === listKey && stocks.length === 0 && (
             <p className="stock-list-empty">아직 시세를 받은 종목이 없어요.<br />서버가 처음 켜지면 몇 분 동안 차례로 채워져요.</p>
           )}
           {searching && results.key === trimmed && results.items.length === 0 && (
@@ -406,7 +446,7 @@ function StockPage() {
                 </button>
               </li>
             ))}
-            {!searching && listInfo.key === market && listInfo.hasMore && (
+            {!searching && listInfo.key === listKey && listInfo.hasMore && (
               <li className="stock-more-item" ref={sentinelRef}>
                 <button type="button" className="stock-more" onClick={loadMore} disabled={loadingMore}>
                   {loadingMore ? '불러오는 중...' : '더 보기'}
@@ -439,7 +479,11 @@ function StockPage() {
                         {arrow(change)} {signed(change)} ({signed(changeRate, 2)}%)
                       </span>
                     )}
-                    <span className="detail-date">{latest?.date} 종가 기준</span>
+                    <span className="detail-date">
+                      {latest?.date === today.date && today.time < '15:30'
+                        ? `${latest.date} 장중 기준 (저녁 8시 반에 종가로 바뀌어요)`
+                        : `${latest?.date ?? ''} 종가 기준`}
+                    </span>
                   </div>
                   {watchMsg && (
                     <p className="watch-msg">

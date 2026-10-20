@@ -14,7 +14,7 @@
 //   GET /api/mock/ranking?size=3             모의투자 수익률 TOP 3 (MockBanner)
 //   GET /api/watchlist                       관심 종목 (⭐ 관심 종목 탭)
 // ============================================
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useBoardStream from '../../hooks/useBoardStream'
 import './MainPage.css'
@@ -22,23 +22,11 @@ import WeatherBox from '../../components/weather/WeatherBox'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import MockBanner from '../../components/mock/MockBanner'
 import TodayCard from '../../components/me/TodayCard'
+import AllMenu from '../../components/layout/AllMenu'
+import { SERVICES, SHORTCUT_KEYS } from '../../components/layout/menuData'
 
 // 바로가기 아이콘
 // 바로가기 (위 상단 메뉴와 같은 순서 + 기업 정보 · 투자 성향 · 뉴스 퀴즈)
-const SHORTCUTS = [
-  { icon: '📈', label: '주식 종목', to: '/stock' },
-  { icon: '💰', label: '모의투자', to: '/mock' },
-  { icon: '🏆', label: 'AI 리그', to: '/league' },
-  { icon: '🎯', label: '예측 게임', to: '/predict' },
-  { icon: '🤖', label: 'AI 비서', to: '/ai' },
-  { icon: '💄', label: '뷰티 랩', to: '/beauty' },
-  { icon: '🍀', label: '오늘의 숫자', to: '/lotto' },
-  { icon: '🏭', label: '기업 정보', to: `/ai?q=${encodeURIComponent('')}` },
-  { icon: '🧭', label: '투자 성향', to: '/persona' },
-  { icon: '📰', label: '뉴스 퀴즈', to: '/quiz' },
-  { icon: '⚔️', label: '친구 대결', to: '/duel' },
-  { icon: '🏅', label: '내 활동', to: '/activity' },
-]
 
 // 오른쪽 아래 "지금 토론 중"에 보여줄 글 개수
 // - 새 글은 실시간(SSE)으로 바로 반영, 혹시 연결이 안 될 때를 대비해 5분마다 한 번 더
@@ -104,6 +92,8 @@ function MainPage() {
   const [stocks, setStocks] = useState([])
   const [baseDate, setBaseDate] = useState(null)
   const [user, setUser] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)   // ☰ 전체 메뉴
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
   const [stockTab, setStockTab] = useState('ALL')   // 종목 카드 탭: 'ALL' | 'WATCH'
   const [watchStocks, setWatchStocks] = useState([])   // 관심 종목 (시세 포함, 전 종목 중 어떤 종목이든)
 
@@ -238,7 +228,12 @@ function MainPage() {
       {/* ===== 검색창 ===== */}
       <section className="home-search-area">
         <div className="home-search-row">
-          <span className="home-logo">SKLabs</span>
+          <div className="home-brand">
+            <button type="button" className="home-menu-btn" onClick={() => setMenuOpen(true)} aria-label="전체 메뉴">
+              <span /><span /><span />
+            </button>
+            <span className="home-logo">SKLabs</span>
+          </div>
 
           <form className="home-search" onSubmit={handleSearch}>
             <input
@@ -252,16 +247,25 @@ function MainPage() {
           </form>
         </div>
 
-        {/* 바로가기 */}
+        {/* 바로가기 (검색창 바로 아래 촘촘하게, 마지막 칸은 ☰ 전체 메뉴) */}
         <nav className="home-shortcuts">
-          {SHORTCUTS.map((s) => (
-            <Link key={s.label} to={s.to} className="home-shortcut">
-              <span className="home-shortcut-icon">{s.icon}</span>
-              <span className="home-shortcut-label">{s.label}</span>
-            </Link>
-          ))}
+          {SHORTCUT_KEYS.map((k) => {
+            const s = SERVICES[k]
+            return (
+              <Link key={k} to={s.to} className="home-shortcut">
+                <span className="home-shortcut-icon" style={{ '--c': s.color }}>{s.icon}</span>
+                <span className="home-shortcut-label">{s.label}</span>
+              </Link>
+            )
+          })}
+          <button type="button" className="home-shortcut" onClick={() => setMenuOpen(true)}>
+            <span className="home-shortcut-icon home-shortcut-more">⋯</span>
+            <span className="home-shortcut-label">전체</span>
+          </button>
         </nav>
       </section>
+
+      {menuOpen && <AllMenu user={user} onClose={closeMenu} />}
 
       {/* 줄마다 왼쪽·오른쪽 칸 높이가 같음 (grid: 같은 줄 칸끼리 위아래 끝 맞춤) */}
       <div className="home-grid">

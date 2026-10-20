@@ -16,9 +16,35 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  padding: 12px 0 28px;
+  gap: 12px;
+  padding: 12px 0 24px;
 }
+/* ☰ + 로고 */
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.home-menu-btn {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  cursor: pointer;
+}
+.home-menu-btn span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text);
+}
+.home-menu-btn:hover { background: var(--hover); }
 .home-search-row {
   display: flex;
   align-items: center;
@@ -86,16 +112,20 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: 2px;
 }
 .home-shortcut {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  width: 88px;
-  padding: 8px 0;
+  gap: 5px;
+  width: 72px;
+  padding: 6px 0;
+  border: none;
   border-radius: 12px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
   color: color-mix(in srgb, var(--text) 80%, transparent);
   text-decoration: none;
   transition: background-color 0.15s, color 0.15s;
@@ -108,16 +138,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
   font-size: 22px;
+  background: color-mix(in srgb, var(--c, var(--text)) 20%, transparent);
+}
+.home-shortcut-more {
+  border: 1px solid var(--border);
   background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
 }
 .home-shortcut-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ===== 2단 배치 (네이버 메인처럼: 왼쪽 넓게 | 오른쪽 380px)
@@ -646,6 +683,12 @@
   .home-logo {
     font-size: 24px;
   }
+  /* ☰ 왼쪽 끝, 로고 가운데 */
+  .home-brand {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    width: 100%;
+  }
 }
 
 
@@ -828,12 +871,12 @@
     font-size: 16px;   /* 16px보다 작으면 아이폰이 입력할 때 화면을 확대함 */
   }
 
-  /* 바로가기: 한 줄에 4개씩 (7개 → 2줄) */
+  /* 바로가기: 한 줄에 5개씩 (9개 + 전체 → 2줄) */
   .home-shortcuts {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     width: 100%;
-    gap: 10px 4px;
+    gap: 4px 0;
   }
   .home-shortcut {
     width: auto;
@@ -841,7 +884,11 @@
   .home-shortcut-icon {
     width: 44px;
     height: 44px;
+    border-radius: 14px;
     font-size: 20px;
+  }
+  .home-shortcut-label {
+    font-size: 11.5px;
   }
   .home-shortcut-label {
     font-size: 12px;

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    💕 커플 맺기
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.couple.dao.CoupleDao">
+
+    <select id="selectUsersByNickname" resultType="java.util.LinkedHashMap">
+        SELECT  ID          AS "id"
+               ,NICKNAME    AS "nickname"
+          FROM T_USER
+         WHERE 1=1
+           AND NICKNAME = #{nickname}
+           AND DEL_DAY IS NULL
+         LIMIT 2
+    </select>
+
+    <select id="selectActive" resultType="java.util.LinkedHashMap">
+        SELECT  C.ID                                        AS "id"
+               ,TO_CHAR(C.START_DATE, 'YYYY-MM-DD')         AS "startDate"
+               ,ME.NICKNAME                                 AS "myName"
+               ,P.NICKNAME                                  AS "partnerName"
+          FROM T_COUPLE C
+          JOIN T_USER ME ON ME.ID = #{userId}
+          JOIN T_USER P  ON P.ID = CASE WHEN C.REQUESTER_ID = #{userId} THEN C.PARTNER_ID ELSE C.REQUESTER_ID END
+         WHERE 1=1
+           AND C.STATUS = 'ACTIVE'
+           AND (C.REQUESTER_ID = #{userId} OR C.PARTNER_ID = #{userId})
+         ORDER BY C.ID DESC
+         LIMIT 1
+    </select>
+
+    <select id="selectSent" resultType="java.util.LinkedHashMap">
+        SELECT  C.ID                                        AS "id"
+               ,U.NICKNAME                                  AS "nickname"
+               ,TO_CHAR(C.START_DATE, 'YYYY-MM-DD')         AS "startDate"
+               ,(EXTRACT(EPOCH FROM C.INS_DAY) * 1000)::BIGINT AS "insAt"
+          FROM T_COUPLE C
+          JOIN T_USER U ON U.ID = C.PARTNER_ID
+         WHERE 1=1
+           AND C.REQUESTER_ID = #{userId}
+           AND C.STATUS = 'PENDING'
+         ORDER BY C.ID DESC
+    </select>
+
+    <select id="selectReceived" resultType="java.util.LinkedHashMap">
+        SELECT  C.ID                                        AS "id"
+               ,U.NICKNAME                                  AS "nickname"
+               ,TO_CHAR(C.START_DATE, 'YYYY-MM-DD')         AS "startDate"
+               ,(EXTRACT(EPOCH FROM C.INS_DAY) * 1000)::BIGINT AS "insAt"
+          FROM T_COUPLE C
+          JOIN T_USER U ON U.ID = C.REQUESTER_ID
+         WHERE 1=1
+           AND C.PARTNER_ID = #{userId}
+           AND C.STATUS = 'PENDING'
+         ORDER BY C.ID DESC
+    </select>
+
+    <select id="selectCouple" resultType="java.util.LinkedHashMap">
+        SELECT  ID              AS "id"
+               ,REQUESTER_ID    AS "requesterId"
+               ,PARTNER_ID      AS "partnerId"
+               ,STATUS          AS "status"
+          FROM T_COUPLE
+         WHERE ID = #{id}
+    </select>
+
+    <select id="countActive" resultType="int">
+        SELECT COUNT(*)
+          FROM T_COUPLE
+         WHERE 1=1
+           AND STATUS = 'ACTIVE'
+           AND (REQUESTER_ID = #{userId} OR PARTNER_ID = #{userId})
+    </select>
+
+    <select id="countPendingBetween" resultType="int">
+        SELECT COUNT(*)
+          FROM T_COUPLE
+         WHERE 1=1
+           AND STATUS = 'PENDING'
+           AND ((REQUESTER_ID = #{a} AND PARTNER_ID = #{b}) OR (REQUESTER_ID = #{b} AND PARTNER_ID = #{a}))
+    </select>
+
+    <select id="countSentPending" resultType="int">
+        SELECT COUNT(*)
+          FROM T_COUPLE
+         WHERE 1=1
+           AND REQUESTER_ID = #{userId}
+           AND STATUS = 'PENDING'
+    </select>
+
+    <insert id="insertRequest">
+        INSERT INTO T_COUPLE (REQUESTER_ID, PARTNER_ID, START_DATE)
+        VALUES (#{requesterId}, #{partnerId}, #{startDate})
+    </insert>
+
+    <update id="accept">
+        UPDATE T_COUPLE C
+           SET STATUS       = 'ACTIVE'
+              ,ACCEPTED_DAY = NOW()
+         WHERE 1=1
+           AND C.ID         = #{id}
+           AND C.PARTNER_ID = #{partnerId}
+           AND C.STATUS     = 'PENDING'
+           AND NOT EXISTS (
+                SELECT 1
+                  FROM T_COUPLE X
+                 WHERE X.STATUS = 'ACTIVE'
+                   AND (X.REQUESTER_ID IN (C.REQUESTER_ID, C.PARTNER_ID) OR X.PARTNER_ID IN (C.REQUESTER_ID, C.PARTNER_ID))
+           )
+    </update>
+
+    <update id="decline">
+        UPDATE T_COUPLE
+           SET STATUS    = 'DECLINED'
+              ,ENDED_DAY = NOW()
+         WHERE 1=1
+           AND ID         = #{id}
+           AND PARTNER_ID = #{partnerId}
+           AND STATUS     = 'PENDING'
+    </update>
+
+    <update id="cancel">
+        UPDATE T_COUPLE
+           SET STATUS    = 'CANCELED'
+              ,ENDED_DAY = NOW()
+         WHERE 1=1
+           AND ID           = #{id}
+           AND REQUESTER_ID = #{requesterId}
+           AND STATUS       = 'PENDING'
+    </update>
+
+    <update id="end">
+        UPDATE T_COUPLE
+           SET STATUS    = 'ENDED'
+              ,ENDED_DAY = NOW()
+         WHERE 1=1
+           AND ID     = #{id}
+           AND STATUS = 'ACTIVE'
+           AND (REQUESTER_ID = #{userId} OR PARTNER_ID = #{userId})
+    </update>
+
+    <update id="cancelOthers">
+        UPDATE T_COUPLE
+           SET STATUS    = 'CANCELED'
+              ,ENDED_DAY = NOW()
+         WHERE 1=1
+           AND STATUS = 'PENDING'
+           AND (REQUESTER_ID IN (#{a}, #{b}) OR PARTNER_ID IN (#{a}, #{b}))
+    </update>
+</mapper>

@@ -22,6 +22,7 @@ import WeatherBox from '../../components/weather/WeatherBox'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import MockBanner from '../../components/mock/MockBanner'
 import TodayCard from '../../components/me/TodayCard'
+import CoupleLine from '../../components/me/CoupleLine'
 import AllMenu from '../../components/layout/AllMenu'
 import FxList from '../../components/fx/FxList'
 import { SERVICES, SHORTCUT_KEYS } from '../../components/layout/menuData'
@@ -283,6 +284,7 @@ function MainPage() {
                   <div className="home-login-info">
                     <p className="home-login-hello"><strong>{user.nickname}</strong>님, 반가워요 👋</p>
                     {user.email && <span className="home-login-email">{user.email}</span>}
+                    <CoupleLine />
                   </div>
                 </div>
                 <nav className="home-login-menu">

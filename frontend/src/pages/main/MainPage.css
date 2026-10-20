@@ -980,3 +980,14 @@
 }
 /* 탭이 3개라 좁은 칸에서는 설명 글이 다음 줄로 */
 .home-quotes-box .home-box-head { flex-wrap: wrap; row-gap: 4px; }
+
+/* 💕 로그인 카드 이름 아래 커플 한 줄 */
+.home-couple {
+  margin-top: 4px;
+  color: #ec4899;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.home-couple b { font-weight: 800; }
+.home-couple:hover { text-decoration: underline; }

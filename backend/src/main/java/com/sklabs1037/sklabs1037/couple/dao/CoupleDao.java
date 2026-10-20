@@ -46,4 +46,13 @@ public interface CoupleDao {
 
     // 커플이 되면 둘에게 남은 다른 신청은 정리
     int cancelOthers(@Param("a") Long a, @Param("b") Long b);
+
+    // ===== 💗 하트 =====
+    int insertHeart(@Param("coupleId") Long coupleId, @Param("fromId") Long fromId);
+
+    // 보낸 사람 기준 하트 수 (전체 / 오늘)
+    Map<String, Object> selectHeartCounts(@Param("coupleId") Long coupleId, @Param("fromId") Long fromId);
+
+    // 상대가 아직 안 읽은 하트 알림은 지우고 새로 1줄 (알림함이 하트로 가득 차지 않게)
+    int deleteUnreadHeartNotifications(@Param("userId") Long userId);
 }

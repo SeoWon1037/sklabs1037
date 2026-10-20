@@ -22,6 +22,7 @@ import java.util.Map;
  *   POST /api/couple/request { nickname, startDate }   신청
  *   POST /api/couple/{id}/accept | decline | cancel
  *   POST /api/couple/end                 커플 끊기
+ *   POST /api/couple/heart               💗 하트 날리기 (커플끼리만) → { sent: {total, today} }
  */
 @Slf4j
 @RestController
@@ -79,6 +80,16 @@ public class CoupleController {
             }
             return coupleService.mine(userId);
         });
+
+    }
+
+    @PostMapping("/heart")
+    public ResponseEntity<Map<String, Object>> heart(HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+
+        return run("하트", () -> coupleService.heart(userId));
 
     }
 

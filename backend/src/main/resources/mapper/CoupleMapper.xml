@@ -150,4 +150,27 @@
            AND STATUS = 'PENDING'
            AND (REQUESTER_ID IN (#{a}, #{b}) OR PARTNER_ID IN (#{a}, #{b}))
     </update>
+
+    <!-- ===== 💗 하트 ===== -->
+    <insert id="insertHeart">
+        INSERT INTO T_COUPLE_HEART (COUPLE_ID, FROM_ID)
+        VALUES (#{coupleId}, #{fromId})
+    </insert>
+
+    <select id="selectHeartCounts" resultType="java.util.LinkedHashMap">
+        SELECT  COUNT(*)::INT                                                       AS "total"
+               ,COUNT(*) FILTER (WHERE INS_DAY >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::DATE::TIMESTAMP AT TIME ZONE 'Asia/Seoul')::INT AS "today"
+          FROM T_COUPLE_HEART
+         WHERE 1=1
+           AND COUPLE_ID = #{coupleId}
+           AND FROM_ID   = #{fromId}
+    </select>
+
+    <delete id="deleteUnreadHeartNotifications">
+        DELETE FROM T_NOTIFICATION
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND KIND    = 'HEART'
+           AND READ_YN = 'N'
+    </delete>
 </mapper>

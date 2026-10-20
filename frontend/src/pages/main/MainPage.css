@@ -991,3 +991,19 @@
 }
 .home-couple b { font-weight: 800; }
 .home-couple:hover { text-decoration: underline; }
+
+.home-couple-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+.home-couple-row .home-couple { margin-top: 0; }
+.home-couple-heart {
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: #ec4899;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.home-couple-heart:hover { transform: scale(1.25); }
+.home-couple-heart:active { transform: scale(0.85); }
+.home-couple-sent { color: color-mix(in srgb, var(--text) 60%, transparent); font-size: 12px; }

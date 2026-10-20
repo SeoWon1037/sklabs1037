@@ -28,6 +28,22 @@ function CouplePage() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [confirmEnd, setConfirmEnd] = useState(false)
+  const [floats, setFloats] = useState([])   // 하트 날아가는 효과
+
+  // 💗 하트 날리기
+  const sendHeart = async () => {
+    const key = Date.now()
+    setFloats((f) => [...f.slice(-8), { key, x: Math.round(Math.random() * 60 - 30) }])
+    setTimeout(() => setFloats((f) => f.filter((h) => h.key !== key)), 1200)
+    try {
+      const json = await post('/api/couple/heart')
+      if (!json.success) throw new Error(json.message)
+      setMsg('')
+      setData((d) => ({ ...d, couple: { ...d.couple, heartsSent: json.sent } }))
+    } catch (e) {
+      setMsg(e.message || '하트를 보내지 못했어요.')
+    }
+  }
 
   useEffect(() => {
     let ignore = false
@@ -101,6 +117,18 @@ function CouplePage() {
               ? <span>🎉 오늘은 <b>{c.next.label}</b>이에요!</span>
               : <span>다음 기념일 <b>{c.next.label}</b> · {dot(c.next.date)} · <b>D-{c.next.dDay}</b></span>}
           </div>
+
+          <div className="cp-heart-area">
+            <button type="button" className="cp-heart-btn" onClick={sendHeart} aria-label={`${c.partnerName}님에게 하트 보내기`}>
+              💗
+              {floats.map((h) => <span key={h.key} className="cp-float" style={{ '--x': `${h.x}px` }} aria-hidden="true">💗</span>)}
+            </button>
+            <p className="cp-heart-hint">눌러서 {c.partnerName}님에게 하트 보내기</p>
+            <p className="cp-heart-count">
+              보낸 하트 <b>{c.heartsSent.total.toLocaleString()}</b> (오늘 {c.heartsSent.today}) · 받은 하트 <b>{c.heartsReceived.total.toLocaleString()}</b> (오늘 {c.heartsReceived.today})
+            </p>
+          </div>
+
           <p className="cp-private">커플 정보는 두 분에게만 보여요.</p>
 
           {!confirmEnd ? (

@@ -21,6 +21,8 @@ import java.util.*;
  *   2. 상대가 수락하면 커플 (둘 다 다른 커플이 없을 때만) / 거절 · 신청 취소도 가능
  *   3. 로그인하면 "○○님과 200일 ♥" (시작일 = 1일, 우리나라에서 세는 방식) + 다가오는 기념일 D-day
  *   4. 둘 중 한 사람이 "커플 끊기"를 하면 끝, 상대에게 알림
+ *   5. 💗 하트 날리기: 커플끼리만, 누르면 상대에게 🔔 알림 (안 읽은 하트 알림은 "오늘 n번째" 한 줄로 합침)
+ *      1.5초에 한 번 · 하루 300개까지
  *
  * - 커플 정보는 두 사람에게만 보임 (다른 사람 화면에는 안 나옴)
  * - 보낸 신청은 한 번에 1개까지 (아무에게나 여러 번 보내지 않게)
@@ -38,6 +40,12 @@ public class CoupleService {
     @Autowired
     private MeDao meDao;
 
+    static final long HEART_GAP_MS = 1500;
+    static final int HEART_DAILY = 300;
+
+    // 연타 막기 (사람마다 마지막으로 보낸 시각)
+    private final Map<Long, Long> lastHeart = new java.util.concurrent.ConcurrentHashMap<>();
+
     // ============================================
     // 보기
     // ============================================
@@ -52,6 +60,10 @@ public class CoupleService {
             Map<String, Object> c = new LinkedHashMap<>(active);
             c.put("days", days(start, today));
             c.put("next", nextMilestone(start, today));
+            Long id = num(active.get("id"));
+            Long partnerId = partnerOf(id, userId);
+            c.put("heartsSent", coupleDao.selectHeartCounts(id, userId));
+            c.put("heartsReceived", partnerId == null ? Map.of("total", 0, "today", 0) : coupleDao.selectHeartCounts(id, partnerId));
             result.put("couple", c);
         } else {
             result.put("couple", null);
@@ -159,6 +171,43 @@ public class CoupleService {
 
         Long other = userId.equals(num(c.get("requesterId"))) ? num(c.get("partnerId")) : num(c.get("requesterId"));
         notificationService.notify(other, "COUPLE", "💔 커플 연결이 끝났어요", myName(userId) + "님이 커플 연결을 끊었어요", "/couple");
+
+    }
+
+    // 💗 하트 날리기
+    public Map<String, Object> heart(Long userId) {
+
+        Map<String, Object> active = coupleDao.selectActive(userId);
+        if (active == null) throw new IllegalArgumentException("커플끼리만 하트를 보낼 수 있어요.");
+
+        long now = System.currentTimeMillis();
+        Long last = lastHeart.put(userId, now);
+        if (last != null && now - last < HEART_GAP_MS) throw new IllegalArgumentException("하트가 너무 빨라요. 천천히 보내주세요 💗");
+
+        Long id = num(active.get("id"));
+        if (((Number) coupleDao.selectHeartCounts(id, userId).get("today")).intValue() >= HEART_DAILY) {
+            throw new IllegalArgumentException("오늘은 하트를 " + HEART_DAILY + "개 다 보냈어요. 내일 또 보내주세요 💗");
+        }
+
+        coupleDao.insertHeart(id, userId);
+        Map<String, Object> counts = coupleDao.selectHeartCounts(id, userId);
+
+        Long partnerId = partnerOf(id, userId);
+        if (partnerId != null) {
+            coupleDao.deleteUnreadHeartNotifications(partnerId);
+            notificationService.notify(partnerId, "HEART", "💗 " + active.get("myName") + "님이 하트를 보냈어요",
+                    "오늘 " + counts.get("today") + "번째 하트예요", "/couple");
+        }
+
+        return Map.of("sent", counts);
+
+    }
+
+    private Long partnerOf(Long coupleId, Long userId) {
+
+        Map<String, Object> c = coupleDao.selectCouple(coupleId);
+        if (c == null) return null;
+        return userId.equals(num(c.get("requesterId"))) ? num(c.get("partnerId")) : num(c.get("requesterId"));
 
     }
 

@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.stock.controller;
 
+import com.sklabs1037.sklabs1037.stock.service.BoardLiveHub;
 import com.sklabs1037.sklabs1037.stock.service.IStockBoardService;
 import com.sklabs1037.sklabs1037.stock.vo.StockBoardVO;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
@@ -9,8 +10,10 @@ import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +31,7 @@ import java.util.Map;
  *   GET    /api/stock/board/{postId}/comments          댓글 목록                   → { success, comments }
  *   POST   /api/stock/board/{postId}/comments { content }   댓글 쓰기              → { success }
  *   DELETE /api/stock/board/comments/{commentId}       댓글 삭제                   → { success }
+ *   GET    /api/stock/board/stream?stockId=1          실시간 알림 (SSE, stockId 없으면 전 종목 새 글) → text/event-stream
  *
  * - 목록은 누구나, 쓰기·삭제는 로그인한 사람만
  * - 삭제는 본인 글/댓글 또는 관리자만
@@ -46,6 +50,26 @@ public class StockBoardController {
 
     @Autowired
     private IStockBoardService stockBoardService;
+
+    @Autowired
+    private BoardLiveHub boardLiveHub;
+
+    // 실시간 알림 연결 (누구나, 보기만)
+    // - 응답을 끊지 않고 이벤트가 생길 때마다 한 줄씩 보냄 (BoardLiveHub 설명 참고)
+    // - 동시 연결이 너무 많으면 503 → 화면은 예전처럼 주기적으로 새로고침
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public ResponseEntity<SseEmitter> stream(@RequestParam(required = false) Long stockId) {
+
+        SseEmitter emitter = boardLiveHub.subscribe(stockId);
+        if (emitter == null) return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+
+        // nginx가 모아서 보내지 않게 (실시간이 늦어지지 않게)
+        return ResponseEntity.ok()
+                .header("X-Accel-Buffering", "no")
+                .header("Cache-Control", "no-cache")
+                .body(emitter);
+
+    }
 
     // 글 목록 + 의견 비율
     @GetMapping

@@ -16,6 +16,7 @@
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import useBoardStream from '../../hooks/useBoardStream'
 import './MainPage.css'
 import WeatherBox from '../../components/weather/WeatherBox'
 import NewsSummaryBox from '../../components/news/NewsSummaryBox'
@@ -30,9 +31,10 @@ const SHORTCUTS = [
   { icon: '🏭', label: '기업 정보', to: `/ai?q=${encodeURIComponent('')}` },
 ]
 
-// 오른쪽 아래 "지금 토론 중"에 보여줄 글 개수 / 자동 새로고침 주기 (1분)
+// 오른쪽 아래 "지금 토론 중"에 보여줄 글 개수
+// - 새 글은 실시간(SSE)으로 바로 반영, 혹시 연결이 안 될 때를 대비해 5분마다 한 번 더
 const HOT_BOARD_SIZE = 3
-const HOT_REFRESH_MS = 60 * 1000
+const HOT_REFRESH_MS = 5 * 60 * 1000
 
 // 뉴스 탭에 보여줄 종목 (종목코드, 이 순서대로 표시)
 const NEWS_TAB_SYMBOLS = ['005930', '000660', '035420']   // 삼성전자, SK하이닉스, NAVER
@@ -99,6 +101,15 @@ function MainPage() {
   // ===== 지금 토론 중 (오른쪽 아래) =====
   const [hotPosts, setHotPosts] = useState(null)   // null = 불러오는 중
   const [hotAt, setHotAt] = useState(() => Date.now())   // 마지막으로 불러온 시각 ("n분 전" 기준)
+  const [boardTick, setBoardTick] = useState(0)          // 실시간: 어느 종목이든 새 글·삭제가 생기면 +1
+
+  // 실시간 연결 (전 종목) → 지금 토론 중 박스 + 💬 토론 탭 다시 불러오기
+  useBoardStream(null, (type) => {
+    if (type === 'post' || type === 'delete') setBoardTick((n) => n + 1)
+  })
+
+  // 토론 탭을 보고 있을 때만 실시간 새 글에 반응 (뉴스 탭에서는 0으로 고정 → 다시 안 불러옴)
+  const boardRefresh = tab === 'BOARD' ? boardTick : 0
 
   // 탭이나 개수가 바뀔 때마다 뉴스 다시 불러오기
   useEffect(() => {
@@ -119,7 +130,7 @@ function MainPage() {
 
     return () => { ignore = true }
 
-  }, [tab, size])
+  }, [tab, size, boardRefresh])
 
   // 처음 한 번: 시세 + 로그인 상태
   useEffect(() => {
@@ -178,7 +189,7 @@ function MainPage() {
       document.removeEventListener('visibilitychange', onVisible)
     }
 
-  }, [])
+  }, [boardTick])   // 실시간 새 글이 오면 바로 다시
 
   // 탭 바꾸기 (개수는 처음으로)
   const changeTab = (value) => {

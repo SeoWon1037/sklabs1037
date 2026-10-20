@@ -28,6 +28,10 @@ public class StockBoardServiceImpl implements IStockBoardService {
     @Autowired
     private StockBoardDao stockBoardDao;
 
+    // 실시간 알림 (저장이 끝난 뒤에 보냄)
+    @Autowired
+    private BoardLiveHub boardLiveHub;
+
     @Override
     public List<StockBoardVO> getPosts(Long stockId, int page, int size) {
 
@@ -87,6 +91,8 @@ public class StockBoardServiceImpl implements IStockBoardService {
             throw new IllegalArgumentException("없는 종목입니다.");
         }
 
+        boardLiveHub.postCreated(stockId);
+
     }
 
     @Override
@@ -104,6 +110,8 @@ public class StockBoardServiceImpl implements IStockBoardService {
         param.setUserId(userId);     // 삭제한 사람
 
         stockBoardDao.deletePost(param);
+
+        boardLiveHub.deleted(post.getStockId(), postId, true);
 
     }
 
@@ -136,6 +144,8 @@ public class StockBoardServiceImpl implements IStockBoardService {
             throw new IllegalArgumentException("삭제된 글에는 댓글을 달 수 없습니다.");
         }
 
+        notifyComment(postId, false);
+
     }
 
     @Override
@@ -153,6 +163,25 @@ public class StockBoardServiceImpl implements IStockBoardService {
         param.setUserId(userId);     // 삭제한 사람
 
         stockBoardDao.deleteComment(param);
+
+        notifyComment(comment.getPostId(), true);
+
+    }
+
+    // 댓글이 달린 글의 종목을 찾아서 그 종목 화면에 알림 (알림 실패는 댓글 저장과 무관)
+    private void notifyComment(Long postId, boolean delete) {
+
+        try {
+
+            StockBoardVO post = stockBoardDao.selectPost(postId);
+            if (post == null) return;
+
+            if (delete) boardLiveHub.deleted(post.getStockId(), postId, false);
+            else boardLiveHub.commentCreated(post.getStockId(), postId);
+
+        } catch (Exception ignore) {
+            // 알림만 빠짐 (화면은 다음 새로고침 때 반영)
+        }
 
     }
 

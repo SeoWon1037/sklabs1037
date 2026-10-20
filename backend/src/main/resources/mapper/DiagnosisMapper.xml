@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🩺 포트폴리오 AI 진단
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.mock.dao.DiagnosisDao">
+
+    <select id="selectLast" resultType="java.util.LinkedHashMap">
+        SELECT  STATS_JSON                                      AS "statsJson"
+               ,RESULT_JSON                                     AS "resultJson"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT    AS "insAt"
+          FROM T_MOCK_DIAGNOSIS
+         WHERE USER_ID = #{userId}
+         ORDER BY ID DESC
+         LIMIT 1
+    </select>
+
+    <select id="countToday" resultType="int">
+        SELECT COUNT(*)
+          FROM T_MOCK_DIAGNOSIS
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND INS_DAY >= NOW() - INTERVAL '1 day'
+    </select>
+
+    <insert id="insertDiagnosis">
+        INSERT INTO T_MOCK_DIAGNOSIS (USER_ID, STATS_JSON, RESULT_JSON)
+        VALUES (#{userId}, #{statsJson}, #{resultJson})
+    </insert>
+</mapper>

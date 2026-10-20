@@ -1,0 +1,33 @@
+/* ===== 🧾 종목 한 장 요약 ===== */
+.sb {
+  margin: 14px 0 4px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+.sb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 14px; }
+.sb-time { color: color-mix(in srgb, var(--text) 50%, transparent); font-size: 12px; }
+.sb-intro { margin: 8px 0 0; color: color-mix(in srgb, var(--text) 65%, transparent); font-size: 13px; }
+.sb-lines { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.sb-lines li { display: grid; grid-template-columns: 108px 1fr; gap: 8px; font-size: 14px; line-height: 1.5; }
+.sb-label { color: color-mix(in srgb, var(--text) 60%, transparent); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.sb-text { word-break: keep-all; }
+.sb-news { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.sb-news a {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+  text-decoration: none;
+  text-overflow: ellipsis;
+}
+.sb-news a:hover { text-decoration: underline; }
+.sb-news small { margin-left: 6px; color: color-mix(in srgb, var(--text) 45%, transparent); font-size: 11px; }
+.sb-btn { margin-top: 10px; }
+.sb-error { margin: 6px 0 0; color: #e5484d; font-size: 13px; }
+.sb-note { margin: 8px 0 0; color: color-mix(in srgb, var(--text) 40%, transparent); font-size: 11px; }
+
+@media (max-width: 640px) {
+  .sb-lines li { grid-template-columns: 1fr; gap: 2px; }
+}

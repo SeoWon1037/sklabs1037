@@ -25,6 +25,7 @@ import WatchStar from '../../components/stock/WatchStar'
 import StockBoard from '../../components/stock/StockBoard'
 import PriceAlertPanel from '../../components/alert/PriceAlertPanel'
 import './StockPage.css'
+import StockBrief from '../../components/stock/StockBrief'
 
 // 목록 탭 (전체·코스피·코스닥은 주식만, ETF는 따로)
 const MARKET_TABS = [
@@ -523,6 +524,9 @@ function StockPage() {
                   onClose={() => setAlertOpen(false)}
                 />
               )}
+
+              {/* 🧾 AI 한 장 요약 */}
+              <StockBrief key={stockId} stockId={stockId} />
 
               {/* 탭 */}
               <div className="detail-tabs">

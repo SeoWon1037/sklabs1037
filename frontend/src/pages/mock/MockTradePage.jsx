@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ReturnChart from '../../components/mock/ReturnChart'
 import './MockTradePage.css'
+import DiagnosisCard from '../../components/mock/DiagnosisCard'
 
 // 현재가 자동 새로고침 간격 (30초)
 const REFRESH_MS = 30_000
@@ -577,6 +578,9 @@ function MockTradePage() {
               </table>
             )}
           </section>
+
+          {/* ===== 🩺 AI 포트폴리오 진단 ===== */}
+          <DiagnosisCard />
 
           {/* ===== 거래 내역 ===== */}
           <section className="mock-card mock-trades">

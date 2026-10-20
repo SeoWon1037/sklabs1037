@@ -1,0 +1,131 @@
+/* ============================================
+   💡 기능 제안 + 투표 (/ideas)
+   ============================================ */
+.ip-page {
+  --ip-muted: color-mix(in srgb, var(--text) 58%, transparent);
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+.ip-muted { color: var(--ip-muted); font-size: 13px; }
+.ip-eyebrow { margin: 0; color: var(--primary); font-size: 13px; font-weight: 700; }
+.ip-hero h1 { margin: 4px 0 8px; font-size: 28px; letter-spacing: -0.5px; }
+.ip-desc { margin: 0; color: var(--ip-muted); font-size: 15px; line-height: 1.6; word-break: keep-all; }
+.ip-login { margin-top: 18px; padding: 20px; border-radius: 16px; background: color-mix(in srgb, var(--text) 4%, transparent); text-align: center; }
+.ip-login p { margin: 0 0 12px; color: var(--ip-muted); }
+
+.ip-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.ip-form input,
+.ip-form textarea,
+.ip-similar select,
+.ip-admin select,
+.ip-admin input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;   /* 아이폰 확대 방지 */
+}
+.ip-form textarea { resize: vertical; }
+.ip-submit { align-self: flex-end; }
+.ip-msg { margin: 0; font-size: 13px; }
+
+.ip-similar { padding: 12px; border-radius: 12px; background: color-mix(in srgb, #f59e0b 10%, transparent); }
+.ip-similar-title { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+.ip-similar ul { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ip-similar li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.ip-similar li span { flex: 1; min-width: 0; }
+.ip-similar li em { color: var(--ip-muted); font-size: 12px; font-style: normal; }
+.ip-similar-actions { display: flex; gap: 8px; margin-top: 10px; }
+.ip-similar-actions select { width: auto; flex: 1; }
+.ip-vote-sm {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ip-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 24px 0 10px; }
+.ip-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.ip-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ip-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ip-chip-on { border-color: var(--text); color: var(--text); font-weight: 700; }
+.ip-sort { display: flex; gap: 10px; }
+.ip-sort button { padding: 0; border: none; background: none; color: var(--ip-muted); font: inherit; font-size: 13px; cursor: pointer; }
+.ip-sort .ip-sort-on { color: var(--text); font-weight: 700; }
+.ip-empty { padding: 32px 0; color: var(--ip-muted); text-align: center; }
+
+.ip-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ip-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.ip-done { border-color: color-mix(in srgb, #22c55e 45%, var(--border)); }
+.ip-rejected { opacity: 0.65; }
+.ip-vote {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 52px;
+  height: 60px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.ip-vote b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.ip-vote:disabled { cursor: default; }
+.ip-voted { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); }
+.ip-main { flex: 1; min-width: 0; }
+.ip-tags { display: flex; gap: 6px; }
+.ip-status, .ip-cat { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.ip-cat { background: color-mix(in srgb, var(--text) 7%, transparent); color: var(--ip-muted); }
+.ip-st-open { background: color-mix(in srgb, var(--text) 10%, transparent); }
+.ip-st-planned { background: color-mix(in srgb, var(--primary) 20%, transparent); color: var(--primary); }
+.ip-st-done { background: color-mix(in srgb, #22c55e 20%, transparent); color: #22c55e; }
+.ip-st-rejected { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--ip-muted); }
+.ip-title { margin: 6px 0 0; font-size: 15px; font-weight: 700; word-break: keep-all; }
+.ip-body { margin: 4px 0 0; color: color-mix(in srgb, var(--text) 75%, transparent); font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.ip-note { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--text) 5%, transparent); font-size: 13px; }
+.ip-meta { display: flex; align-items: center; gap: 8px; margin: 6px 0 0; color: var(--ip-muted); font-size: 12px; }
+.ip-del { padding: 0; border: none; background: none; color: var(--ip-muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+.ip-admin { display: flex; gap: 6px; margin-top: 8px; }
+.ip-admin select { width: auto; }
+.ip-admin input { flex: 1; min-width: 0; }
+
+/* 관리자 칸은 작게 */
+.ip-admin select,
+.ip-admin input { padding: 5px 8px; border-radius: 8px; font-size: 13px; }
+.ip-admin .btn { padding: 5px 12px; font-size: 13px; }

@@ -569,13 +569,14 @@
 .home-stock-tabs {
   display: flex;
   align-items: baseline;
-  gap: 14px;
+  gap: 12px;
 }
 .home-stock-tab {
   padding: 0;
   border: none;
   background: none;
-  font-size: 17px;
+  font-size: 16px;
+  cursor: pointer;
   font-weight: 800;
   color: color-mix(in srgb, var(--text) 40%, transparent);
   white-space: nowrap;
@@ -949,3 +950,19 @@
     font-size: 16px;
   }
 }
+/* ===== 💱 오늘의 환율 (오늘의 시세와 같은 줄 모양 + 작은 흐름 선) ===== */
+.fx-row {
+  grid-template-columns: 20px minmax(0, 1fr) 40px auto 64px;
+}
+.fx-flag { font-size: 15px; }
+.fx-spark { width: 40px; height: 16px; color: color-mix(in srgb, var(--text) 40%, transparent); }
+.fx-spark.up { color: #e5484d; }
+.fx-spark.down { color: #3b82f6; }
+.fx-note {
+  margin: 10px 0 0;
+  color: color-mix(in srgb, var(--text) 45%, transparent);
+  font-size: 12px;
+  text-align: right;
+}
+/* 탭이 3개라 좁은 칸에서는 설명 글이 다음 줄로 */
+.home-quotes-box .home-box-head { flex-wrap: wrap; row-gap: 4px; }

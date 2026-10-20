@@ -23,6 +23,7 @@ import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import MockBanner from '../../components/mock/MockBanner'
 import TodayCard from '../../components/me/TodayCard'
 import AllMenu from '../../components/layout/AllMenu'
+import FxList from '../../components/fx/FxList'
 import { SERVICES, SHORTCUT_KEYS } from '../../components/layout/menuData'
 
 // 바로가기 아이콘
@@ -94,7 +95,7 @@ function MainPage() {
   const [user, setUser] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)   // ☰ 전체 메뉴
   const closeMenu = useCallback(() => setMenuOpen(false), [])
-  const [stockTab, setStockTab] = useState('ALL')   // 종목 카드 탭: 'ALL' | 'WATCH'
+  const [stockTab, setStockTab] = useState('ALL')   // 종목 카드 탭: 'ALL' | 'FX' | 'WATCH'
   const [watchStocks, setWatchStocks] = useState([])   // 관심 종목 (시세 포함, 전 종목 중 어떤 종목이든)
 
   // ===== 지금 토론 중 (오른쪽 아래) =====
@@ -409,6 +410,13 @@ function MainPage() {
                 >
                   오늘의 시세
                 </button>
+                <button
+                  type="button"
+                  className={`home-stock-tab ${stockTab === 'FX' ? 'home-stock-tab-active' : ''}`}
+                  onClick={() => setStockTab('FX')}
+                >
+                  오늘의 환율
+                </button>
                 {user && (
                   <button
                     type="button"
@@ -422,6 +430,8 @@ function MainPage() {
               {stockTab === 'ALL' && baseDate && <span className="home-box-sub">시가총액 TOP 3 · {baseDate.slice(5)} 종가</span>}
             </div>
 
+            {stockTab === 'FX' ? <FxList /> : (
+            <>
             <ul className="home-quotes">
               {quoteStocks.length === 0 && (
                 <li className="home-quote-empty">
@@ -451,6 +461,8 @@ function MainPage() {
               })}
             </ul>
             <Link to="/stock" className="home-box-link">주식 종목 더보기 →</Link>
+            </>
+            )}
           </section>
 
           {/* 지금 토론 중 */}

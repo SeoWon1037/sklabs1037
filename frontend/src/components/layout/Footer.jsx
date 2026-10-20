@@ -4,7 +4,7 @@
 // - 데이터 출처 + 투자 유의 문구
 // - AI 비서 화면(채팅이 화면을 꽉 채움)과 소셜 로그인 팝업에서는 숨김
 // ============================================
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import './Footer.css'
 
 // 관리자 문의 메일 주소 (여기만 바꾸면 됨)
@@ -41,6 +41,8 @@ function Footer() {
           <span className="footer-logo">SKLabs</span>
 
           <nav className="footer-links">
+            <Link to="/ideas" className="footer-link">💡 기능 제안</Link>
+            <span className="footer-bar">|</span>
             <a href={mailLink} className="footer-link">✉️ 관리자 문의</a>
             <span className="footer-bar">|</span>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="footer-link">GitHub</a>

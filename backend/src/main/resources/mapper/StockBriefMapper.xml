@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🧾 종목 한 장 요약
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.stock.dao.StockBriefDao">
+
+    <select id="selectStock" resultType="java.util.LinkedHashMap">
+        SELECT  ID      AS "stockId"
+               ,SYMBOL  AS "symbol"
+               ,NAME    AS "name"
+          FROM T_STOCK
+         WHERE ID = #{stockId}
+    </select>
+
+    <select id="selectCloses" resultType="java.util.LinkedHashMap">
+        SELECT  TO_CHAR(TRADE_DATE, 'YYYY-MM-DD')   AS "date"
+               ,CLOSE_PRICE                         AS "close"
+          FROM T_STOCK_PRICE
+         WHERE STOCK_ID = #{stockId}
+         ORDER BY TRADE_DATE DESC
+         LIMIT  #{limit}
+    </select>
+
+    <select id="selectNews" resultType="java.util.LinkedHashMap">
+        SELECT * FROM (
+            SELECT  DISTINCT ON (N.TITLE)
+                    N.TITLE                                         AS "title"
+                   ,N.PRESS                                         AS "press"
+                   ,N.LINK                                          AS "link"
+                   ,(EXTRACT(EPOCH FROM N.PUB_DATE) * 1000)::BIGINT AS "pubAt"
+              FROM T_NEWS N
+             WHERE 1=1
+               AND N.STOCK_ID = #{stockId}
+               AND N.PUB_DATE >= NOW() - MAKE_INTERVAL(days => #{days})
+             ORDER BY N.TITLE, N.PUB_DATE DESC
+        ) X
+         ORDER BY "pubAt" DESC
+         LIMIT  #{limit}
+    </select>
+
+    <select id="selectBoardCounts" resultType="java.util.LinkedHashMap">
+        SELECT  COUNT(*)::INT                                   AS "posts"
+               ,COUNT(*) FILTER (WHERE OPINION = 'UP')::INT     AS "up"
+               ,COUNT(*) FILTER (WHERE OPINION = 'DOWN')::INT   AS "down"
+          FROM T_STOCK_POST
+         WHERE 1=1
+           AND STOCK_ID = #{stockId}
+           AND DEL_DAY IS NULL
+           AND INS_DAY >= NOW() - MAKE_INTERVAL(days => #{days})
+    </select>
+
+    <select id="selectRecentPosts" resultType="java.lang.String">
+        SELECT  P.CONTENT
+          FROM T_STOCK_POST P
+         WHERE 1=1
+           AND P.STOCK_ID = #{stockId}
+           AND P.DEL_DAY IS NULL
+           AND (SELECT COUNT(*) FROM T_STOCK_POST_REPORT R WHERE R.POST_ID = P.ID AND R.STATUS = 'OPEN') &lt; 3
+         ORDER BY P.ID DESC
+         LIMIT  #{limit}
+    </select>
+
+    <select id="selectBrief" resultType="java.util.LinkedHashMap">
+        SELECT  BRIEF_JSON                                          AS "briefJson"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT        AS "insAt"
+               ,(EXTRACT(EPOCH FROM (NOW() - INS_DAY)) / 60)::INT   AS "ageMinutes"
+          FROM T_STOCK_BRIEF
+         WHERE STOCK_ID = #{stockId}
+    </select>
+
+    <insert id="upsertBrief">
+        INSERT INTO T_STOCK_BRIEF (STOCK_ID, BRIEF_JSON)
+        VALUES (#{stockId}, #{briefJson})
+        ON CONFLICT (STOCK_ID) DO UPDATE
+           SET BRIEF_JSON = EXCLUDED.BRIEF_JSON
+              ,INS_DAY    = NOW()
+    </insert>
+</mapper>

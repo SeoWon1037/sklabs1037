@@ -961,7 +961,8 @@
   .mock-history {
     order: 3;
   }
-  .mock-holdings {
+  .mock-holdings,
+  .mock-diag {
     order: 4;
   }
   .mock-trades {

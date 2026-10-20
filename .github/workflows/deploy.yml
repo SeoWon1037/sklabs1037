@@ -34,6 +34,11 @@ jobs:
     needs: [ backend-ci, frontend-ci ]
     runs-on: ubuntu-latest
 
+    #===================================
+    # GitHub 가상 컴퓨터가 SSH로 EC2 터미널에 접속해서 명령어 실행
+    # - 접속 정보(주소, 사용자, 열쇠)는 GitHub Secrets에 보관
+    # - script 안의 명령은 전부 EC2에서 실행됨
+    #===================================
     steps:
       - name: EC2에 접속해서 배포
         uses: appleboy/ssh-action@v1.2.0

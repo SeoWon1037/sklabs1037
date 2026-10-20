@@ -142,7 +142,7 @@ function LeaguePage() {
                   <strong className={`lg-card-rate ${tone(t.returnRate)}`}>{signed(t.returnRate)}</strong>
                 </div>
 
-                <p className="lg-persona">{t.persona}</p>
+                <p className="lg-persona" title={t.persona}>{t.persona}</p>
 
                 <Sparkline points={t.points} />
 

@@ -344,3 +344,24 @@
   background: var(--lg-soft);
   color: var(--lg-muted);
 }
+
+/* QA 봇 지적(카드 안 글·그래프 겹침) 대응
+   - 성격 설명은 4줄까지만 (전체 문장은 마우스를 올리면), 세 카드의 그래프 높이를 맞춤
+   - 그래프 안내 문구는 칸 안에서만 줄바꿈 */
+@media (min-width: 861px) {
+  .lg-persona {
+    display: -webkit-box;
+    min-height: calc(13px * 1.6 * 4);
+    overflow: hidden;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+  }
+}
+.lg-spark-empty {
+  box-sizing: border-box;
+  padding: 0 12px;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.4;
+}
+.lg-holdings .lg-muted { font-size: 13px; }

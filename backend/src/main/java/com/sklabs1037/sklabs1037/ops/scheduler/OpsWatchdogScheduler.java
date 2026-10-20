@@ -23,6 +23,7 @@ import java.time.ZonedDateTime;
  * - 평일 15:50: 오늘 15:40 모의투자 자산 기록이 없으면 → 메일 + 다시 실행
  * - 매일 08:00 / 17:00: 07:30 / 16:30 AI 뉴스 요약이 없으면 → 메일 (Claude 비용이 드는 작업이라 자동 재실행은 안 함)
  * - 매일 09:00~23:00 매시 10분: 최근 2시간 뉴스 수집 성공이 없으면 → 메일
+ * - 평일 09:40: 오늘 09:10 AI 투자 리그 매매 기록이 없으면 → 메일 + 한 번 다시 실행 (이미 매매한 AI는 건너뜀)
  * - 매일 03:00: 60일 지난 기록 삭제
  */
 @Slf4j
@@ -86,6 +87,22 @@ public class OpsWatchdogScheduler {
         opsAlertService.alert("WATCH_NEWS_SUMMARY", "AI 뉴스 요약이 안 됐어요",
                 "최근 1시간 안에 AI 뉴스 요약 성공 기록이 없어요.\n"
                         + "Claude 비용이 드는 작업이라 자동으로 다시 돌리지 않아요. 필요하면 운영 화면에서 \"지금 실행\"을 눌러주세요.");
+
+    }
+
+    // AI 투자 리그 매매 (09:10) 확인 → 없으면 한 번 다시 (2026-10-20 하루 종일 안 돈 일이 계기)
+    @Scheduled(cron = "0 40 9 * * MON-FRI", zone = "Asia/Seoul")
+    public void checkAiLeague() {
+
+        if (!jobRunService.backgroundEnabled()) return;   // 로컬 PC에서는 감시·메일 안 함
+
+        if (jobRunService.isRunning("AI_LEAGUE") || succeededSince("AI_LEAGUE", todayAt(9, 0))) return;
+
+        opsAlertService.alert("WATCH_AI_LEAGUE", "오늘 AI 투자 리그 매매가 없어요",
+                "오늘 09:10 AI 투자 리그 매매 기록이 없어요. (서버가 꺼져 있었거나 스케줄이 안 돎)\n"
+                        + "자동으로 한 번 다시 실행합니다. (이미 매매한 AI는 건너뜀)");
+
+        opsJobs.run("AI_LEAGUE", "WATCHDOG");
 
     }
 

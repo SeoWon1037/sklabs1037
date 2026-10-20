@@ -47,7 +47,7 @@ public class TossApiClient {
     @Value("${toss.client-secret}")
     private String clientSecret;
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient = RestClients.withTimeout(20);   // 응답 20초 제한 (멈춘 연결이 스케줄러를 묶지 않게)
 
     // 재사용할 토큰 + 만료 시각
     private String accessToken;

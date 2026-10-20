@@ -35,7 +35,7 @@ public class NewsRssClient {
     private static final DateTimeFormatter RSS_DATE = DateTimeFormatter.RFC_1123_DATE_TIME;
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient = RestClients.withTimeout(15);
 
     // 검색어로 최근 7일 뉴스 조회 → 최신순 maxCount개
     public List<NewsCollectVO> search(String query, int maxCount) throws Exception {

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🤖 AI QA 봇 점검 기록
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.qa.dao.QaRunDao">
+
+    <insert id="insertRun"
+            parameterType="com.sklabs1037.sklabs1037.qa.vo.QaRunVO"
+            useGeneratedKeys="true" keyProperty="runId" keyColumn="id">
+        INSERT INTO T_QA_RUN (
+               SOURCE
+              ,COMMIT_SHA
+              ,STATUS
+              ,CHECKS_JSON
+              ,SHOTS_JSON
+        ) VALUES (
+               #{source}
+              ,#{commitSha}
+              ,'ANALYZING'
+              ,#{checksJson}
+              ,#{shotsJson}
+        )
+    </insert>
+
+    <update id="updateRun"
+            parameterType="com.sklabs1037.sklabs1037.qa.vo.QaRunVO">
+        UPDATE T_QA_RUN
+           SET  STATUS        = #{status}
+               ,SUMMARY       = #{summary}
+               ,FINDINGS_JSON = #{findingsJson}
+         WHERE 1=1
+           AND ID = #{runId}
+    </update>
+
+    <select id="selectRuns"
+            resultType="com.sklabs1037.sklabs1037.qa.vo.QaRunVO">
+        SELECT  ID                                          AS RUN_ID
+               ,SOURCE
+               ,COMMIT_SHA
+               ,STATUS
+               ,SUMMARY
+               ,FINDINGS_JSON
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT AS INS_AT
+          FROM T_QA_RUN
+         ORDER BY ID DESC
+         LIMIT  #{limit}
+    </select>
+
+    <select id="selectRun"
+            resultType="com.sklabs1037.sklabs1037.qa.vo.QaRunVO">
+        SELECT  ID                                          AS RUN_ID
+               ,SOURCE
+               ,COMMIT_SHA
+               ,STATUS
+               ,SUMMARY
+               ,FINDINGS_JSON
+               ,CHECKS_JSON
+               ,SHOTS_JSON
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT AS INS_AT
+          FROM T_QA_RUN
+         WHERE 1=1
+           AND ID = #{runId}
+    </select>
+
+    <delete id="deleteOld"
+            parameterType="com.sklabs1037.sklabs1037.qa.vo.QaRunVO">
+        DELETE FROM T_QA_RUN
+         WHERE 1=1
+           AND ID NOT IN (
+                SELECT  ID
+                  FROM T_QA_RUN
+                 ORDER BY ID DESC
+                 LIMIT  #{keep}
+           )
+    </delete>
+</mapper>

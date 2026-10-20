@@ -75,6 +75,7 @@
   color: var(--lg-muted);
   font-size: 12px;
   line-height: 1.5;
+  word-break: keep-all;   /* 닉네임이 글자 중간에서 끊기지 않게 */
 }
 .lg-vs {
   display: flex;

@@ -1,0 +1,12 @@
+{
+  "name": "sklabs-qa-bot",
+  "private": true,
+  "type": "module",
+  "description": "AI QA 봇: 운영 사이트를 진짜 브라우저로 열고 눌러본 결과를 서버로 보냄 (.github/workflows/qa-bot.yml)",
+  "scripts": {
+    "qa": "node run.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.49.1"
+  }
+}

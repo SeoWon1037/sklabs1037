@@ -1,0 +1,53 @@
+# ============================================
+# 🤖 AI QA 봇: 진짜 브라우저로 운영 사이트를 열고 눌러본 뒤 결과를 서버로 보냄
+# - 매일 08:30 (한국 시간), 배포 직후(deploy.yml이 불러서), Actions 화면에서 수동 실행
+# - 브라우저 쪽: qa/run.mjs (Playwright Chromium, 휴대폰 390 · PC 1400)
+# - 판정 쪽: 서버 QaBotService (규칙 + Claude가 캡처를 보고 깨진 화면 찾기) → 관리자 화면 /admin/qa, 문제 있으면 메일
+# - 필요한 Secret: QA_TOKEN (서버 .env 의 QA_TOKEN 과 같은 값)
+# ============================================
+name: QA Bot
+
+on:
+  schedule:
+    - cron: '30 23 * * *'          # 매일 23:30 UTC = 한국 08:30
+  workflow_dispatch:                # Actions 화면에서 수동 실행
+  workflow_call:                    # 배포(deploy.yml)가 끝나고 불러서 실행
+    inputs:
+      source:
+        type: string
+        default: DEPLOY
+    secrets:
+      QA_TOKEN:
+        required: false
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: qa
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 배포 직후면 새 컨테이너가 완전히 뜰 때까지 잠깐 기다림
+      - name: 서버 준비 대기
+        if: ${{ inputs.source == 'DEPLOY' }}
+        run: sleep 45
+
+      - name: Playwright 설치
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: 화면 점검 → 서버로 보내기
+        env:
+          QA_BASE_URL: https://sklabs1037.com
+          QA_TOKEN: ${{ secrets.QA_TOKEN }}
+          QA_SOURCE: ${{ inputs.source || (github.event_name == 'schedule' && 'SCHEDULE') || 'MANUAL' }}
+        run: node run.mjs

@@ -57,3 +57,12 @@ jobs:
             docker image prune -f
 
             docker compose ps
+
+  # 4. 배포 직후 🤖 AI QA 봇 (진짜 브라우저로 주요 화면 점검 → 문제 있으면 관리자 메일)
+  # - 점검이 실패해도 이미 배포는 끝난 상태 (배포를 되돌리지는 않음, 알려주기만)
+  qa:
+    needs: [ deploy ]
+    uses: ./.github/workflows/qa-bot.yml
+    with:
+      source: DEPLOY
+    secrets: inherit

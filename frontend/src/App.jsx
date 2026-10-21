@@ -30,6 +30,7 @@ import DuelPage from './pages/duel/DuelPage'
 import SharePage from './pages/share/SharePage'
 import IdeasPage from './pages/ideas/IdeasPage'
 import CouplePage from './pages/couple/CouplePage'
+import AboutPage from './pages/about/AboutPage'
 import LottoPage from './pages/lotto/LottoPage'
 import BeautyLabPage from './pages/beauty/BeautyLabPage'
 
@@ -51,6 +52,7 @@ function App() {
         <Route path="/activity" element={<ActivityPage />} />            {/* 🏅 내 활동 · 업적 + 🤖 AI 주간 코치 */}
         <Route path="/duel" element={<DuelPage />} />                    {/* ⚔️ 친구 대결 */}
         <Route path="/duel/:code" element={<DuelPage />} />              {/* ⚔️ 대결 초대 · 점수판 */}
+        <Route path="/about" element={<AboutPage />} />                  {/* 👤 만든 사람 (로그인 없이) */}
         <Route path="/couple" element={<CouplePage />} />                {/* 💕 커플 */}
         <Route path="/ideas" element={<IdeasPage />} />                  {/* 💡 기능 제안 + 투표 */}
         <Route path="/s/:code" element={<SharePage />} />                {/* 📸 공유받은 성적 카드 */}

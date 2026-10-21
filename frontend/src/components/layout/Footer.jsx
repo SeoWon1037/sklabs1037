@@ -7,11 +7,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import './Footer.css'
 
-// 관리자 문의 메일 주소 (여기만 바꾸면 됨)
-const CONTACT_EMAIL = 'your-email@example.com'
-
-// 소스 코드 저장소
-const GITHUB_URL = 'https://github.com/SeoWon1037/sklabs1037'
+// 관리자 문의 메일 · GitHub 주소는 src/site.js 한 곳에서
+import { CONTACT_EMAIL, GITHUB_URL } from '../../site'
 
 // 데이터 출처
 const SOURCES = [
@@ -41,6 +38,8 @@ function Footer() {
           <span className="footer-logo">SKLabs</span>
 
           <nav className="footer-links">
+            <Link to="/about" className="footer-link">👤 만든 사람</Link>
+            <span className="footer-bar">|</span>
             <Link to="/ideas" className="footer-link">💡 기능 제안</Link>
             <span className="footer-bar">|</span>
             <a href={mailLink} className="footer-link">✉️ 관리자 문의</a>

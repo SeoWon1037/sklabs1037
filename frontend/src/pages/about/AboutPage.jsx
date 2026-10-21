@@ -4,6 +4,7 @@
 // - 이 사이트의 기술 스택 + 어떻게 돌아가는지 (배포 흐름 · 매일 도는 작업)
 // - 내용은 아래 상수만 고치면 됨 (서버 호출 없음)
 // ============================================
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CONTACT_EMAIL, GITHUB_URL } from '../../site'
 import './AboutPage.css'
@@ -23,16 +24,16 @@ const STACK = [
   { icon: '🗄️', title: 'DB', items: ['PostgreSQL (AWS RDS)', 'pgvector (문서 검색)'] },
   { icon: '🤖', title: 'AI', items: ['Claude API (비서 · 요약 · 코치 · QA 봇)', 'Voyage 임베딩 (규제 Q&A)', '도구 호출 + 서버 규칙 검증'] },
   { icon: '☁️', title: '인프라', items: ['AWS EC2', 'Docker Compose', 'nginx', "Let's Encrypt (HTTPS)"] },
-  { icon: '🔁', title: '자동화', items: ['GitHub Actions', 'JUnit 테스트 + JaCoCo', '자동 배포', 'Playwright AI QA 봇'] },
+  { icon: '🔁', title: 'CI/CD · 자동화', items: ['GitHub Actions CI/CD', 'JUnit 테스트 + JaCoCo', 'EC2 자동 배포', 'Playwright AI QA 봇'] },
   { icon: '📡', title: '데이터', items: ['토스증권 Open API (시세)', 'Google News (뉴스)', 'Open-Meteo (날씨)', 'Frankfurter (환율)'] },
 ]
 
-// 코드가 올라가서 사이트에 반영되기까지
+// 코드가 올라가서 사이트에 반영되기까지 (GitHub Actions CI/CD)
 const PIPELINE = [
-  { icon: '💻', title: '코드 push', desc: 'GitHub main' },
-  { icon: '🧪', title: '테스트', desc: '단위 테스트 · 커버리지' },
-  { icon: '🚀', title: '자동 배포', desc: 'EC2 Docker 재시작' },
-  { icon: '🤖', title: 'QA 봇 점검', desc: '화면 캡처 → AI 판정 → 메일' },
+  { icon: '💻', tag: 'push', title: '코드 올리기', desc: 'GitHub main' },
+  { icon: '🧪', tag: 'CI', title: '빌드 · 테스트', desc: '백엔드 · 프론트 빌드, 단위 테스트, 커버리지' },
+  { icon: '🚀', tag: 'CD', title: '자동 배포', desc: 'EC2 Docker 새로 띄우기' },
+  { icon: '🤖', tag: 'QA', title: 'AI QA 봇 점검', desc: '화면 캡처 → AI 판정 → 메일' },
 ]
 
 // 매일 정해진 시각에 서버가 혼자 하는 일
@@ -60,6 +61,15 @@ const dot = (ym) => ym.replace('-', '.')
 
 function AboutPage() {
 
+  const [copied, setCopied] = useState(false)
+
+  // 메일 앱이 연결 안 된 PC에서는 mailto가 아무 반응이 없어서 → 주소도 같이 복사하고 화면에 보여줌
+  const contact = () => {
+    navigator.clipboard?.writeText(CONTACT_EMAIL).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 4000)
+  }
+
   const total = CAREER.reduce((sum, c) => sum + months(c.from, c.to), 0)
 
   return (
@@ -75,8 +85,13 @@ function AboutPage() {
         </div>
         <div className="ab-links">
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">GitHub</a>
-          <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('[SKLabs] 문의')}`} className="btn btn-primary">✉️ 문의하기</a>
+          <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('[SKLabs] 문의')}`} className="btn btn-primary" onClick={contact}>✉️ 문의하기</a>
         </div>
+        {copied && (
+          <p className="ab-copied" role="status">
+            📋 메일 주소를 복사했어요 · <b>{CONTACT_EMAIL}</b> (메일 앱이 안 열리면 붙여넣어 보내주세요)
+          </p>
+        )}
       </section>
 
       {/* 경력 */}
@@ -112,12 +127,13 @@ function AboutPage() {
 
       {/* 어떻게 돌아가나요 */}
       <section className="ab-section">
-        <h2>🔁 이 사이트는 이렇게 돌아가요</h2>
-        <p className="ab-sub">코드를 올리면 사람 손 없이 사이트까지 반영돼요</p>
+        <h2>🔁 CI/CD · 이 사이트는 이렇게 돌아가요</h2>
+        <p className="ab-sub">GitHub Actions로 코드를 올리면 CI(빌드 · 테스트)와 CD(자동 배포)를 거쳐 사람 손 없이 사이트까지 반영돼요. 테스트가 실패하면 배포되지 않아요.</p>
         <ol className="ab-flow">
           {PIPELINE.map((p, i) => (
             <li key={p.title}>
               <span className="ab-flow-icon" aria-hidden="true">{p.icon}</span>
+              <em className="ab-flow-tag">{p.tag}</em>
               <b>{p.title}</b>
               <small>{p.desc}</small>
               {i < PIPELINE.length - 1 && <i className="ab-flow-arrow" aria-hidden="true">→</i>}

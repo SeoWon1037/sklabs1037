@@ -21,8 +21,8 @@ export const SERVICES = {
   ideas: { icon: '💡', label: '기능 제안', to: '/ideas', color: '#facc15', desc: '원하는 기능 투표' },
 }
 
-// 검색창 아래 한 줄 (위 메뉴와 같은 순서) + 마지막 칸은 "⋯ 전체"
-export const SHORTCUT_KEYS = ['stock', 'mock', 'league', 'predict', 'ai', 'beauty', 'lotto', 'quiz', 'duel']
+// 검색창 아래 한 줄 (위 메뉴와 같은 순서: 예측 게임 → AI 리그 → AI 비서) + 마지막 칸은 "⋯ 전체"
+export const SHORTCUT_KEYS = ['stock', 'mock', 'predict', 'league', 'ai', 'beauty', 'lotto', 'quiz', 'duel']
 
 // ☰ 전체 메뉴: 카테고리별
 export const CATEGORIES = [

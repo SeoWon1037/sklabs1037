@@ -18,8 +18,8 @@ const MENUS = [
   { to: '/', label: '뉴스', end: true },     // end: 정확히 "/"일 때만 선택 표시 (안 그러면 모든 주소에서 선택됨)
   { to: '/stock', label: '주식 종목' },
   { to: '/mock', label: '모의투자' },
-  { to: '/league', label: 'AI 리그' },
   { to: '/predict', label: '예측 게임' },
+  { to: '/league', label: 'AI 리그' },      // AI 리그 · AI 비서는 나란히
   { to: '/ai', label: 'AI 비서' },
   { to: '/beauty', label: '뷰티 랩' },
   { to: '/lotto', label: '오늘의 숫자' },
@@ -27,6 +27,9 @@ const MENUS = [
 
 // 관리자에게만 보이는 탭
 const ADMIN_MENU = { to: '/admin', label: '관리자' }
+
+// 맨 오른쪽 끝 (누구나)
+const ABOUT_MENU = { to: '/about', label: '만든이 정보' }
 
 // 넓은 화면을 쓰는 주소
 const WIDE_PATHS = ['/stock']
@@ -89,7 +92,7 @@ function Header() {
     }
   }
 
-  const menus = isAdmin ? [...MENUS, ADMIN_MENU] : MENUS
+  const menus = isAdmin ? [...MENUS, ADMIN_MENU, ABOUT_MENU] : [...MENUS, ABOUT_MENU]
   const wide = WIDE_PATHS.some((p) => location.pathname.startsWith(p))
 
   return (

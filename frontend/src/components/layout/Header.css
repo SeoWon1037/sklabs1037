@@ -267,3 +267,17 @@
     font-size: 14px;
   }
 }
+
+/* 메뉴가 10개(관리자 11개)라 PC 보통 폭에서도 한 줄에 다 보이게
+   - 메뉴 간격 조금 줄이고, 이름 칩의 "마이페이지" 글자는 숨김 (칩 자체가 마이페이지 링크) */
+@media (min-width: 641px) and (max-width: 1440px) {
+  .header-left { gap: 14px; }
+  .header-actions { gap: 6px; }
+  .header-user-label { display: none; }
+}
+@media (min-width: 1281px) and (max-width: 1440px) {
+  .header-menu-link { padding: 8px 8px; }
+}
+@media (min-width: 641px) and (max-width: 1280px) {
+  .header-menu-link { padding: 8px 6px; }
+}

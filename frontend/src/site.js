@@ -3,7 +3,7 @@
 // ============================================
 
 // 관리자 문의 메일 주소 (여기만 바꾸면 푸터·만든 사람 페이지 모두 바뀜)
-export const CONTACT_EMAIL = 'your-email@example.com'
+export const CONTACT_EMAIL = 'aptl1471@naver.com'
 
 // 소스 코드 저장소
 export const GITHUB_URL = 'https://github.com/SeoWon1037/sklabs1037'

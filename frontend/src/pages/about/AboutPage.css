@@ -127,3 +127,15 @@
   .ab-flow li:nth-child(2) .ab-flow-arrow { display: none; }   /* 줄 끝 화살표는 숨김 */
   .ab-jobs { grid-template-columns: 1fr; }
 }
+
+.ab-copied { width: 100%; margin: 0; font-size: 13px; }
+.ab-copied b { color: var(--primary); }
+.ab-flow-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}

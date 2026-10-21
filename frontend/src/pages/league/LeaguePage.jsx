@@ -31,7 +31,17 @@ const dayLabel = (text) => {
 function Sparkline({ points }) {
 
   const values = (points || []).map((p) => Number(p.returnRate) || 0)
-  if (values.length < 2) return <div className="lg-spark lg-spark-empty">기록이 쌓이면 그래프가 보여요</div>
+  // 기록이 2일 미만: 빈 상자 안에 안내 글을 넣으면 그래프와 글이 겹친 것처럼 보여서(QA 봇 지적) → 점선 기준선 + 아래 한 줄
+  if (values.length < 2) {
+    return (
+      <div className="lg-spark-wait">
+        <svg className="lg-spark" viewBox="0 0 240 56" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" x2="240" y1="28" y2="28" className="lg-spark-zero" />
+        </svg>
+        <p>첫 매매 후 하루가 지나면 수익률 선이 그려져요</p>
+      </div>
+    )
+  }
 
   const w = 240
   const h = 56

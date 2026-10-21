@@ -365,3 +365,6 @@
   line-height: 1.4;
 }
 .lg-holdings .lg-muted { font-size: 13px; }
+
+/* 기록 2일 미만: 점선 기준선 + 아래 안내 한 줄 (글과 그래프가 겹치지 않게) */
+.lg-spark-wait p { margin: 4px 0 0; color: var(--lg-muted); font-size: 12px; text-align: center; }

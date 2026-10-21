@@ -1,6 +1,6 @@
 // ============================================
 // 모의투자 화면 (주소: /mock)
-// - 가상 자금 1,000만 원으로 매수/매도 → 보유 종목, 수익률, 랭킹
+// - 가상 자금 3,000만 원으로 매수/매도 → 보유 종목, 수익률, 랭킹
 //   · 시장가: 지금 가격으로 바로 체결
 //   · 지정가: 정해둔 가격이 되면 체결 (정규장 1분마다 확인, 그 거래일 장 마감까지 안 되면 자동 취소)
 // - 주문 종목: 주요 종목 칩 + 🔍 검색 (코스피·코스닥 전 종목, ETF 포함)
@@ -336,7 +336,7 @@ function MockTradePage() {
         setOrderMsg({ type: 'error', text: json.message })
         return
       }
-      setOrderMsg({ type: 'ok', text: '계좌를 1,000만 원으로 초기화했어요. (미체결 주문도 모두 취소)' })
+      setOrderMsg({ type: 'ok', text: '계좌를 3,000만 원으로 초기화했어요. (미체결 주문도 모두 취소)' })
       await Promise.all([loadAccount(), loadTrades(1), loadRanking(), loadHistory()])
     } finally {
       setConfirmReset(false)
@@ -395,11 +395,11 @@ function MockTradePage() {
       <p
         className="mock-note mock-rank-note"
         title={rankPeriod === 'WEEK'
-          ? '이번 주 수익률 = 지난주 마지막 장 마감 기록 대비 (이번 주에 시작했으면 1,000만 원 대비)'
+          ? '이번 주 수익률 = 지난주 마지막 장 마감 기록 대비 (이번 주에 시작했으면 3,000만 원 대비)'
           : '총자산 = 현금 + 주문에 묶인 돈 + 보유 주식 평가금액 · 거래 1번 이상 한 계좌만'}
       >
         {rankPeriod === 'WEEK'
-          ? '이번 주 = 지난주 장 마감 대비 (처음이면 1,000만 원)'
+          ? '이번 주 = 지난주 장 마감 대비 (처음이면 3,000만 원)'
           : '총자산 = 현금 + 주문 대기 + 주식 평가 · 거래한 계좌만'}
       </p>
     </section>
@@ -420,7 +420,7 @@ function MockTradePage() {
         <div className="mock-guest">
           <section className="mock-card mock-guest-card">
             <span className="mock-guest-icon">💰</span>
-            <h1>가상 1,000만 원으로 모의투자</h1>
+            <h1>가상 3,000만 원으로 모의투자</h1>
             <p>실제 시세로 사고팔고, 수익률 랭킹에 도전해보세요. 진짜 돈은 들지 않아요.</p>
             <ul>
               <li>토스증권 실시간 가격으로 체결되는 시장가 · 지정가 주문</li>

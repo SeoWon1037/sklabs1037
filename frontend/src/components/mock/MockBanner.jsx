@@ -43,7 +43,7 @@ function MockBanner() {
       {/* 왼쪽: 그림 칸 */}
       <Link to="/mock" className="home-banner-art" aria-label="모의투자로 이동">
         <span className="home-banner-emoji">💰</span>
-        <span className="home-banner-art-text">가상 1,000만 원</span>
+        <span className="home-banner-art-text">가상 3,000만 원</span>
       </Link>
 
       {/* 가운데: 제목 + TOP 3 */}

@@ -109,10 +109,11 @@
            AND USER_ID = #{userId}
     </update>
 
-    <!-- 초기화: 현금을 시작 자금으로 -->
+    <!-- 초기화: 현금 = 시작 자금 = 지금 기준 금액 -->
     <update id="resetAccount">
         UPDATE T_MOCK_ACCOUNT
-           SET CASH        = INIT_CASH
+           SET CASH        = #{initCash}
+              ,INIT_CASH   = #{initCash}
               ,RESET_COUNT = RESET_COUNT + 1
               ,RESET_DAY   = NOW()
               ,UPD_DAY     = NOW()

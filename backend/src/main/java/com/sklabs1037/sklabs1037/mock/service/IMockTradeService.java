@@ -11,7 +11,7 @@ import java.util.Map;
  */
 public interface IMockTradeService {
 
-    // 내 계좌 요약 + 보유 종목 + 미체결 주문 + 주문 가능 종목 (계좌가 없으면 1,000만 원으로 만들어 줌)
+    // 내 계좌 요약 + 보유 종목 + 미체결 주문 + 주문 가능 종목 (계좌가 없으면 3,000만 원으로 만들어 줌)
     Map<String, Object> getAccount(Long userId);
 
     // 종목코드 하나의 현재가 (주문 칸에서 검색해 고른 종목) → 없으면 null

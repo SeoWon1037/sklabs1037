@@ -4,7 +4,7 @@
 // ============================================
 export const SERVICES = {
   stock: { icon: '📈', label: '주식 종목', to: '/stock', color: '#22c55e', desc: '시세 · 차트 · 토론' },
-  mock: { icon: '💰', label: '모의투자', to: '/mock', color: '#f59e0b', desc: '가상 1,000만 원' },
+  mock: { icon: '💰', label: '모의투자', to: '/mock', color: '#f59e0b', desc: '가상 3,000만 원' },
   league: { icon: '🏆', label: 'AI 리그', to: '/league', color: '#eab308', desc: 'AI vs 사람 수익률' },
   predict: { icon: '🎯', label: '예측 게임', to: '/predict', color: '#ef4444', desc: '오를까 내릴까' },
   ai: { icon: '🤖', label: 'AI 비서', to: '/ai', color: '#3b82f6', desc: '종목 · 시장 질문' },

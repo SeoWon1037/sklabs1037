@@ -25,7 +25,7 @@ public class DiagnosisService {
     private static final long WEEK_MS = 7L * 24 * 3600 * 1000;
 
     private static final String SYSTEM = """
-            너는 SKLabs 모의투자(가상 1,000만 원)의 포트폴리오 코치다.
+            너는 SKLabs 모의투자(가상 3,000만 원)의 포트폴리오 코치다.
             서버가 계산한 숫자와 점검 결과, 보유 종목·최근 거래를 보고 투자 "습관"을 진단한다.
 
             규칙

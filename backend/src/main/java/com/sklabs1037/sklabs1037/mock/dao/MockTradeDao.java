@@ -2,6 +2,7 @@ package com.sklabs1037.sklabs1037.mock.dao;
 
 import com.sklabs1037.sklabs1037.mock.vo.MockTradeVO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -32,7 +33,8 @@ public interface MockTradeDao {
 
     int updateCash(MockTradeVO vo);
 
-    int resetAccount(Long userId);
+    // 초기화: 현금 = 시작 자금 = 지금 기준 금액 (예전 1,000만 원 계좌도 초기화하면 3,000만 원)
+    int resetAccount(@Param("userId") Long userId, @Param("initCash") BigDecimal initCash);
 
     // ===== 보유 종목 =====
     List<MockTradeVO> selectHoldings(Long userId);

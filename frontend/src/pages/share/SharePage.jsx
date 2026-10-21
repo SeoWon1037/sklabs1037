@@ -35,7 +35,7 @@ function SharePage() {
 
       <div className="sp-cta">
         <h1>나도 SKLabs에서 해볼까요?</h1>
-        <p className="sp-muted">매일 오를까 내릴까 예측하고, 뉴스 퀴즈 풀고, 가상 1,000만 원으로 모의투자해요.</p>
+        <p className="sp-muted">매일 오를까 내릴까 예측하고, 뉴스 퀴즈 풀고, 가상 3,000만 원으로 모의투자해요.</p>
         <div className="sp-links">
           <Link to="/predict" className="btn btn-primary">🎯 예측 게임 해보기</Link>
           <Link to="/quiz" className="btn btn-ghost">📰 뉴스 퀴즈</Link>

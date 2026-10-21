@@ -41,8 +41,8 @@ import java.util.*;
 @Service
 public class MockTradeServiceImpl implements IMockTradeService {
 
-    // 시작 자금 1,000만 원
-    private static final BigDecimal INIT_CASH = new BigDecimal("10000000");
+    // 시작 자금 3,000만 원 (2026-10-21 1,000만 → 3,000만, 기존 계좌는 sql/mock-cash-30m.sql 로 2,000만 원 추가)
+    private static final BigDecimal INIT_CASH = new BigDecimal("30000000");
 
     // 한 번에 주문할 수 있는 최대 수량
     private static final int MAX_ORDER_QUANTITY = 100_000;
@@ -589,7 +589,7 @@ public class MockTradeServiceImpl implements IMockTradeService {
         mockTradeDao.deleteAllHoldings(userId);
         mockTradeDao.deleteAllTrades(userId);
         mockTradeDao.deleteSnapshots(userId);          // 수익률 그래프도 처음부터
-        mockTradeDao.resetAccount(userId);
+        mockTradeDao.resetAccount(userId, INIT_CASH);
 
     }
 

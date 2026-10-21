@@ -105,7 +105,7 @@ function LeaguePage() {
         <h1>🤖 AI vs 사람</h1>
         <p className="lg-desc">
           성격이 다른 AI 투자자 3명이 평일 오전 9시 10분, 시세와 뉴스를 읽고 직접 종목을 골라요.
-          사람과 똑같이 1,000만 원으로 시작하고, 같은 시장가 규칙·같은 랭킹에서 경쟁해요.
+          사람과 똑같이 3,000만 원으로 시작하고, 같은 시장가 규칙·같은 랭킹에서 경쟁해요.
         </p>
       </header>
 
@@ -216,7 +216,7 @@ function LeaguePage() {
             ))}
           </section>
 
-          <Link to="/mock" className="lg-cta">🙋 나도 1,000만 원으로 참가하기 →</Link>
+          <Link to="/mock" className="lg-cta">🙋 나도 3,000만 원으로 참가하기 →</Link>
         </>
       )}
     </main>

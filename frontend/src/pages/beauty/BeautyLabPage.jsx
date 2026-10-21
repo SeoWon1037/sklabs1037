@@ -2,6 +2,7 @@
 // 뷰티 랩 (주소: /beauty, /beauty?tab=brief, /beauty?tab=dict)
 // - 🔬 성분 분석: 화장품 전성분 사진/글 → 역할·기능성·알레르기·내 피부 주의 성분
 // - ⚖️ 성분 비교: 두 제품 전성분 → 공통 / 한쪽에만, 겹침 %, 기능성·향료·착향제·내 피부 주의 수
+// - 📣 광고 문구: 광고 문구 → 화장품법 표시·광고 기준 규칙 검사 + AI 고쳐 쓰기(서버 재검사)
 // - 📝 기획 브리프: 브랜드 요청 → 개발 브리프 + 규제 확인 + 추천 성분 + 되물을 질문
 // - 📚 규제 Q&A: 규제 문서에서 뜻이 가까운 문단(pgvector) → 그 문단만 근거로 답 + 출처 번호
 // - 📖 성분 사전: 판단 기준이 되는 사전 (누구나)
@@ -10,6 +11,7 @@
 // ============================================
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import AdCopyTab from '../../components/beauty/AdCopyTab'
 import AnalyzeTab from '../../components/beauty/AnalyzeTab'
 import BriefTab from '../../components/beauty/BriefTab'
 import CompareTab from '../../components/beauty/CompareTab'
@@ -25,6 +27,7 @@ const TABS = [
   { value: 'compare', label: '⚖️ 성분 비교' },
   { value: 'shelf', label: '🧴 내 화장대' },
   { value: 'formula', label: '🧪 처방 검토' },
+  { value: 'adcopy', label: '📣 광고 문구' },
   { value: 'brief', label: '📝 기획 브리프' },
   { value: 'law', label: '📚 규제 Q&A' },
   { value: 'dict', label: '📖 성분 사전' },
@@ -41,6 +44,7 @@ function BeautyLabPage() {
   const [brief, setBrief] = useState(null)
   const [compare, setCompare] = useState(null)
   const [qa, setQa] = useState(null)
+  const [adcopy, setAdcopy] = useState(null)
   const [historyMsg, setHistoryMsg] = useState('')
 
   const loadHistory = useCallback(() => {
@@ -67,6 +71,9 @@ function BeautyLabPage() {
       } else if (json.kind === 'ASK') {
         setQa(json)
         setTab('law')
+      } else if (json.kind === 'ADCOPY') {
+        setAdcopy(json)
+        setTab('adcopy')
       } else if (json.kind === 'COMPARE') {
         setCompare(json)
         setTab('compare')
@@ -131,6 +138,15 @@ function BeautyLabPage() {
           {tab === 'law' && (
             <RegulationTab loggedIn={loggedIn} result={qa} onResult={(r) => { setQa(r); loadHistory() }} />
           )}
+          {tab === 'adcopy' && (
+            <AdCopyTab
+              key={adcopy?.logId ?? 'new'}
+              loggedIn={loggedIn}
+              remaining={history?.remainingAdcopy}
+              result={adcopy}
+              onResult={(r, used) => { setAdcopy(r); if (used) loadHistory() }}
+            />
+          )}
           {tab === 'shelf' && <ShelfTab />}
           {tab === 'formula' && <FormulaTab />}
           {tab === 'dict' && <DictionaryTab />}
@@ -147,8 +163,8 @@ function BeautyLabPage() {
                 {history.logs?.map((l) => (
                   <li key={l.logId}>
                     <button type="button" onClick={() => openLog(l)}>
-                      <span className={`bl-tag ${l.kind === 'BRIEF' ? 'bl-tag-blue' : l.kind === 'COMPARE' ? 'bl-tag-violet' : l.kind === 'ASK' ? 'bl-tag-amber' : 'bl-tag-green'}`}>
-                        {l.kind === 'BRIEF' ? '브리프' : l.kind === 'COMPARE' ? '비교' : l.kind === 'ASK' ? '규제 Q&A' : l.inputType === 'IMAGE' ? '사진 분석' : '분석'}
+                      <span className={`bl-tag ${l.kind === 'BRIEF' ? 'bl-tag-blue' : l.kind === 'ADCOPY' ? 'bl-tag-red' : l.kind === 'COMPARE' ? 'bl-tag-violet' : l.kind === 'ASK' ? 'bl-tag-amber' : 'bl-tag-green'}`}>
+                        {l.kind === 'BRIEF' ? '브리프' : l.kind === 'ADCOPY' ? '광고 문구' : l.kind === 'COMPARE' ? '비교' : l.kind === 'ASK' ? '규제 Q&A' : l.inputType === 'IMAGE' ? '사진 분석' : '분석'}
                       </span>
                       <strong>{l.title}</strong>
                       <small>{formatDay(l.insDay)}{l.itemCount ? ` · 성분 ${l.itemCount}개` : ''}</small>
@@ -156,7 +172,7 @@ function BeautyLabPage() {
                   </li>
                 ))}
               </ul>
-              <p className="bl-muted bl-small">분석·비교·브리프는 각각 하루 {history.limit}번까지 쓸 수 있어요.</p>
+              <p className="bl-muted bl-small">분석·비교·브리프·문구 고쳐 쓰기는 각각 하루 {history.limit}번까지 쓸 수 있어요.</p>
             </section>
           </aside>
         )}

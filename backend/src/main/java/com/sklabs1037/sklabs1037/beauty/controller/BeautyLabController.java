@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.beauty.controller;
 
+import com.sklabs1037.sklabs1037.beauty.service.AdCopyService;
 import com.sklabs1037.sklabs1037.beauty.service.BeautyLabService;
 import com.sklabs1037.sklabs1037.beauty.service.FormulaCheckService;
 import com.sklabs1037.sklabs1037.beauty.service.IngredientDictionary;
@@ -27,6 +28,8 @@ import java.util.*;
  *   POST /api/beauty/compare { a: {image|text, name}, b: {...}, skinType }   두 제품 성분 비교 (로그인, 하루 20번)
  *   POST /api/beauty/brief { request }                   기획 요청 → 개발 브리프 (로그인, 하루 20번)
  *   GET  /api/beauty/ingredients?q=나이아신              성분 사전 검색 (누구나)
+ *   POST /api/beauty/adcopy/check { text, claims }       광고 문구 규칙 검사 (누구나, AI 없음)
+ *   POST /api/beauty/adcopy/rewrite { text, claims }     AI로 고쳐 쓰기 + 서버 재검사 (로그인, 하루 20번)
  *   GET  /api/beauty/history                             내 최근 기록 + 오늘 남은 횟수
  *   GET  /api/beauty/history/{logId}                     내 기록 하나 다시 보기
  */
@@ -52,6 +55,9 @@ public class BeautyLabController {
 
     @Autowired
     private ShelfService shelfService;
+
+    @Autowired
+    private AdCopyService adCopyService;
 
     @Autowired
     private JsonMapper jsonMapper;
@@ -351,6 +357,79 @@ public class BeautyLabController {
 
     }
 
+    // ============================================
+    // 📣 광고 문구 검수
+    // ============================================
+    @PostMapping("/adcopy/check")
+    public ResponseEntity<Map<String, Object>> adCopyCheck(@RequestBody Map<String, Object> req) {
+
+        try {
+
+            Map<String, Object> body = new LinkedHashMap<>(adCopyService.check(str(req.get("text")), claims(req.get("claims"))));
+            body.put("success", true);
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        } catch (Exception e) {
+
+            log.error("광고 문구 검사 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "검사하지 못했습니다.");
+
+        }
+
+    }
+
+    @PostMapping("/adcopy/rewrite")
+    public ResponseEntity<Map<String, Object>> adCopyRewrite(@RequestBody Map<String, Object> req, HttpServletRequest request) {
+
+        Long userId = getLoginUserId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
+
+        try {
+
+            Map<String, Object> body = new LinkedHashMap<>(adCopyService.rewrite(userId, str(req.get("text")), claims(req.get("claims"))));
+            body.put("success", true);
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.BAD_REQUEST, e.getMessage());
+
+        } catch (IllegalStateException e) {
+
+            return fail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+
+        } catch (RestClientResponseException e) {
+
+            log.error("광고 문구 AI 오류: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return fail(HttpStatus.BAD_GATEWAY, "AI 응답에 실패했어요. 잠시 후 다시 시도해주세요.");
+
+        } catch (Exception e) {
+
+            log.error("광고 문구 고쳐 쓰기 오류", e);
+            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "문구를 고치는 중 오류가 발생했어요.");
+
+        }
+
+    }
+
+    private static String str(Object o) {
+
+        return o == null ? "" : String.valueOf(o);
+
+    }
+
+    private static List<String> claims(Object raw) {
+
+        List<String> out = new ArrayList<>();
+        if (raw instanceof List<?> list) for (Object o : list) if (o != null && out.size() < 10) out.add(String.valueOf(o));
+        return out;
+
+    }
+
     @GetMapping("/ingredients")
     public ResponseEntity<Map<String, Object>> ingredients(@RequestParam(required = false) String q) {
 
@@ -389,6 +468,7 @@ public class BeautyLabController {
             body.put("remainingAnalyze", beautyLabService.remaining(userId, "ANALYZE"));
             body.put("remainingBrief", beautyLabService.remaining(userId, "BRIEF"));
             body.put("remainingCompare", beautyLabService.remaining(userId, "COMPARE"));
+            body.put("remainingAdcopy", adCopyService.remaining(userId));
 
             return ResponseEntity.ok(body);
 

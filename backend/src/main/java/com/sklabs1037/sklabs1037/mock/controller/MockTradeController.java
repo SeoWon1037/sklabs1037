@@ -26,7 +26,7 @@ import java.util.Map;
  *   POST /api/mock/order { stockId, side, quantity, orderType, limitPrice }
  *                                                  주문 (MARKET 바로 체결 / LIMIT 대기) → { success, trade }
  *   POST /api/mock/orders/{orderId}/cancel         지정가 주문 취소                   → { success }
- *   POST /api/mock/reset                           계좌 초기화                        → { success }
+ *   POST /api/mock/reset                           (예전 주소) 바로 초기화하지 않음 → 관리자 승인 필요 안내
  *   GET  /api/mock/ranking?size=10&period=ALL      수익률 랭킹 (누구나, period=ALL|WEEK) → { success, period, ranking, me, participants }
  *   GET  /api/mock/history                         내 수익률 추이 (그래프)            → { success, initCash, points: [{ date, totalAsset, returnRate, live? }] }
  *
@@ -189,28 +189,12 @@ public class MockTradeController {
 
     }
 
-    // 초기화
+    // 초기화: 이제 관리자 승인이 필요 → POST /api/mock/reset-request (MockResetController)
+    // 예전 화면이 열려 있어도 바로 지워지지 않게 막음
     @PostMapping("/reset")
     public ResponseEntity<Map<String, Object>> reset(HttpServletRequest request) {
 
-        UserLoginVO loginUser = getLoginUser(request);
-        if (loginUser == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
-
-        try {
-
-            mockTradeService.reset(loginUser.getId());
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("success", true);
-
-            return ResponseEntity.ok(body);
-
-        } catch (Exception e) {
-
-            log.error("모의투자 초기화 오류", e);
-            return fail(HttpStatus.INTERNAL_SERVER_ERROR, "초기화하지 못했습니다.");
-
-        }
+        return fail(HttpStatus.BAD_REQUEST, "계좌 초기화는 관리자 승인이 필요해요. 새로고침 후 \"초기화 신청\"을 눌러주세요.");
 
     }
 

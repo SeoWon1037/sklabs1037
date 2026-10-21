@@ -94,3 +94,26 @@
   border-color: rgba(229, 72, 77, 0.5);
   color: #e5484d;
 }
+
+/* ===== ♻️ 계좌 초기화 신청 (/admin/resets) ===== */
+.reset-note {
+  flex: 1;
+  min-width: 160px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.reset-done { margin-top: 28px; }
+.reset-done-title { font-size: 17px; }
+.reset-done-list { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.reset-done-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.reset-status { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.reset-approved { background: color-mix(in srgb, #22c55e 20%, transparent); color: #22c55e; }
+.reset-rejected { background: color-mix(in srgb, var(--text) 10%, transparent); }
+@media (max-width: 640px) {
+  .reset-note { font-size: 16px; }
+}

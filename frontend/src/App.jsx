@@ -21,6 +21,7 @@ import AdminOpsPage from './pages/admin/AdminOpsPage'
 import AdminReportsPage from './pages/admin/AdminReportsPage'
 import AdminImprovePage from './pages/admin/AdminImprovePage'
 import AdminQaPage from './pages/admin/AdminQaPage'
+import AdminResetsPage from './pages/admin/AdminResetsPage'
 import LeaguePage from './pages/league/LeaguePage'
 import PredictPage from './pages/predict/PredictPage'
 import PersonaPage from './pages/persona/PersonaPage'
@@ -61,6 +62,7 @@ function App() {
         <Route path="/admin/ops" element={<AdminOpsPage />} />           {/* 관리자: 운영 상태 (메일 속 링크) */}
         <Route path="/admin/reports" element={<AdminReportsPage />} />   {/* 관리자: 토론방 신고 관리 */}
         <Route path="/admin/ai-improve" element={<AdminImprovePage />} /> {/* 관리자: 🔁 AI 비서 자기 개선 */}
+        <Route path="/admin/resets" element={<AdminResetsPage />} />    {/* 관리자: ♻️ 모의투자 계좌 초기화 신청 */}
         <Route path="/admin/qa" element={<AdminQaPage />} />            {/* 관리자: 🤖 AI QA 봇 */}
         <Route path="/admin/feedback" element={<AdminFeedbackPage />} /> {/* 관리자: AI 피드백 대시보드 */}
         <Route path="/signup" element={<UserSignUpPage />} />            {/* 회원가입 */}

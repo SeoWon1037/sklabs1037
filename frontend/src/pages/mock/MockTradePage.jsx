@@ -14,7 +14,7 @@
 //   GET  /api/mock/trades?page=1                    내 거래 내역 (20개씩)
 //   POST /api/mock/order { stockId, side, quantity, orderType, limitPrice }   주문
 //   POST /api/mock/orders/{orderId}/cancel          지정가 주문 취소
-//   POST /api/mock/reset                            계좌 초기화
+//   POST /api/mock/reset-request (+/cancel)        계좌 초기화 신청 (관리자 승인 후 초기화)
 //   GET  /api/mock/ranking?size=10&period=ALL|WEEK  수익률 랭킹 (누구나, 전체 / 이번 주)
 //   GET  /api/mock/history                          내 수익률 추이 (평일 15:40 기록 + 지금)
 // ============================================
@@ -111,8 +111,10 @@ function MockTradePage() {
   const [ordering, setOrdering] = useState(false)
   const [orderMsg, setOrderMsg] = useState(null)   // { type: 'ok' | 'error', text }
 
-  // 초기화 확인 단계
+  // 초기화 신청 (관리자 승인 후 초기화)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [resetReason, setResetReason] = useState('')
+  const [resetReq, setResetReq] = useState(null)   // { pending: {id, reason, insAt} | null, last }
 
   // ===== 불러오기 =====
   const loadAccount = useCallback(() => {
@@ -327,19 +329,39 @@ function MockTradePage() {
     }
   }
 
-  // ===== 초기화 =====
-  const doReset = async () => {
+  // ===== 초기화 신청 (관리자가 승인하면 그때 초기화) =====
+  useEffect(() => {
+    if (!data?.loggedIn) return undefined
+    let ignore = false
+    fetch('/api/mock/reset-request')
+      .then((res) => res.json())
+      .then((json) => { if (!ignore && json.success) setResetReq(json) })
+      .catch(() => {})
+    return () => { ignore = true }
+  }, [data?.loggedIn])
+
+  const sendReset = async (url, body) => {
     try {
-      const res = await fetch('/api/mock/reset', { method: 'POST' })
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      })
       const json = await res.json()
       if (!json.success) {
         setOrderMsg({ type: 'error', text: json.message })
         return
       }
-      setOrderMsg({ type: 'ok', text: '계좌를 3,000만 원으로 초기화했어요. (미체결 주문도 모두 취소)' })
-      await Promise.all([loadAccount(), loadTrades(1), loadRanking(), loadHistory()])
+      setResetReq(json)
+      setOrderMsg({
+        type: 'ok',
+        text: json.pending ? '초기화를 신청했어요. 관리자가 승인하면 3,000만 원으로 다시 시작해요. (🔔 알림으로 알려드려요)' : '초기화 신청을 취소했어요.',
+      })
+    } catch {
+      setOrderMsg({ type: 'error', text: '서버에 연결할 수 없습니다.' })
     } finally {
       setConfirmReset(false)
+      setResetReason('')
     }
   }
 
@@ -479,12 +501,24 @@ function MockTradePage() {
           >
             ✨ AI 포트폴리오 코치
           </Link>
-          {!confirmReset ? (
-            <button type="button" className="mock-reset" onClick={() => setConfirmReset(true)}>계좌 초기화</button>
+          {resetReq?.pending ? (
+            <span className="mock-reset-confirm">
+              ⏳ 초기화 신청 중 · 관리자 승인을 기다리고 있어요
+              <button type="button" className="mock-reset-no" onClick={() => sendReset('/api/mock/reset-request/cancel')}>신청 취소</button>
+            </span>
+          ) : !confirmReset ? (
+            <button type="button" className="mock-reset" onClick={() => setConfirmReset(true)}>계좌 초기화 신청</button>
           ) : (
             <span className="mock-reset-confirm">
-              보유 종목·주문·거래 내역이 모두 지워져요.
-              <button type="button" className="mock-reset-yes" onClick={doReset}>초기화</button>
+              관리자가 승인하면 보유 종목·주문·거래 내역이 모두 지워지고 3,000만 원으로 다시 시작해요.
+              <input
+                className="mock-reset-reason"
+                value={resetReason}
+                onChange={(e) => setResetReason(e.target.value)}
+                placeholder="이유 (선택)"
+                maxLength={200}
+              />
+              <button type="button" className="mock-reset-yes" onClick={() => sendReset('/api/mock/reset-request', { reason: resetReason })}>신청</button>
               <button type="button" className="mock-reset-no" onClick={() => setConfirmReset(false)}>취소</button>
             </span>
           )}

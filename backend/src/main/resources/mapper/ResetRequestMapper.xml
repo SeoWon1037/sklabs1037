@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    ♻️ 모의투자 계좌 초기화 신청
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.mock.dao.ResetRequestDao">
+
+    <insert id="insertRequest">
+        INSERT INTO T_MOCK_RESET_REQUEST (USER_ID, REASON)
+        VALUES (#{userId}, #{reason})
+        ON CONFLICT (USER_ID) WHERE STATUS = 'PENDING' DO NOTHING
+    </insert>
+
+    <select id="selectMyPending" resultType="java.util.LinkedHashMap">
+        SELECT  ID                                              AS "id"
+               ,REASON                                          AS "reason"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT    AS "insAt"
+          FROM T_MOCK_RESET_REQUEST
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND STATUS  = 'PENDING'
+    </select>
+
+    <select id="selectMyLastHandled" resultType="java.util.LinkedHashMap">
+        SELECT  STATUS                                          AS "status"
+               ,ADMIN_NOTE                                      AS "note"
+               ,(EXTRACT(EPOCH FROM HANDLED_DAY) * 1000)::BIGINT AS "handledAt"
+          FROM T_MOCK_RESET_REQUEST
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND STATUS IN ('APPROVED', 'REJECTED')
+         ORDER BY ID DESC
+         LIMIT 1
+    </select>
+
+    <update id="cancel">
+        UPDATE T_MOCK_RESET_REQUEST
+           SET STATUS      = 'CANCELED'
+              ,HANDLED_DAY = NOW()
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND STATUS  = 'PENDING'
+    </update>
+
+    <!-- 기다리는 신청 전부 (오래된 것부터) + 최근 처리 30개 -->
+    <select id="selectForAdmin" resultType="java.util.LinkedHashMap">
+        SELECT  X.ID                                                AS "id"
+               ,X.USER_ID                                           AS "userId"
+               ,U.NICKNAME                                          AS "nickname"
+               ,X.REASON                                            AS "reason"
+               ,X.STATUS                                            AS "status"
+               ,X.ADMIN_NOTE                                        AS "note"
+               ,(EXTRACT(EPOCH FROM X.INS_DAY) * 1000)::BIGINT      AS "insAt"
+               ,(EXTRACT(EPOCH FROM X.HANDLED_DAY) * 1000)::BIGINT  AS "handledAt"
+          FROM (
+                (SELECT R.* FROM T_MOCK_RESET_REQUEST R WHERE R.STATUS = 'PENDING')
+                UNION ALL
+                (SELECT R.* FROM T_MOCK_RESET_REQUEST R WHERE R.STATUS IN ('APPROVED', 'REJECTED') ORDER BY R.ID DESC LIMIT 30)
+               ) X
+          JOIN T_USER U ON U.ID = X.USER_ID
+         ORDER BY CASE WHEN X.STATUS = 'PENDING' THEN 0 ELSE 1 END
+                 ,CASE WHEN X.STATUS = 'PENDING' THEN X.ID ELSE -X.ID END
+    </select>
+
+    <select id="countPending" resultType="int">
+        SELECT COUNT(*) FROM T_MOCK_RESET_REQUEST WHERE STATUS = 'PENDING'
+    </select>
+
+    <select id="selectRequest" resultType="java.util.LinkedHashMap">
+        SELECT  ID          AS "id"
+               ,USER_ID     AS "userId"
+               ,STATUS      AS "status"
+          FROM T_MOCK_RESET_REQUEST
+         WHERE ID = #{id}
+    </select>
+
+    <update id="handle">
+        UPDATE T_MOCK_RESET_REQUEST
+           SET STATUS      = #{status}
+              ,ADMIN_NOTE  = #{note}
+              ,HANDLED_BY  = #{adminId}
+              ,HANDLED_DAY = NOW()
+         WHERE 1=1
+           AND ID     = #{id}
+           AND STATUS = 'PENDING'
+    </update>
+
+    <select id="selectAdminIds" resultType="java.lang.Long">
+        SELECT ID FROM T_USER WHERE ROLE = 'ADMIN' AND DEL_DAY IS NULL
+    </select>
+</mapper>

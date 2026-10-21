@@ -247,6 +247,19 @@
   text-align: center;
   color: var(--mock-muted);
 }
+.mock-reset-reason {
+  width: 160px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+@media (max-width: 640px) {
+  .mock-reset-reason { width: 100%; font-size: 16px; }   /* 아이폰 확대 방지 */
+}
 .mock-reset-yes,
 .mock-reset-no {
   padding: 4px 10px;

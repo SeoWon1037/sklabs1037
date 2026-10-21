@@ -47,10 +47,14 @@ function AiChatPage() {
   // 관심 종목 이름 (브리핑 버튼용)
   const [watchNames, setWatchNames] = useState([])
 
-  // 새 메시지가 오면 맨 아래로 스크롤
+  // 새 메시지가 오면 대화 칸만 맨 아래로 스크롤
+  // - 처음(대화 없음)에는 스크롤하지 않음 → 휴대폰에서 안내·예시 질문 위쪽이 잘려 보이던 문제
+  // - scrollIntoView는 화면 전체까지 움직여서, 대화 칸(scrollTop)만 움직임
   const bottomRef = useRef(null)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length === 0 && !loading) return
+    const box = bottomRef.current?.parentElement
+    if (box) box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' })
   }, [messages, loading])
 
   // 처음 한 번: 관심 종목 (로그아웃 상태면 빈 목록)
@@ -156,6 +160,12 @@ function AiChatPage() {
 
           {/* 처음: 관심 종목 브리핑 + 예시 질문 */}
           {messages.length === 0 && (
+            <div className="ai-welcome">
+            <div className="ai-welcome-head">
+              <span className="ai-welcome-icon" aria-hidden="true">🤖</span>
+              <strong>무엇이든 물어보세요</strong>
+              <p>시세 · 종목 정보 · 최근 뉴스 · 내 모의투자까지 직접 찾아보고 답해요. 아래 질문을 눌러 바로 시작해도 돼요.</p>
+            </div>
             <div className="ai-examples">
               {watchNames.length > 0 && (
                 <button type="button" className="ai-example" onClick={() => sendMessage(briefingQuestion(watchNames))}>
@@ -167,6 +177,7 @@ function AiChatPage() {
                   {ex}
                 </button>
               ))}
+            </div>
             </div>
           )}
 

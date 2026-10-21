@@ -49,12 +49,42 @@
 /* 예시 질문 */
 .ai-examples {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));   /* QA 봇: auto-fit이라 마지막 줄이 비고 카드 줄이 어긋남 → 2칸 고정 */
   gap: 10px;
-  margin: auto 0;
+}
+/* 처음 화면: 안내 + 예시 질문을 가운데에 (위아래 빈 공간이 덜 허전하게) */
+.ai-welcome { margin: auto 0; }
+.ai-welcome-head { margin-bottom: 16px; text-align: center; }
+.ai-welcome-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 8px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  font-size: 26px;
+}
+.ai-welcome-head strong { display: block; font-size: 20px; }
+.ai-welcome-head p {
+  margin: 6px auto 0;
+  max-width: 460px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+/* 카드 수가 홀수면 마지막 카드를 한 줄 전체로 (빈 칸 없이) */
+.ai-example:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 .ai-example {
-  padding: 14px;
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 12px 14px;
+  line-height: 1.45;
+  word-break: keep-all;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: transparent;
@@ -189,4 +219,12 @@
     height: calc(100dvh - 120px);
     min-height: 420px;
   }
+}
+@media (max-width: 640px) {
+  .ai-examples { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .ai-example { min-height: 0; padding: 10px 12px; font-size: 13px; }
+  .ai-welcome-head { margin-bottom: 12px; }
+  .ai-welcome-icon { width: 40px; height: 40px; font-size: 20px; border-radius: 12px; }
+  .ai-welcome-head strong { font-size: 17px; }
+  .ai-welcome-head p { display: none; }
 }

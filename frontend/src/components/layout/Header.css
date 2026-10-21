@@ -232,13 +232,13 @@
   }
   .header-menu-link {
     flex-shrink: 0;
-    padding: 10px 10px 12px;
+    padding: 10px 8px 12px;
     font-size: 14px;
     white-space: nowrap;
   }
   .header-menu-active::after {
-    left: 10px;
-    right: 10px;
+    left: 8px;
+    right: 8px;
     bottom: 3px;
   }
 

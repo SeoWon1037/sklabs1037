@@ -230,12 +230,7 @@ function MainPage() {
       {/* ===== 검색창 ===== */}
       <section className="home-search-area">
         <div className="home-search-row">
-          <div className="home-brand">
-            <button type="button" className="home-menu-btn" onClick={() => setMenuOpen(true)} aria-label="전체 메뉴">
-              <span /><span /><span />
-            </button>
-            <span className="home-logo">SKLabs</span>
-          </div>
+          <span className="home-logo">SKLabs</span>
 
           <form className="home-search" onSubmit={handleSearch}>
             <input

@@ -684,12 +684,6 @@
   .home-logo {
     font-size: 24px;
   }
-  /* ☰ 왼쪽 끝, 로고 가운데 */
-  .home-brand {
-    display: grid;
-    grid-template-columns: 44px 1fr 44px;
-    width: 100%;
-  }
 }
 
 

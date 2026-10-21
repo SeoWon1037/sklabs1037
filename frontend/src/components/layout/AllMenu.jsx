@@ -4,6 +4,7 @@
 // - 바깥을 누르거나 Esc, 메뉴를 고르면 닫힘
 // ============================================
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { CATEGORIES, SERVICES, SHORTCUT_KEYS } from './menuData'
 import './AllMenu.css'
@@ -39,7 +40,8 @@ function AllMenu({ user, onClose }) {
     ? Object.values(SERVICES).filter((s) => s.label.includes(keyword) || s.desc.includes(keyword))
     : null
 
-  return (
+  // body에 바로 그림 (상단바의 흐림 효과(backdrop-filter) 안에 있으면 화면 전체를 덮지 못해서)
+  return createPortal(
     <div className="am-overlay" onClick={onClose}>
       <aside
         className="am-panel"
@@ -103,7 +105,8 @@ function AllMenu({ user, onClose }) {
           )}
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

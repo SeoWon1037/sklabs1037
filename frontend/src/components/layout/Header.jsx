@@ -5,10 +5,11 @@
 // - 주식 종목 화면(/stock)은 넓은 화면이라 상단바 안쪽 폭도 같이 넓힘
 // - 마이페이지에서 닉네임을 바꾸거나 탈퇴하면 "sklabs:user-updated" 이벤트 → 로그인 정보를 다시 불러옴
 // ============================================
-import { useEffect, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from '../../theme/useTheme'
 import NotificationBell from './NotificationBell'
+import AllMenu from './AllMenu'
 import './Header.css'
 import './HeaderUser.css'
 
@@ -37,7 +38,6 @@ function Header() {
 
   // 현재 주소 정보 (주소가 바뀔 때마다 로그인 상태를 다시 확인하려고)
   const location = useLocation()
-  const navigate = useNavigate()
 
   // 로그인한 회원 정보 (null이면 로그아웃 상태) + 관리자 여부
   const [user, setUser] = useState(null)
@@ -76,14 +76,16 @@ function Header() {
 
   }, [location.pathname, refreshKey])
 
-  // 로그아웃 버튼
+  // ☰ 전체 메뉴 (모든 화면 상단바 로고 왼쪽)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+
+  // 로그아웃 버튼 → 지금 화면을 새로고침 (메인 로그인 카드·알림·커플 등 화면마다 들고 있던 로그인 정보까지 한 번에 비우기)
   const handleLogout = async () => {
     try {
       await fetch('/api/user/logout', { method: 'POST' })
     } finally {
-      setUser(null)
-      setIsAdmin(false)
-      navigate('/')
+      window.location.reload()
     }
   }
 
@@ -92,11 +94,17 @@ function Header() {
 
   return (
     <header className="header">
+      {menuOpen && <AllMenu user={user} onClose={closeMenu} />}
       <div className={`header-inner ${wide ? 'header-inner-wide' : ''}`}>
 
         {/* 왼쪽: 로고 + 메뉴 탭 */}
         <div className="header-left">
-          <Link to="/" className="header-logo">SKLabs</Link>
+          <div className="header-brand">
+            <button type="button" className="header-menu-btn" onClick={() => setMenuOpen(true)} aria-label="전체 메뉴">
+              <span /><span /><span />
+            </button>
+            <Link to="/" className="header-logo">SKLabs</Link>
+          </div>
 
           <nav className="header-menu">
             {menus.map((m) => (

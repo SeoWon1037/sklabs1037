@@ -172,11 +172,12 @@
     <!-- 관리자 메일 주소 -->
     <select id="selectAdminEmails"
             resultType="string">
-        SELECT  U.EMAIL
+        SELECT  DISTINCT LOWER(U.EMAIL)
           FROM T_USER U
          WHERE 1=1
            AND U.ROLE  = 'ADMIN'
            AND U.EMAIL LIKE '%@%'
+           AND U.DEL_DAY IS NULL
     </select>
 
 </mapper>

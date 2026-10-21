@@ -13,16 +13,12 @@ import AllMenu from './AllMenu'
 import './Header.css'
 import './HeaderUser.css'
 
-// 상단 메뉴 탭
+// 상단 메뉴 탭: 진짜 메인 기능만 (나머지는 ☰ 전체 메뉴 · 메인 바로가기에서)
+// - 뉴스(메인)는 SKLabs 로고로, AI 비서는 메인 검색창 ✨ AI로도 들어감
 const MENUS = [
-  { to: '/', label: '뉴스', end: true },     // end: 정확히 "/"일 때만 선택 표시 (안 그러면 모든 주소에서 선택됨)
   { to: '/stock', label: '주식 종목' },
   { to: '/mock', label: '모의투자' },
-  { to: '/predict', label: '예측 게임' },
-  { to: '/league', label: 'AI 리그' },      // AI 리그 · AI 비서는 나란히
-  { to: '/ai', label: 'AI 비서' },
   { to: '/beauty', label: '뷰티 랩' },
-  { to: '/lotto', label: '오늘의 숫자' },
 ]
 
 // 관리자에게만 보이는 탭

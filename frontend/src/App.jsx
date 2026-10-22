@@ -25,6 +25,8 @@ import AdminReportsPage from './pages/admin/AdminReportsPage'
 import AdminImprovePage from './pages/admin/AdminImprovePage'
 import AdminQaPage from './pages/admin/AdminQaPage'
 import AdminResetsPage from './pages/admin/AdminResetsPage'
+import AdminInquiriesPage from './pages/admin/AdminInquiriesPage'
+import SupportPage from './pages/support/SupportPage'
 import LeaguePage from './pages/league/LeaguePage'
 import PredictPage from './pages/predict/PredictPage'
 import PersonaPage from './pages/persona/PersonaPage'
@@ -56,6 +58,7 @@ function App() {
         <Route path="/activity" element={<ActivityPage />} />            {/* 🏅 내 활동 · 업적 + 🤖 AI 주간 코치 */}
         <Route path="/duel" element={<DuelPage />} />                    {/* ⚔️ 친구 대결 */}
         <Route path="/duel/:code" element={<DuelPage />} />              {/* ⚔️ 대결 초대 · 점수판 */}
+        <Route path="/support" element={<SupportPage />} />              {/* 📮 문의하기 */}
         <Route path="/messages" element={<MessagesPage />} />            {/* 💬 1:1 메시지 */}
         <Route path="/app" element={<AppInstallPage />} />               {/* 📲 앱 설치 안내 (QR · 기기별) */}
         <Route path="/about" element={<AboutPage />} />                  {/* 👤 만든 사람 (로그인 없이) */}
@@ -67,6 +70,7 @@ function App() {
         <Route path="/admin/ops" element={<AdminOpsPage />} />           {/* 관리자: 운영 상태 (메일 속 링크) */}
         <Route path="/admin/reports" element={<AdminReportsPage />} />   {/* 관리자: 토론방 신고 관리 */}
         <Route path="/admin/ai-improve" element={<AdminImprovePage />} /> {/* 관리자: 🔁 AI 비서 자기 개선 */}
+        <Route path="/admin/inquiries" element={<AdminInquiriesPage />} /> {/* 관리자: 📮 문의함 (AI 분류) */}
         <Route path="/admin/resets" element={<AdminResetsPage />} />    {/* 관리자: ♻️ 모의투자 계좌 초기화 신청 */}
         <Route path="/admin/qa" element={<AdminQaPage />} />            {/* 관리자: 🤖 AI QA 봇 */}
         <Route path="/admin/feedback" element={<AdminFeedbackPage />} /> {/* 관리자: AI 피드백 대시보드 */}

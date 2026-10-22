@@ -1,14 +1,14 @@
 // ============================================
 // 하단 정보 (푸터) — 모든 화면 맨 아래 공통
-// - 만든이 + 관리자 문의(메일) + GitHub 코드 링크
+// - 만든이 + 관리자 문의(/support 문의함, 보던 화면을 ?from= 으로) + GitHub 코드 링크
 // - 데이터 출처 + 투자 유의 문구
 // - AI 비서 화면(채팅이 화면을 꽉 채움)과 소셜 로그인 팝업에서는 숨김
 // ============================================
 import { Link, useLocation } from 'react-router-dom'
 import './Footer.css'
 
-// 관리자 문의 메일 · GitHub 주소는 src/site.js 한 곳에서
-import { CONTACT_EMAIL, GITHUB_URL } from '../../site'
+// GitHub 주소는 src/site.js 한 곳에서 (문의 메일 주소는 /support 화면에 안내)
+import { GITHUB_URL } from '../../site'
 
 // 데이터 출처
 const SOURCES = [
@@ -27,8 +27,6 @@ function Footer() {
 
   if (HIDE_PATHS.includes(location.pathname)) return null
 
-  const mailLink = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('[SKLabs] 문의')}`
-
   return (
     <footer className="footer">
       <div className="footer-inner">
@@ -44,7 +42,7 @@ function Footer() {
             <span className="footer-bar">|</span>
             <Link to="/app" className="footer-link">📲 앱 설치</Link>
             <span className="footer-bar">|</span>
-            <a href={mailLink} className="footer-link">✉️ 관리자 문의</a>
+            <Link to={`/support?from=${encodeURIComponent(location.pathname)}`} className="footer-link">✉️ 관리자 문의</Link>
             <span className="footer-bar">|</span>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="footer-link">GitHub</a>
           </nav>

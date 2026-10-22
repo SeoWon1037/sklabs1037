@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    📮 문의함
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.support.dao.InquiryDao">
+
+    <insert id="insertInquiry" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_INQUIRY (USER_ID, CATEGORY, TITLE, BODY, PAGE, USER_AGENT)
+        VALUES (#{userId}, #{category}, #{title}, #{body}, #{page}, #{userAgent})
+    </insert>
+
+    <select id="countToday" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_INQUIRY
+         WHERE 1=1
+           AND USER_ID = #{userId}
+           AND INS_DAY &gt;= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul')
+    </select>
+
+    <sql id="userCols">
+        I.ID                                                AS "id"
+       ,I.CATEGORY                                          AS "category"
+       ,I.TITLE                                             AS "title"
+       ,I.BODY                                              AS "body"
+       ,I.STATUS                                            AS "status"
+       ,I.REPLY                                             AS "reply"
+       ,(EXTRACT(EPOCH FROM I.REPLIED_DAY) * 1000)::BIGINT  AS "repliedAt"
+       ,(EXTRACT(EPOCH FROM I.INS_DAY) * 1000)::BIGINT      AS "insAt"
+    </sql>
+
+    <select id="selectMine" resultType="java.util.LinkedHashMap">
+        SELECT <include refid="userCols"/>
+          FROM T_INQUIRY I
+         WHERE I.USER_ID = #{userId}
+         ORDER BY I.ID DESC
+         LIMIT 30
+    </select>
+
+    <sql id="adminCols">
+        <include refid="userCols"/>
+       ,I.USER_ID                                           AS "userId"
+       ,U.NICKNAME                                          AS "nickname"
+       ,I.PAGE                                              AS "page"
+       ,I.USER_AGENT                                        AS "userAgent"
+       ,I.AI_TYPE                                           AS "aiType"
+       ,I.AI_AREA                                           AS "aiArea"
+       ,I.AI_SEVERITY                                       AS "aiSeverity"
+       ,I.AI_SUMMARY                                        AS "aiSummary"
+       ,I.AI_FIX_HINT                                       AS "aiFixHint"
+       ,I.AI_REPLY                                          AS "aiReply"
+       ,I.AUTOFIX                                           AS "autofix"
+       ,I.RISK_FLAGS                                        AS "riskFlags"
+       ,I.TRIAGE_STATUS                                     AS "triageStatus"
+    </sql>
+
+    <select id="selectOne" resultType="java.util.LinkedHashMap">
+        SELECT <include refid="adminCols"/>
+          FROM T_INQUIRY I
+          JOIN T_USER U ON U.ID = I.USER_ID
+         WHERE I.ID = #{id}
+    </select>
+
+    <select id="selectForAdmin" resultType="java.util.LinkedHashMap">
+        SELECT <include refid="adminCols"/>
+          FROM T_INQUIRY I
+          JOIN T_USER U ON U.ID = I.USER_ID
+         WHERE 1=1
+           <if test="status != null">AND I.STATUS = #{status}</if>
+         ORDER BY I.ID DESC
+         LIMIT 100
+    </select>
+
+    <select id="countOpen" resultType="int">
+        SELECT COUNT(*) FROM T_INQUIRY WHERE STATUS = 'OPEN'
+    </select>
+
+    <update id="updateTriage" parameterType="java.util.Map">
+        UPDATE T_INQUIRY
+           SET AI_TYPE       = #{aiType}
+              ,AI_AREA       = #{aiArea}
+              ,AI_SEVERITY   = #{aiSeverity}
+              ,AI_SUMMARY    = #{aiSummary}
+              ,AI_FIX_HINT   = #{aiFixHint}
+              ,AI_REPLY      = #{aiReply}
+              ,AUTOFIX       = #{autofix}
+              ,RISK_FLAGS    = #{riskFlags}
+              ,TRIAGE_STATUS = #{triageStatus}
+              ,TRIAGED_DAY   = NOW()
+         WHERE ID = #{id}
+    </update>
+
+    <update id="reply">
+        UPDATE T_INQUIRY
+           SET REPLY       = #{reply}
+              ,REPLIED_BY  = #{adminId}
+              ,REPLIED_DAY = NOW()
+              ,STATUS      = #{status}
+         WHERE ID = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE T_INQUIRY SET STATUS = #{status} WHERE ID = #{id}
+    </update>
+
+    <select id="selectAdminIds" resultType="java.lang.Long">
+        SELECT ID FROM T_USER WHERE ROLE = 'ADMIN' AND DEL_DAY IS NULL
+    </select>
+</mapper>

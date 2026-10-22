@@ -1,0 +1,81 @@
+/* 📮 문의하기 (/support) */
+.sp-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 16px 64px;
+}
+.sp-page h1 { margin: 0; font-size: 26px; }
+.sp-sub { margin: 6px 0 18px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.sp-muted { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.sp-card {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.sp-login { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.sp-login p { margin: 0; }
+.sp-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-kind {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sp-kind-on {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+.sp-field { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.sp-field span { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.sp-field small { font-weight: 400; }
+.sp-field input,
+.sp-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.sp-field input:focus,
+.sp-field textarea:focus { outline: none; border-color: var(--primary); }
+.sp-error { color: #e5484d; font-size: 14px; }
+.sp-ok { color: #16a34a; font-size: 14px; font-weight: 600; }
+.sp-submit { margin-top: 14px; height: 44px; padding: 0 22px; }
+
+.sp-mine { margin-top: 28px; }
+.sp-mine h2 { margin: 0 0 10px; font-size: 18px; }
+.sp-mine ul { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.sp-item strong { display: block; margin-top: 8px; font-size: 15px; }
+.sp-item-head { display: flex; align-items: center; gap: 8px; }
+.sp-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sp-open { background: color-mix(in srgb, #f59e0b 16%, transparent); color: #d97706; }
+.sp-done { background: color-mix(in srgb, #22c55e 16%, transparent); color: #16a34a; }
+.sp-closed { background: color-mix(in srgb, var(--text) 9%, transparent); color: var(--text-muted); }
+.sp-body { margin: 6px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-muted); }
+.sp-reply {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--primary);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.sp-reply b { font-size: 13px; }
+.sp-reply small { color: var(--text-muted); font-weight: 400; }
+.sp-reply p { margin: 6px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }

@@ -139,7 +139,8 @@ function AdminServerPage() {
             <section className="sv-card">
               <h2>🖥 운영 서버 <small>EC2 · Docker · Spring Boot</small></h2>
               <Meter label="CPU (서버 전체)" value={s.cpu} text={pct(s.cpu)} sub={`우리 앱 ${pct(s.appCpu)} · 코어 ${app.cpus}개`} />
-              <Meter label="메모리" value={ratio(s.memUsed, s.memTotal)} text={pct(ratio(s.memUsed, s.memTotal))} sub={`${gb(s.memUsed)} / ${gb(s.memTotal)}`} />
+              <Meter label="메모리 (캐시 제외 실사용)" value={ratio(s.memUsed, s.memTotal)} text={pct(ratio(s.memUsed, s.memTotal))}
+                sub={`${gb(s.memUsed)} / ${gb(s.memTotal)} · ${s.swapTotal > 0 ? `스왑 ${gb(s.swapUsed)} / ${gb(s.swapTotal)}` : '스왑 없음'}`} />
               <Meter label="Java 힙" value={ratio(s.heapUsed, s.heapMax)} text={pct(ratio(s.heapUsed, s.heapMax))} sub={`${gb(s.heapUsed)} / ${gb(s.heapMax)}`} />
               <Meter label="디스크" value={ratio(s.diskUsed, s.diskTotal)} text={pct(ratio(s.diskUsed, s.diskTotal))} sub={`${gb(s.diskUsed)} / ${gb(s.diskTotal)}`} />
               <div className="sv-stats">

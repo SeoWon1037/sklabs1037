@@ -57,7 +57,8 @@ public class ServerMonitorService {
     // 한 번 잰 값 (-1 = 모름)
     public record Sample(long t, double cpu, double appCpu, long memUsed, long memTotal, long heapUsed, long heapMax,
                          long diskUsed, long diskTotal, int threads, int live,
-                         boolean dbOk, long dbMs, int dbConn, int dbConnAll, int dbMax, double dbTps, double cacheHit, double longestSec) {
+                         boolean dbOk, long dbMs, int dbConn, int dbConnAll, int dbMax, double dbTps, double cacheHit, double longestSec,
+                         long swapUsed, long swapTotal) {
     }
 
     private final Deque<Sample> history = new ArrayDeque<>();
@@ -101,6 +102,18 @@ public class ServerMonitorService {
             memTotal = os.getTotalMemorySize();
             memUsed = memTotal - os.getFreeMemorySize();
         }
+        // 리눅스는 남는 메모리를 파일 캐시로 쓰고 필요하면 바로 돌려줌 → "free"로 재면 늘 꽉 차 보임
+        // /proc/meminfo 의 MemAvailable(실제로 더 쓸 수 있는 양)로 다시 계산 + 스왑
+        long swapTotal = -1, swapUsed = -1;
+        Map<String, Long> mi = meminfo();
+        if (mi.containsKey("MemTotal") && mi.containsKey("MemAvailable")) {
+            memTotal = mi.get("MemTotal");
+            memUsed = memTotal - mi.get("MemAvailable");
+        }
+        if (mi.containsKey("SwapTotal") && mi.containsKey("SwapFree")) {
+            swapTotal = mi.get("SwapTotal");
+            swapUsed = swapTotal - mi.get("SwapFree");
+        }
         MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
         long heapUsed = mem.getHeapMemoryUsage().getUsed();
         long heapMax = mem.getHeapMemoryUsage().getMax();
@@ -141,7 +154,8 @@ public class ServerMonitorService {
         }
 
         return new Sample(now, round(cpu), round(appCpu), memUsed, memTotal, heapUsed, heapMax, diskUsed, diskTotal, threads, live,
-                dbOk, dbMs, dbConn, dbAll, dbMax, Math.round(tps * 10) / 10.0, round(hit), Math.round(longest * 10) / 10.0);
+                dbOk, dbMs, dbConn, dbAll, dbMax, Math.round(tps * 10) / 10.0, round(hit), Math.round(longest * 10) / 10.0,
+                swapUsed, swapTotal);
 
     }
 
@@ -245,6 +259,34 @@ public class ServerMonitorService {
                 notificationService.notify(admin, "ADMIN", "🚨 " + a.title(), a.body(), "/admin/server", a.key() + ":" + hour);
             }
         }
+
+    }
+
+    private static Map<String, Long> meminfo() {
+
+        try {
+            return parseMeminfo(java.nio.file.Files.readString(java.nio.file.Path.of("/proc/meminfo")));
+        } catch (Exception e) {
+            return Map.of();   // 리눅스가 아니면 (로컬 윈도우) JVM 값 그대로
+        }
+
+    }
+
+    // "MemAvailable:   512000 kB" → 바이트
+    static Map<String, Long> parseMeminfo(String text) {
+
+        Map<String, Long> m = new HashMap<>();
+        for (String line : text.split("\n")) {
+            String[] p = line.trim().split("\\s+");
+            if (p.length >= 2 && p[0].endsWith(":")) {
+                try {
+                    m.put(p[0].substring(0, p[0].length() - 1), Long.parseLong(p[1]) * 1024);
+                } catch (NumberFormatException ignore) {
+                    // 숫자가 아닌 줄
+                }
+            }
+        }
+        return m;
 
     }
 

@@ -29,8 +29,12 @@ WORKDIR /app
 # 한국 시간 (스케줄러, 로그 시간 기준)
 ENV TZ=Asia/Seoul
 
-# 메모리 제한 (EC2 프리티어는 메모리가 1GB라서)
-ENV JAVA_OPTS="-Xms256m -Xmx512m"
+# 메모리 제한 (EC2 프리티어는 메모리가 1GB라서, 서버 상태 화면에서 힙은 평소 50~150MB)
+# - Xmx384m: 힙 최대 (512 → 384, 남는 메모리는 nginx·OS·파일 캐시에)
+# - MaxMetaspaceSize: 클래스 정보 영역이 끝없이 커지지 않게
+# - SerialGC: 작은 힙·코어 2개에서는 GC 자체가 쓰는 메모리·스레드가 가장 적음
+# - ExitOnOutOfMemoryError: 메모리가 터지면 이상한 상태로 버티지 않고 바로 종료 → docker가 자동 재시작
+ENV JAVA_OPTS="-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError"
 
 COPY --from=build /app/app.jar app.jar
 

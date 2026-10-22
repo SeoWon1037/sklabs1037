@@ -19,7 +19,7 @@ class ServerMonitorRulesTest {
     private static final long G = 1L << 30;
 
     private static Sample s(double cpu, long mem, long disk, boolean dbOk, long dbMs, int dbAll) {
-        return new Sample(0, cpu, 0.1, mem, 10 * G, 1, 2, disk, 100 * G, 50, 0, dbOk, dbMs, 3, dbAll, 100, 1, 0.99, 0);
+        return new Sample(0, cpu, 0.1, mem, 10 * G, 1, 2, disk, 100 * G, 50, 0, dbOk, dbMs, 3, dbAll, 100, 1, 0.99, 0, 0, 0);
     }
 
     private static List<String> keys(List<Alert> a) {
@@ -64,6 +64,16 @@ class ServerMonitorRulesTest {
 
         Sample down = s(0.1, G, 10 * G, false, -1, -1);
         assertEquals(List.of("DB_DOWN"), keys(ServerMonitorService.alerts(List.of(down, down, down), down)));
+
+    }
+
+    @Test
+    void meminfo_읽기() {
+
+        var m = ServerMonitorService.parseMeminfo("MemTotal:         931000 kB\nMemFree:           60000 kB\nMemAvailable:     420000 kB\nSwapTotal:             0 kB\n");
+        assertEquals((Object) (931000L * 1024), m.get("MemTotal"));
+        assertEquals((Object) (420000L * 1024), m.get("MemAvailable"));
+        assertEquals((Object) 0L, m.get("SwapTotal"));
 
     }
 

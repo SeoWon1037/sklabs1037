@@ -16,6 +16,7 @@ export const SERVICES = {
   company: { icon: '🏭', label: '기업 정보', to: '/ai?q=', color: '#78716c', desc: 'AI가 정리' },
   activity: { icon: '🏅', label: '내 활동', to: '/activity', color: '#f97316', desc: '배지 · AI 코치' },
   mypage: { icon: '👤', label: '마이페이지', to: '/mypage', color: '#6366f1', desc: '내 정보 · 알림' },
+  messages: { icon: '💬', label: '메시지', to: '/messages', color: '#22c55e', desc: '1:1 대화' },
   couple: { icon: '💕', label: '커플', to: '/couple', color: '#ec4899', desc: '함께한 날 세기' },
   about: { icon: '👤', label: '만든 사람', to: '/about', color: '#0ea5e9', desc: '경력 · 기술 스택' },
   app: { icon: '📲', label: '앱 설치', to: '/app', color: '#0ea5e9', desc: '휴대폰 · PC에 설치' },
@@ -30,6 +31,6 @@ export const CATEGORIES = [
   { title: '투자', icon: '📈', keys: ['stock', 'mock', 'league', 'company'] },
   { title: '게임 · 도전', icon: '🎮', keys: ['predict', 'quiz', 'duel', 'lotto'] },
   { title: 'AI 도구', icon: '✨', keys: ['ai', 'beauty', 'persona'] },
-  { title: '내 공간', icon: '🙋', keys: ['activity', 'couple', 'mypage'] },
+  { title: '내 공간', icon: '🙋', keys: ['messages', 'activity', 'couple', 'mypage'] },
   { title: 'SKLabs', icon: '🧪', keys: ['ideas', 'app', 'about'] },
 ]

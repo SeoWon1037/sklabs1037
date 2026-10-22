@@ -40,7 +40,7 @@ function InstallBanner() {
     return isMobile() && !isStandalone() && n >= 2 && read(localStorage, CLOSED_KEY) !== 'closed'
   })
 
-  if (!show || pathname === '/app' || pathname.startsWith('/oauth') || pathname.startsWith('/admin')) return null
+  if (!show || pathname === '/app' || pathname === '/messages' || pathname.startsWith('/oauth') || pathname.startsWith('/admin')) return null
 
   const close = () => {
     write(localStorage, CLOSED_KEY, 'closed')

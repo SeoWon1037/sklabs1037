@@ -281,3 +281,9 @@
     margin-right: 20px;   /* 오른쪽 버튼과 살짝 띄우기 */
   }
 }
+
+/* 아주 좁은 휴대폰: 버튼(☀️ 💬 🔔 👤 로그아웃)이 한 줄에 들어가게 닉네임은 숨김 (☰ 메뉴 맨 위에 있음) */
+@media (max-width: 420px) {
+  .header-user-name { display: none; }
+  .header-user-chip { padding: 5px 8px; }
+}

@@ -1,0 +1,36 @@
+-- ============================================
+-- 💬 1:1 메시지 (pgAdmin에서 한 번만 실행, push 전에!)
+-- - T_DM_ROOM  : 두 사람 대화방 (USER_A < USER_B 로 한 쌍에 1개), 각자 어디까지 읽었는지(READ_A/READ_B = 메시지 ID)
+-- - T_DM_MSG   : 메시지
+-- - T_DM_BLOCK : 차단 (USER_ID가 BLOCKED_ID를 차단 → 서로 메시지를 보낼 수 없음)
+-- ============================================
+CREATE TABLE IF NOT EXISTS T_DM_ROOM (
+     ID             BIGSERIAL       PRIMARY KEY
+    ,USER_A         BIGINT          NOT NULL REFERENCES T_USER (ID)
+    ,USER_B         BIGINT          NOT NULL REFERENCES T_USER (ID)
+    ,READ_A         BIGINT          NOT NULL DEFAULT 0
+    ,READ_B         BIGINT          NOT NULL DEFAULT 0
+    ,LAST_MSG_ID    BIGINT
+    ,LAST_AT        TIMESTAMPTZ
+    ,INS_DAY        TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    ,CHECK (USER_A < USER_B)
+    ,UNIQUE (USER_A, USER_B)
+);
+CREATE INDEX IF NOT EXISTS IX_DM_ROOM_B ON T_DM_ROOM (USER_B);
+
+CREATE TABLE IF NOT EXISTS T_DM_MSG (
+     ID             BIGSERIAL       PRIMARY KEY
+    ,ROOM_ID        BIGINT          NOT NULL REFERENCES T_DM_ROOM (ID)
+    ,SENDER_ID      BIGINT          NOT NULL REFERENCES T_USER (ID)
+    ,BODY           VARCHAR(1000)   NOT NULL
+    ,INS_DAY        TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS IX_DM_MSG_ROOM ON T_DM_MSG (ROOM_ID, ID DESC);
+CREATE INDEX IF NOT EXISTS IX_DM_MSG_SENDER ON T_DM_MSG (SENDER_ID, INS_DAY);
+
+CREATE TABLE IF NOT EXISTS T_DM_BLOCK (
+     USER_ID        BIGINT          NOT NULL REFERENCES T_USER (ID)
+    ,BLOCKED_ID     BIGINT          NOT NULL REFERENCES T_USER (ID)
+    ,INS_DAY        TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+    ,PRIMARY KEY (USER_ID, BLOCKED_ID)
+);

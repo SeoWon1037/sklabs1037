@@ -9,6 +9,7 @@ import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import InstallBanner from './components/layout/InstallBanner'
 import AppInstallPage from './pages/app/AppInstallPage'
+import MessagesPage from './pages/messages/MessagesPage'
 import MainPage from './pages/main/MainPage'
 import StockPage from './pages/stock/StockPage'
 import UserSignUpPage from './pages/user/UserSignUpPage'
@@ -55,6 +56,7 @@ function App() {
         <Route path="/activity" element={<ActivityPage />} />            {/* 🏅 내 활동 · 업적 + 🤖 AI 주간 코치 */}
         <Route path="/duel" element={<DuelPage />} />                    {/* ⚔️ 친구 대결 */}
         <Route path="/duel/:code" element={<DuelPage />} />              {/* ⚔️ 대결 초대 · 점수판 */}
+        <Route path="/messages" element={<MessagesPage />} />            {/* 💬 1:1 메시지 */}
         <Route path="/app" element={<AppInstallPage />} />               {/* 📲 앱 설치 안내 (QR · 기기별) */}
         <Route path="/about" element={<AboutPage />} />                  {/* 👤 만든 사람 (로그인 없이) */}
         <Route path="/couple" element={<CouplePage />} />                {/* 💕 커플 */}

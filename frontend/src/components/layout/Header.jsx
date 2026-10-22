@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from '../../theme/useTheme'
 import NotificationBell from './NotificationBell'
+import MessageButton from './MessageButton'
 import AllMenu from './AllMenu'
 import './Header.css'
 import './HeaderUser.css'
@@ -134,10 +135,11 @@ function Header() {
           {user ? (
             // ===== 로그인 상태 =====
             <>
+              <MessageButton />
               <NotificationBell />
               <Link to="/mypage" className="header-user-chip" title="마이페이지">
                 <span className="header-user-icon">👤</span>
-                {user.nickname}님
+                <span className="header-user-name">{user.nickname}님</span>
                 <span className="header-user-label">마이페이지</span>
               </Link>
               <button type="button" className="btn btn-ghost" onClick={handleLogout}>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    💬 1:1 메시지
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.dm.dao.DmDao">
+
+    <select id="searchUsers" resultType="java.util.LinkedHashMap">
+        SELECT  ID          AS "id"
+               ,NICKNAME    AS "nickname"
+          FROM T_USER
+         WHERE 1=1
+           AND DEL_DAY IS NULL
+           AND COALESCE(PROVIDER, '') &lt;&gt; 'AI'
+           AND ID &lt;&gt; #{me}
+           AND NICKNAME ILIKE #{q} || '%'
+         ORDER BY LENGTH(NICKNAME), NICKNAME
+         LIMIT #{limit}
+    </select>
+
+    <select id="selectUser" resultType="java.util.LinkedHashMap">
+        SELECT  ID          AS "id"
+               ,NICKNAME    AS "nickname"
+               ,(DEL_DAY IS NULL AND COALESCE(PROVIDER, '') &lt;&gt; 'AI') AS "active"
+          FROM T_USER
+         WHERE ID = #{id}
+    </select>
+
+    <select id="upsertRoom" resultType="java.lang.Long">
+        INSERT INTO T_DM_ROOM (USER_A, USER_B)
+        VALUES (#{a}, #{b})
+        ON CONFLICT (USER_A, USER_B) DO UPDATE SET USER_A = EXCLUDED.USER_A
+        RETURNING ID
+    </select>
+
+    <select id="selectRoom" resultType="java.util.LinkedHashMap">
+        SELECT  ID          AS "id"
+               ,USER_A      AS "userA"
+               ,USER_B      AS "userB"
+               ,READ_A      AS "readA"
+               ,READ_B      AS "readB"
+          FROM T_DM_ROOM
+         WHERE ID = #{id}
+    </select>
+
+    <select id="selectRooms" resultType="java.util.LinkedHashMap">
+        SELECT  R.ID                                                    AS "id"
+               ,U.ID                                                    AS "partnerId"
+               ,U.NICKNAME                                              AS "partnerName"
+               ,(U.DEL_DAY IS NOT NULL)                                 AS "partnerGone"
+               ,M.BODY                                                  AS "lastBody"
+               ,(M.SENDER_ID = #{me})                                   AS "lastMine"
+               ,(EXTRACT(EPOCH FROM R.LAST_AT) * 1000)::BIGINT          AS "lastAt"
+               ,(SELECT COUNT(*) FROM T_DM_MSG X
+                  WHERE X.ROOM_ID = R.ID
+                    AND X.SENDER_ID &lt;&gt; #{me}
+                    AND X.ID &gt; CASE WHEN R.USER_A = #{me} THEN R.READ_A ELSE R.READ_B END)  AS "unread"
+          FROM T_DM_ROOM R
+          JOIN T_USER U ON U.ID = CASE WHEN R.USER_A = #{me} THEN R.USER_B ELSE R.USER_A END
+          LEFT JOIN T_DM_MSG M ON M.ID = R.LAST_MSG_ID
+         WHERE 1=1
+           AND (R.USER_A = #{me} OR R.USER_B = #{me})
+           AND R.LAST_MSG_ID IS NOT NULL
+         ORDER BY R.LAST_AT DESC
+         LIMIT #{limit}
+    </select>
+
+    <select id="countUnread" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_DM_ROOM R
+          JOIN T_DM_MSG M ON M.ROOM_ID = R.ID
+         WHERE 1=1
+           AND (R.USER_A = #{me} OR R.USER_B = #{me})
+           AND M.SENDER_ID &lt;&gt; #{me}
+           AND M.ID &gt; CASE WHEN R.USER_A = #{me} THEN R.READ_A ELSE R.READ_B END
+    </select>
+
+    <select id="selectMessages" resultType="java.util.LinkedHashMap">
+        SELECT  ID                                              AS "id"
+               ,SENDER_ID                                       AS "senderId"
+               ,BODY                                            AS "body"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT    AS "at"
+          FROM T_DM_MSG
+         WHERE 1=1
+           AND ROOM_ID = #{roomId}
+           <if test="before != null">AND ID &lt; #{before}</if>
+         ORDER BY ID DESC
+         LIMIT #{limit}
+    </select>
+
+    <insert id="insertMessage" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_DM_MSG (ROOM_ID, SENDER_ID, BODY)
+        VALUES (#{roomId}, #{senderId}, #{body})
+    </insert>
+
+    <!-- 마지막 메시지 + 보낸 사람은 자기 메시지까지 읽은 것으로 -->
+    <update id="touchRoom">
+        UPDATE T_DM_ROOM
+           SET LAST_MSG_ID = #{msgId}
+              ,LAST_AT     = NOW()
+              <if test="senderIsA">,READ_A = GREATEST(READ_A, #{msgId})</if>
+              <if test="!senderIsA">,READ_B = GREATEST(READ_B, #{msgId})</if>
+         WHERE ID = #{roomId}
+    </update>
+
+    <update id="markRead">
+        UPDATE T_DM_ROOM
+           <if test="isA">SET READ_A = GREATEST(READ_A, LEAST(#{msgId}, COALESCE(LAST_MSG_ID, 0)))</if>
+           <if test="!isA">SET READ_B = GREATEST(READ_B, LEAST(#{msgId}, COALESCE(LAST_MSG_ID, 0)))</if>
+         WHERE ID = #{roomId}
+    </update>
+
+    <select id="countSentToday" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_DM_MSG
+         WHERE 1=1
+           AND SENDER_ID = #{me}
+           AND INS_DAY &gt;= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul')
+    </select>
+
+    <select id="countBlockBetween" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_DM_BLOCK
+         WHERE (USER_ID = #{a} AND BLOCKED_ID = #{b})
+            OR (USER_ID = #{b} AND BLOCKED_ID = #{a})
+    </select>
+
+    <select id="countBlocked" resultType="int">
+        SELECT COUNT(*) FROM T_DM_BLOCK WHERE USER_ID = #{me} AND BLOCKED_ID = #{other}
+    </select>
+
+    <insert id="insertBlock">
+        INSERT INTO T_DM_BLOCK (USER_ID, BLOCKED_ID) VALUES (#{me}, #{other})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <delete id="deleteBlock">
+        DELETE FROM T_DM_BLOCK WHERE USER_ID = #{me} AND BLOCKED_ID = #{other}
+    </delete>
+</mapper>

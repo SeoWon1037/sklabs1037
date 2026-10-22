@@ -19,7 +19,7 @@ const SOURCES = [
 ]
 
 // 푸터를 숨길 주소
-const HIDE_PATHS = ['/ai', '/oauth/result']
+const HIDE_PATHS = ['/messages', '/ai', '/oauth/result']
 
 function Footer() {
 

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    📲 휴대폰·PC 푸시 알림
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.push.dao.PushDao">
+
+    <select id="selectKey" resultType="java.util.LinkedHashMap">
+        SELECT  PUBLIC_KEY      AS "publicKey"
+               ,PRIVATE_KEY     AS "privateKey"
+          FROM T_PUSH_KEY
+         WHERE ID = 1
+    </select>
+
+    <insert id="insertKey">
+        INSERT INTO T_PUSH_KEY (ID, PUBLIC_KEY, PRIVATE_KEY)
+        VALUES (1, #{publicKey}, #{privateKey})
+        ON CONFLICT (ID) DO NOTHING
+    </insert>
+
+    <insert id="upsertSub">
+        INSERT INTO T_PUSH_SUB (USER_ID, ENDPOINT, P256DH, AUTH, DEVICE)
+        VALUES (#{userId}, #{endpoint}, #{p256dh}, #{auth}, #{device})
+        ON CONFLICT (ENDPOINT) DO UPDATE
+           SET USER_ID    = EXCLUDED.USER_ID
+              ,P256DH     = EXCLUDED.P256DH
+              ,AUTH       = EXCLUDED.AUTH
+              ,DEVICE     = EXCLUDED.DEVICE
+              ,FAIL_COUNT = 0
+    </insert>
+
+    <delete id="deleteSub">
+        DELETE FROM T_PUSH_SUB
+         WHERE 1=1
+           AND USER_ID  = #{userId}
+           AND ENDPOINT = #{endpoint}
+    </delete>
+
+    <delete id="deleteByEndpoint">
+        DELETE FROM T_PUSH_SUB WHERE ENDPOINT = #{endpoint}
+    </delete>
+
+    <select id="countByUser" resultType="int">
+        SELECT COUNT(*) FROM T_PUSH_SUB WHERE USER_ID = #{userId}
+    </select>
+
+    <select id="selectSubs" resultType="java.util.LinkedHashMap">
+        SELECT  ID          AS "id"
+               ,ENDPOINT    AS "endpoint"
+               ,P256DH      AS "p256dh"
+               ,AUTH        AS "auth"
+          FROM T_PUSH_SUB
+         WHERE USER_ID = #{userId}
+         ORDER BY ID
+    </select>
+
+    <select id="selectMyDevices" resultType="java.util.LinkedHashMap">
+        SELECT  ID                                                  AS "id"
+               ,DEVICE                                              AS "device"
+               ,RIGHT(ENDPOINT, 24)                                 AS "tail"
+               ,(EXTRACT(EPOCH FROM INS_DAY) * 1000)::BIGINT        AS "insAt"
+               ,(EXTRACT(EPOCH FROM LAST_OK_DAY) * 1000)::BIGINT    AS "lastOkAt"
+          FROM T_PUSH_SUB
+         WHERE USER_ID = #{userId}
+         ORDER BY ID DESC
+    </select>
+
+    <update id="markOk">
+        UPDATE T_PUSH_SUB SET LAST_OK_DAY = NOW(), FAIL_COUNT = 0 WHERE ID = #{id}
+    </update>
+
+    <update id="markFail">
+        UPDATE T_PUSH_SUB SET FAIL_COUNT = FAIL_COUNT + 1 WHERE ID = #{id}
+    </update>
+</mapper>

@@ -3,9 +3,11 @@
 // - 안 읽은 수: 처음 + 60초마다 + 화면(주소)이 바뀔 때 (GET /api/me/notifications/unread)
 // - 누르면 최근 30개 목록 (GET /api/me/notifications), 하나 누르면 읽음 + 그 화면으로
 // - 받는 알림: 새 배지, 예측 결과, 내 글 댓글, 목표가 도달, 신고로 가려짐
+// - 📲 창 아래 "휴대폰·PC 알림": 켜면 사이트를 닫아도 같은 알림이 기기로 와요 (pwa.js)
 // ============================================
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { disablePush, enablePush, pushState, sendTestPush, syncPush } from '../../pwa'
 import './NotificationBell.css'
 
 const POLL_MS = 60 * 1000
@@ -16,6 +18,56 @@ const ago = (ms) => {
   if (m < 60) return `${m}분 전`
   if (m < 1440) return `${Math.floor(m / 60)}시간 전`
   return `${Math.floor(m / 1440)}일 전`
+}
+
+// ===== 📲 휴대폰·PC 알림 켜기/끄기 =====
+function PushToggle() {
+
+  const [state, setState] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  useEffect(() => { pushState().then(setState).catch(() => setState('unsupported')) }, [])
+
+  const act = async (fn, done) => {
+    setBusy(true)
+    setMsg('')
+    try {
+      await fn()
+      if (done) setMsg(done)
+    } catch (e) {
+      setMsg(e.message)
+    }
+    setState(await pushState().catch(() => 'unsupported'))
+    setBusy(false)
+  }
+
+  const test = () => act(async () => {
+    const json = await sendTestPush()
+    if (!json.success) throw new Error(json.message)
+  }, '테스트 알림을 보냈어요. 몇 초 안에 와요.')
+
+  if (state === null) return null
+
+  return (
+    <div className="bell-push">
+      <div className="bell-push-row">
+        <span>📲 휴대폰·PC 알림 {state === 'on' && <b className="bell-push-on">켜짐</b>}</span>
+        {state === 'off' && <button type="button" className="bell-push-btn" disabled={busy} onClick={() => act(enablePush, '켜졌어요! 사이트를 닫아도 알림이 와요.')}>켜기</button>}
+        {state === 'on' && (
+          <span className="bell-push-actions">
+            <button type="button" className="bell-all" disabled={busy} onClick={test}>테스트</button>
+            <button type="button" className="bell-all" disabled={busy} onClick={() => act(disablePush, '이 기기 알림을 껐어요.')}>끄기</button>
+          </span>
+        )}
+      </div>
+      {state === 'ios-install' && <p>아이폰은 Safari <b>공유 → 홈 화면에 추가</b>로 설치한 앱에서 켤 수 있어요.</p>}
+      {state === 'denied' && <p>브라우저 설정에서 이 사이트 알림이 막혀 있어요. 주소창 왼쪽 🔒에서 알림을 허용해 주세요.</p>}
+      {state === 'unsupported' && <p>이 브라우저는 푸시 알림을 지원하지 않아요.</p>}
+      {state === 'off' && !msg && <p>사이트를 닫아도 하트·대결 결과·가격 알림이 기기로 와요.</p>}
+      {msg && <p>{msg}</p>}
+    </div>
+  )
 }
 
 function NotificationBell() {
@@ -40,6 +92,9 @@ function NotificationBell() {
     const timer = setInterval(() => { if (document.visibilityState === 'visible') refresh() }, POLL_MS)
     return () => clearInterval(timer)
   }, [refresh, location.pathname])
+
+  // 이미 알림을 켠 브라우저면 지금 로그인한 계정으로 다시 맞춤
+  useEffect(() => { syncPush().catch(() => {}) }, [])
 
   // 바깥을 누르면 닫기
   useEffect(() => {
@@ -122,6 +177,7 @@ function NotificationBell() {
               ))}
             </ul>
           )}
+          <PushToggle />
         </div>
       )}
     </div>

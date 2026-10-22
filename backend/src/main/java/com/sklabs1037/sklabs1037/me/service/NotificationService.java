@@ -1,6 +1,7 @@
 package com.sklabs1037.sklabs1037.me.service;
 
 import com.sklabs1037.sklabs1037.me.dao.MeDao;
+import com.sklabs1037.sklabs1037.push.service.PushService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.util.Map;
  *
  * - 알림 저장이 실패해도 원래 일(댓글·채점·알림 메일)은 그대로 진행 (여기서 예외를 삼킴)
  * - 화면은 상단 🔔 (60초마다 안 읽은 수), 누르면 목록
+ * - 📲 새로 저장된 알림은 알림을 켠 기기로 푸시도 (PushService, 따로 스레드 / 같은 dedupeKey로 막힌 건 안 보냄)
  */
 @Slf4j
 @Service
@@ -27,6 +29,9 @@ public class NotificationService {
 
     @Autowired
     private MeDao meDao;
+
+    @Autowired
+    private PushService pushService;
 
     public void notify(Long userId, String kind, String title, String body, String link) {
 
@@ -40,7 +45,8 @@ public class NotificationService {
         if (userId == null) return;
 
         try {
-            meDao.insertNotification(userId, kind, cut(title, 120), cut(body, 300), link, dedupeKey);
+            int saved = meDao.insertNotification(userId, kind, cut(title, 120), cut(body, 300), link, dedupeKey);
+            if (saved > 0 && pushService != null) pushService.send(userId, kind, cut(title, 120), cut(body, 300), link);
         } catch (Exception e) {
             log.warn("알림 저장 실패 ({} → {}): {}", kind, userId, e.getMessage());
         }

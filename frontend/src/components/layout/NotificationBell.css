@@ -94,3 +94,47 @@
   .bell-btn { width: 36px; height: 36px; font-size: 15px; }
   .bell-panel { position: fixed; top: 56px; right: 16px; left: 16px; width: auto; }
 }
+
+/* 📲 휴대폰·PC 알림 */
+.bell-push {
+  flex-shrink: 0;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.bell-push-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.bell-push-on {
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #22c55e 16%, transparent);
+  color: #16a34a;
+  font-size: 11px;
+}
+.bell-push-actions { display: flex; gap: 10px; }
+.bell-push-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bell-push-btn:disabled { opacity: 0.6; }
+.bell-push p {
+  margin: 6px 0 0;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+  font-size: 12px;
+  line-height: 1.5;
+}

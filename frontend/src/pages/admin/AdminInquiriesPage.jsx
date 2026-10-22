@@ -3,9 +3,11 @@
 // - 문의마다 AI 분류: 종류 · 영역 · 심각도 · 한 줄 요약 · 고칠 곳 힌트 · 🤖 자동 수정 후보 · ⚠️ 위험 요청
 //   (위험 요청은 서버 규칙이 먼저 잡음 → AI가 괜찮다고 해도 자동 수정 후보가 아님)
 // - 답장: AI 초안을 넣고 고쳐서 보내기 / 답변하고 종료 / 답변 없이 종료 → 사용자에게 🔔·📲
+// - 🤖 자동 수정 후보(위험 요청 없음)는 [AI로 고치기] → GitHub Actions의 Claude Code가 고치고 테스트 → /admin/autofix 에서 승인
 // - 백엔드 API (관리자만): GET /api/admin/inquiries?status=, POST /{id}/reply | /status | /retriage
 // ============================================
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import AdminTabs from '../../components/admin/AdminTabs'
 import './AdminFeedbackPage.css'
 import './AdminInquiriesPage.css'
@@ -18,6 +20,8 @@ const AREA = {
 const SEV = { HIGH: ['심각', 'iq-high'], MEDIUM: ['보통', 'iq-mid'], LOW: ['가벼움', 'iq-low'] }
 const STATUS = { OPEN: '답변 대기', ANSWERED: '답변함', CLOSED: '종료' }
 const FILTERS = [['OPEN', '답변 대기'], ['', '전체']]
+const FIX = { REQUESTED: '🤖 AI 수정 요청됨', WORKING: '🤖 AI가 고치는 중', READY: '🤖 승인 대기', NO_CHANGE: '🤖 고칠 곳 못 찾음', FAILED: '🤖 AI 수정 실패', MERGED: '✅ AI 수정 배포됨', REJECTED: '🤖 AI 수정 거절함' }
+const FIX_ACTIVE = ['REQUESTED', 'WORKING', 'READY']
 
 const time = (ms) => {
   if (!ms) return '-'
@@ -100,12 +104,23 @@ function AdminInquiriesPage() {
                 {q.riskFlags && <span className="iq-chip iq-risk">⚠️ {q.riskFlags}</span>}
                 {q.triageStatus === 'FAILED' && <span className="iq-chip iq-risk">AI 분류 실패</span>}
                 {q.triageStatus === 'RULES' && <span className="iq-chip">규칙으로만 분류</span>}
+                {q.autofixStatus && <Link to="/admin/autofix" className="iq-chip iq-fix">{FIX[q.autofixStatus] ?? q.autofixStatus}</Link>}
               </div>
 
               {q.aiSummary && <p className="iq-summary">📝 {q.aiSummary}</p>}
               <p className="iq-body">{q.body}</p>
               <p className="iq-small">보던 화면: {q.page || '-'} · {q.userAgent ? q.userAgent.slice(0, 80) : '-'}</p>
               {q.aiFixHint && <p className="iq-hint">🔧 {q.aiFixHint}</p>}
+
+              {q.autofix && !q.riskFlags && !FIX_ACTIVE.includes(q.autofixStatus) && q.autofixStatus !== 'MERGED' && (
+                <div className="iq-autofix">
+                  <span>AI가 코드를 고치고 테스트까지 돌린 뒤 승인을 요청해요. (하루 3번)</span>
+                  <button type="button" className="iq-btn iq-primary" disabled={busy === q.id}
+                    onClick={() => act(q.id, `/api/admin/inquiries/${q.id}/autofix`, null, 'AI 수정을 시작했어요. 끝나면 📲 알림이 와요 (보통 5~15분).')}>
+                    🤖 AI로 고치기
+                  </button>
+                </div>
+              )}
 
               {q.reply ? (
                 <div className="iq-replied"><b>보낸 답변</b><p>{q.reply}</p></div>

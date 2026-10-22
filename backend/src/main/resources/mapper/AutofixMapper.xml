@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🤖 AI 자동 수정
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.autofix.dao.AutofixDao">
+
+    <insert id="insertRun" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_AUTOFIX (INQUIRY_ID, ISSUE_NO, REQUESTED_BY)
+        VALUES (#{inquiryId}, #{issueNo}, #{requestedBy})
+    </insert>
+
+    <select id="countToday" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_AUTOFIX
+         WHERE INS_DAY &gt;= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul')
+    </select>
+
+    <select id="countActive" resultType="int">
+        SELECT  COUNT(*)
+          FROM T_AUTOFIX
+         WHERE 1=1
+           AND INQUIRY_ID = #{inquiryId}
+           AND STATUS IN ('REQUESTED', 'WORKING', 'READY')
+    </select>
+
+    <sql id="cols">
+        A.ID                                                AS "id"
+       ,A.INQUIRY_ID                                        AS "inquiryId"
+       ,A.ISSUE_NO                                          AS "issueNo"
+       ,A.PR_NO                                             AS "prNo"
+       ,A.BRANCH                                            AS "branch"
+       ,A.STATUS                                            AS "status"
+       ,A.SUMMARY                                           AS "summary"
+       ,A.FILES                                             AS "files"
+       ,A.ERROR                                             AS "error"
+       ,A.RUN_URL                                           AS "runUrl"
+       ,I.TITLE                                             AS "inquiryTitle"
+       ,I.AI_SUMMARY                                        AS "inquirySummary"
+       ,(EXTRACT(EPOCH FROM A.INS_DAY) * 1000)::BIGINT      AS "insAt"
+       ,(EXTRACT(EPOCH FROM A.UPD_DAY) * 1000)::BIGINT      AS "updAt"
+    </sql>
+
+    <select id="selectRun" resultType="java.util.LinkedHashMap">
+        SELECT <include refid="cols"/>
+          FROM T_AUTOFIX A
+          LEFT JOIN T_INQUIRY I ON I.ID = A.INQUIRY_ID
+         WHERE A.ID = #{id}
+    </select>
+
+    <select id="selectByIssue" resultType="java.util.LinkedHashMap">
+        SELECT <include refid="cols"/>
+          FROM T_AUTOFIX A
+          LEFT JOIN T_INQUIRY I ON I.ID = A.INQUIRY_ID
+         WHERE A.ISSUE_NO = #{issueNo}
+    </select>
+
+    <select id="selectRuns" resultType="java.util.LinkedHashMap">
+        SELECT <include refid="cols"/>
+          FROM T_AUTOFIX A
+          LEFT JOIN T_INQUIRY I ON I.ID = A.INQUIRY_ID
+         ORDER BY A.ID DESC
+         LIMIT 50
+    </select>
+
+    <select id="countReady" resultType="int">
+        SELECT COUNT(*) FROM T_AUTOFIX WHERE STATUS = 'READY'
+    </select>
+
+    <!-- Actions 콜백: 끝난 상태(MERGED·REJECTED)는 덮어쓰지 않음 -->
+    <update id="updateFromCallback" parameterType="java.util.Map">
+        UPDATE T_AUTOFIX
+           SET STATUS   = #{status}
+              ,PR_NO    = COALESCE(#{prNo}, PR_NO)
+              ,BRANCH   = COALESCE(#{branch}, BRANCH)
+              ,SUMMARY  = COALESCE(#{summary}, SUMMARY)
+              ,FILES    = COALESCE(#{files}, FILES)
+              ,ERROR    = #{error}
+              ,RUN_URL  = COALESCE(#{runUrl}, RUN_URL)
+              ,UPD_DAY  = NOW()
+         WHERE 1=1
+           AND ISSUE_NO = #{issueNo}
+           AND STATUS NOT IN ('MERGED', 'REJECTED')
+    </update>
+
+    <!-- 승인·거절은 READY 일 때 한 번만 (두 관리자가 동시에 눌러도 한 번) -->
+    <update id="handle">
+        UPDATE T_AUTOFIX
+           SET STATUS     = #{status}
+              ,HANDLED_BY = #{adminId}
+              ,ERROR      = COALESCE(#{error}, ERROR)
+              ,UPD_DAY    = NOW()
+         WHERE 1=1
+           AND ID = #{id}
+           AND STATUS IN ('READY', 'FAILED', 'NO_CHANGE')
+    </update>
+</mapper>

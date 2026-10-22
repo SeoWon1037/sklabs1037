@@ -65,6 +65,7 @@
 
     <select id="selectForAdmin" resultType="java.util.LinkedHashMap">
         SELECT <include refid="adminCols"/>
+               ,(SELECT A.STATUS FROM T_AUTOFIX A WHERE A.INQUIRY_ID = I.ID ORDER BY A.ID DESC LIMIT 1)  AS "autofixStatus"
           FROM T_INQUIRY I
           JOIN T_USER U ON U.ID = I.USER_ID
          WHERE 1=1

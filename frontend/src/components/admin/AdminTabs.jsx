@@ -1,6 +1,6 @@
 // ============================================
 // 관리자 화면 위 탭 (운영 상태 / 문의함 / 신고 관리 / 초기화 신청 / AI 자기 개선 / QA 봇 / AI 피드백)
-// - 문의함 탭에는 답변 기다리는 문의 수 (GET /api/admin/inquiries/count)
+// - 문의함 탭에는 답변 기다리는 문의 수 (GET /api/admin/inquiries/count), AI 수정 탭에는 승인 기다리는 수
 // - 초기화 신청 탭에는 기다리는 신청 수 (GET /api/admin/resets/count)
 // - 신고 관리 탭에는 처리할 글 수를 숫자로 (GET /api/admin/reports/count)
 // ============================================
@@ -11,6 +11,7 @@ import './AdminTabs.css'
 const TABS = [
   { to: '/admin/ops', label: '🛠 운영 상태' },
   { to: '/admin/inquiries', label: '📮 문의함', badge: 'inquiries' },
+  { to: '/admin/autofix', label: '🤖 AI 수정', badge: 'autofix' },
   { to: '/admin/reports', label: '🚩 신고 관리', badge: 'reports' },
   { to: '/admin/resets', label: '♻️ 초기화 신청', badge: 'resets' },
   { to: '/admin/ai-improve', label: '🔁 AI 자기 개선' },
@@ -24,6 +25,7 @@ function AdminTabs({ reportCount }) {
   const [fetched, setFetched] = useState(null)
   const [resets, setResets] = useState(0)   // 기다리는 계좌 초기화 신청 수
   const [inquiries, setInquiries] = useState(0)   // 답변 기다리는 문의 수
+  const [autofix, setAutofix] = useState(0)       // 승인 기다리는 AI 수정 수
 
   useEffect(() => {
     let ignore = false
@@ -34,6 +36,10 @@ function AdminTabs({ reportCount }) {
     fetch('/api/admin/inquiries/count')
       .then((res) => res.json())
       .then((data) => { if (!ignore && data.success) setInquiries(data.count) })
+      .catch(() => {})
+    fetch('/api/admin/autofix/count')
+      .then((res) => res.json())
+      .then((data) => { if (!ignore && data.success) setAutofix(data.count) })
       .catch(() => {})
     return () => { ignore = true }
   }, [])
@@ -58,6 +64,7 @@ function AdminTabs({ reportCount }) {
           {t.badge === 'reports' && count > 0 && <span className="admin-tab-badge">{count}</span>}
           {t.badge === 'resets' && resets > 0 && <span className="admin-tab-badge">{resets}</span>}
           {t.badge === 'inquiries' && inquiries > 0 && <span className="admin-tab-badge">{inquiries}</span>}
+          {t.badge === 'autofix' && autofix > 0 && <span className="admin-tab-badge">{autofix}</span>}
         </NavLink>
       ))}
     </nav>

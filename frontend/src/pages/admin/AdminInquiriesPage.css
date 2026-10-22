@@ -76,6 +76,23 @@
 .iq-replied { margin-top: 12px; padding: 10px 12px; border-left: 3px solid #22c55e; border-radius: 8px; background: color-mix(in srgb, #22c55e 8%, transparent); }
 .iq-replied b { font-size: 12px; }
 .iq-replied p { margin: 4px 0 0; font-size: 14px; white-space: pre-wrap; }
+.iq-fix { border-color: var(--primary); color: var(--primary); text-decoration: none; }
+.iq-autofix {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px dashed color-mix(in srgb, #22c55e 50%, var(--border));
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
 @media (max-width: 640px) {
   .iq-gap { display: none; }
 }
+a.iq-chip { color: inherit; text-decoration: none; }
+a.iq-chip.iq-fix { color: var(--primary); }
+.iq-err { color: #e5484d; white-space: pre-wrap; }

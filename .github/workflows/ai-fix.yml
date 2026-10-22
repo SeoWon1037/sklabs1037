@@ -1,0 +1,207 @@
+# ============================================
+# 🤖 AI 자동 수정 (문의 → 코드 수정 → 테스트 → PR)
+#
+# 언제: 서버가 "ai-fix" 라벨을 붙여 이슈를 만들면 (관리자가 문의함에서 [AI로 고치기])
+#       - 저장소 주인이 만든 이슈만 (다른 사람이 라벨을 붙여도 안 돌게)
+# 하는 일
+#   1. Claude Code가 이슈를 읽고 코드 수정 (읽기·고치기 도구만, 명령 실행·인터넷 없음)
+#   2. 손대면 안 되는 파일 · 수정 크기 · 비밀 값 검사 (.github/ai-fix/check.sh)
+#   3. 배포 CI와 같은 빌드·테스트 (실패하면 오류 내용을 주고 AI가 한 번 더 고침)
+#   4. 통과하면 PR 만들고 서버에 "READY" → 관리자 📲 → 관리자가 승인하면 서버가 합치고 기존 배포가 돎
+#   어디서든 실패하면 서버에 "FAILED" → 관리자 📲
+#
+# 비밀 값
+#   - ANTHROPIC_API_KEY: AI 수정 단계에만 넘김 (테스트 단계에는 없음 → 바뀐 코드가 테스트 중에 키를 못 봄)
+#   - QA_TOKEN: 서버에 결과 보낼 때만
+#   - 코드 받기는 persist-credentials: false (AI가 도는 동안 GitHub 토큰이 디스크에 없게)
+# ============================================
+name: AI Fix
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: ai-fix
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    if: github.event.label.name == 'ai-fix' && github.event.issue.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    # 백엔드 테스트용 임시 DB (backend-ci.yml과 같음)
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sklabs_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ISSUE: ${{ github.event.issue.number }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      DB_URL: jdbc:postgresql://localhost:5432/sklabs_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+
+    steps:
+      - name: 코드 받아오기
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: 서버에 시작 알리기
+        env:
+          QA_TOKEN: ${{ secrets.QA_TOKEN }}
+        run: mkdir -p /tmp/aifix && .github/ai-fix/callback.sh WORKING
+
+      - name: JDK 설치
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle 설정
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 라이브러리 설치 + Claude Code 설치
+        run: |
+          git config core.fileMode false   # 실행 권한 변경은 "바뀐 파일"로 안 치게
+          chmod +x backend/gradlew
+          (cd frontend && npm ci)
+          npm install -g @anthropic-ai/claude-code
+
+      # 이슈 제목·내용은 사용자 글이 섞여 있어서 명령어 안에 직접 넣지 않고 파일로만 넘김
+      - name: 작업 자료 만들기
+        env:
+          TITLE: ${{ github.event.issue.title }}
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          { printf '# %s\n\n' "$TITLE"; printf '%s\n' "$BODY"; } > /tmp/aifix/issue.md
+          git ls-files > /tmp/aifix/files.txt
+
+      - name: 🤖 AI 수정 (1차)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude -p "GitHub 이슈 #${ISSUE} 의 문제를 고쳐주세요. 이슈 내용은 /tmp/aifix/issue.md, 저장소 파일 목록은 /tmp/aifix/files.txt 에 있어요. 규칙을 지키고, 끝나면 관리자용 요약을 주세요." \
+            --append-system-prompt-file .github/ai-fix/rules.md \
+            --add-dir /tmp/aifix \
+            --tools "Read,Edit,Write,Glob,Grep" \
+            --permission-mode acceptEdits \
+            --model sonnet \
+            --max-turns 40 \
+            --max-budget-usd 3 \
+            --output-format json > /tmp/aifix/out1.json
+          jq -r '.result // ""' /tmp/aifix/out1.json > /tmp/aifix/summary.md
+          cat /tmp/aifix/summary.md
+
+      - name: 바뀐 게 있는지
+        id: changed
+        env:
+          QA_TOKEN: ${{ secrets.QA_TOKEN }}
+        run: |
+          if [ -z "$(git status --porcelain)" ] || grep -q '^NO_CHANGE' /tmp/aifix/summary.md; then
+            git checkout -- . 2>/dev/null || true
+            .github/ai-fix/callback.sh NO_CHANGE "" "" /tmp/aifix/summary.md
+            echo "yes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "yes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 바뀐 파일 검사 (1차)
+        if: steps.changed.outputs.yes == 'true'
+        env:
+          SECRET_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          SECRET_2: ${{ secrets.QA_TOKEN }}
+        run: .github/ai-fix/check.sh
+
+      - name: 빌드·테스트 (1차)
+        id: test1
+        if: steps.changed.outputs.yes == 'true'
+        continue-on-error: true
+        run: .github/ai-fix/test.sh
+
+      - name: 🤖 AI 수정 (2차, 테스트 실패 시)
+        if: steps.changed.outputs.yes == 'true' && steps.test1.outcome == 'failure'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          tail -c 6000 /tmp/aifix/test.log > /tmp/aifix/test-tail.log
+          claude -p "방금 고친 코드로 빌드·테스트가 실패했어요. 오류는 /tmp/aifix/test-tail.log, 원래 이슈는 /tmp/aifix/issue.md 에 있어요. 실패를 고치고(테스트를 지우거나 약하게 만들지 말 것), 끝나면 관리자용 요약을 주세요." \
+            --append-system-prompt-file .github/ai-fix/rules.md \
+            --add-dir /tmp/aifix \
+            --tools "Read,Edit,Write,Glob,Grep" \
+            --permission-mode acceptEdits \
+            --model sonnet \
+            --max-turns 30 \
+            --max-budget-usd 2 \
+            --output-format json > /tmp/aifix/out2.json
+          jq -r '.result // ""' /tmp/aifix/out2.json > /tmp/aifix/summary.md
+
+      - name: 바뀐 파일 검사 (2차)
+        if: steps.changed.outputs.yes == 'true' && steps.test1.outcome == 'failure'
+        env:
+          SECRET_1: ${{ secrets.ANTHROPIC_API_KEY }}
+          SECRET_2: ${{ secrets.QA_TOKEN }}
+        run: .github/ai-fix/check.sh
+
+      - name: 빌드·테스트 (2차, 이번엔 꼭 통과)
+        if: steps.changed.outputs.yes == 'true' && steps.test1.outcome == 'failure'
+        run: .github/ai-fix/test.sh || { tail -c 3000 /tmp/aifix/test.log; exit 1; }
+
+      - name: PR 만들기
+        id: pr
+        if: steps.changed.outputs.yes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ github.event.issue.title }}
+        run: |
+          branch="ai-fix/issue-${ISSUE}"
+          git config user.name "sklabs-ai-fix[bot]"
+          git config user.email "ai-fix@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add -A
+          git commit -q -m "fix: 🤖 AI 수정 (이슈 #${ISSUE})" -m "$(head -c 1500 /tmp/aifix/summary.md)"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "$branch"
+          { echo "Closes #${ISSUE}"; echo; echo "## 🤖 AI 수정 요약"; cat /tmp/aifix/summary.md; echo; echo "---"; echo "빌드·테스트 통과 · 손대면 안 되는 파일 검사 통과 · 관리자 승인 후 배포"; } > /tmp/aifix/pr.md
+          url=$(gh pr create --base main --head "$branch" --title "$TITLE" --body-file /tmp/aifix/pr.md)
+          echo "number=${url##*/}" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: 서버에 완료 알리기
+        if: steps.changed.outputs.yes == 'true'
+        env:
+          QA_TOKEN: ${{ secrets.QA_TOKEN }}
+        run: .github/ai-fix/callback.sh READY "${{ steps.pr.outputs.number }}" "${{ steps.pr.outputs.branch }}" /tmp/aifix/summary.md
+
+      - name: 서버에 실패 알리기
+        if: failure()
+        env:
+          QA_TOKEN: ${{ secrets.QA_TOKEN }}
+        run: |
+          err="AI 수정 중 실패했어요. Actions 로그를 확인해 주세요."
+          [ -f /tmp/aifix/test.log ] && err="$(tail -c 600 /tmp/aifix/test.log)"
+          .github/ai-fix/callback.sh FAILED "" "" /tmp/aifix/summary.md "$err"

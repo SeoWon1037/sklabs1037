@@ -26,6 +26,7 @@ import AdminImprovePage from './pages/admin/AdminImprovePage'
 import AdminQaPage from './pages/admin/AdminQaPage'
 import AdminResetsPage from './pages/admin/AdminResetsPage'
 import AdminInquiriesPage from './pages/admin/AdminInquiriesPage'
+import AdminAutofixPage from './pages/admin/AdminAutofixPage'
 import SupportPage from './pages/support/SupportPage'
 import LeaguePage from './pages/league/LeaguePage'
 import PredictPage from './pages/predict/PredictPage'
@@ -70,6 +71,7 @@ function App() {
         <Route path="/admin/ops" element={<AdminOpsPage />} />           {/* 관리자: 운영 상태 (메일 속 링크) */}
         <Route path="/admin/reports" element={<AdminReportsPage />} />   {/* 관리자: 토론방 신고 관리 */}
         <Route path="/admin/ai-improve" element={<AdminImprovePage />} /> {/* 관리자: 🔁 AI 비서 자기 개선 */}
+        <Route path="/admin/autofix" element={<AdminAutofixPage />} />   {/* 관리자: 🤖 AI 자동 수정 (승인 · 배포) */}
         <Route path="/admin/inquiries" element={<AdminInquiriesPage />} /> {/* 관리자: 📮 문의함 (AI 분류) */}
         <Route path="/admin/resets" element={<AdminResetsPage />} />    {/* 관리자: ♻️ 모의투자 계좌 초기화 신청 */}
         <Route path="/admin/qa" element={<AdminQaPage />} />            {/* 관리자: 🤖 AI QA 봇 */}

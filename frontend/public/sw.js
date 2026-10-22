@@ -7,7 +7,7 @@ self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
 
 self.addEventListener('push', (e) => {
-  let data = {}
+  let data
   try {
     data = e.data ? e.data.json() : {}
   } catch {

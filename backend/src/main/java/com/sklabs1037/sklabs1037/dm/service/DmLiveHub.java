@@ -51,6 +51,13 @@ public class DmLiveHub {
 
     }
 
+    // 🖥 서버 상태 화면용
+    public int totalConnections() {
+
+        return connections.get();
+
+    }
+
     public boolean online(Long userId) {
 
         Set<SseEmitter> set = users.get(userId);

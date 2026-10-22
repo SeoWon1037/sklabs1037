@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🖥 DB 서버 상태 (PostgreSQL 기본 통계 뷰)
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.ops.dao.ServerMonitorDao">
+
+    <select id="ping" resultType="int">
+        SELECT 1
+    </select>
+
+    <select id="selectDbStats" resultType="java.util.LinkedHashMap">
+        SELECT  D.DATNAME                                                       AS "name"
+               ,SPLIT_PART(VERSION(), ' on ', 1)                                AS "version"
+               ,(EXTRACT(EPOCH FROM PG_POSTMASTER_START_TIME()) * 1000)::BIGINT AS "startedAt"
+               ,PG_DATABASE_SIZE(D.DATNAME)                                     AS "sizeBytes"
+               ,(SELECT SETTING::INT FROM PG_SETTINGS WHERE NAME = 'max_connections') AS "maxConnections"
+               ,(SELECT COUNT(*) FROM PG_STAT_ACTIVITY)                          AS "allConnections"
+               ,D.NUMBACKENDS                                                   AS "connections"
+               ,D.XACT_COMMIT + D.XACT_ROLLBACK                                 AS "xacts"
+               ,D.XACT_ROLLBACK                                                 AS "rollbacks"
+               ,D.BLKS_HIT                                                      AS "blksHit"
+               ,D.BLKS_READ                                                     AS "blksRead"
+               ,D.DEADLOCKS                                                     AS "deadlocks"
+          FROM PG_STAT_DATABASE D
+         WHERE D.DATNAME = CURRENT_DATABASE()
+    </select>
+
+    <select id="selectConnStates" resultType="java.util.LinkedHashMap">
+        SELECT  COALESCE(STATE, 'background')   AS "state"
+               ,COUNT(*)                        AS "count"
+          FROM PG_STAT_ACTIVITY
+         WHERE DATNAME = CURRENT_DATABASE()
+         GROUP BY 1
+         ORDER BY 2 DESC
+    </select>
+
+    <select id="selectLongestActive" resultType="java.lang.Double">
+        SELECT  COALESCE(MAX(EXTRACT(EPOCH FROM (NOW() - QUERY_START))), 0)
+          FROM PG_STAT_ACTIVITY
+         WHERE 1=1
+           AND DATNAME = CURRENT_DATABASE()
+           AND STATE = 'active'
+           AND PID &lt;&gt; PG_BACKEND_PID()
+    </select>
+
+    <select id="selectTopTables" resultType="java.util.LinkedHashMap">
+        SELECT  RELNAME                         AS "table"
+               ,PG_TOTAL_RELATION_SIZE(RELID)   AS "bytes"
+               ,N_LIVE_TUP                      AS "rows"
+          FROM PG_STAT_USER_TABLES
+         ORDER BY 2 DESC
+         LIMIT 6
+    </select>
+
+    <select id="selectAdminIds" resultType="java.lang.Long">
+        SELECT ID FROM T_USER WHERE ROLE = 'ADMIN' AND DEL_DAY IS NULL
+    </select>
+</mapper>

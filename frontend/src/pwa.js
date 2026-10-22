@@ -113,3 +113,29 @@ export async function syncPush() {
 }
 
 export const sendTestPush = () => post('/api/push/test')
+
+// ===== 기기 · 브라우저 구분 (설치 안내용) =====
+export const isAndroid = () => /Android/i.test(navigator.userAgent)
+export const isMobile = () => isIos() || isAndroid() || /Mobi/i.test(navigator.userAgent)
+
+// 앱 안 브라우저 (여기서는 설치가 안 됨 → 바깥 브라우저로)
+export const inAppBrowser = () => {
+  const ua = navigator.userAgent
+  if (/KAKAOTALK/i.test(ua)) return '카카오톡'
+  if (/NAVER\(inapp/i.test(ua)) return '네이버 앱'
+  if (/Instagram/i.test(ua)) return '인스타그램'
+  if (/FBAN|FBAV/i.test(ua)) return '페이스북'
+  if (/Line\//i.test(ua)) return '라인'
+  if (/everytimeApp|DaumApps|Whale\/.*Mobile.*inapp/i.test(ua)) return '앱'
+  return null
+}
+
+// 바깥 브라우저로 열기 주소 (카카오톡은 공식 주소, 안드로이드는 크롬 intent, 아이폰 다른 앱은 null → 링크 복사)
+export const openOutsideUrl = (url) => {
+  if (/KAKAOTALK/i.test(navigator.userAgent)) return `kakaotalk://web/openExternal?url=${encodeURIComponent(url)}`
+  if (isAndroid()) {
+    const u = new URL(url)
+    return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=com.android.chrome;end`
+  }
+  return null
+}

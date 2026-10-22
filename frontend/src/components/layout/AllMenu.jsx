@@ -2,7 +2,7 @@
 // ☰ 전체 메뉴 (메인 검색창 왼쪽 버튼 / 바로가기 "⋯ 전체")
 // - 왼쪽에서 열리는 패널: 내 이름 · 바로가기 8칸 · 서비스 검색 · 카테고리별 목록
 // - 바깥을 누르거나 Esc, 메뉴를 고르면 닫힘
-// - 맨 아래 📲 앱 설치 (크롬·엣지·안드로이드는 버튼, 아이폰은 안내 / 이미 설치했으면 안 보임)
+// - 맨 아래 📲 앱 설치 (크롬·엣지·안드로이드는 버튼, 아이폰은 /app 안내로 / 이미 설치했으면 안 보임)
 // ============================================
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -20,10 +20,9 @@ function Tile({ s, onClose }) {
   )
 }
 
-function InstallBox() {
+function InstallBox({ onClose }) {
 
   const [mode, setMode] = useState(installMode)
-  const [iosOpen, setIosOpen] = useState(false)
 
   useEffect(() => onPwaChange(() => setMode(installMode())), [])
 
@@ -34,11 +33,10 @@ function InstallBox() {
       <div>
         <strong>📲 SKLabs 앱 설치</strong>
         <p>{mode === 'ios' ? '홈 화면에 추가하면 앱처럼 열리고 푸시 알림도 받아요.' : '바탕화면·홈 화면에서 앱처럼 바로 열려요. 설치 파일은 없어요.'}</p>
-        {iosOpen && <p className="am-install-ios">Safari 아래 <b>공유(□↑)</b> → <b>홈 화면에 추가</b> → 추가</p>}
       </div>
-      <button type="button" onClick={() => (mode === 'prompt' ? promptInstall() : setIosOpen((v) => !v))}>
-        {mode === 'prompt' ? '설치' : '방법'}
-      </button>
+      {mode === 'prompt'
+        ? <button type="button" onClick={promptInstall}>설치</button>
+        : <Link to="/app" className="am-install-go" onClick={onClose}>방법</Link>}
     </section>
   )
 }
@@ -129,7 +127,7 @@ function AllMenu({ user, onClose }) {
             ))
           )}
 
-          <InstallBox />
+          <InstallBox onClose={onClose} />
         </div>
       </aside>
     </div>,

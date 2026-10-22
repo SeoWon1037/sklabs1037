@@ -42,6 +42,8 @@ function Footer() {
             <span className="footer-bar">|</span>
             <Link to="/ideas" className="footer-link">💡 기능 제안</Link>
             <span className="footer-bar">|</span>
+            <Link to="/app" className="footer-link">📲 앱 설치</Link>
+            <span className="footer-bar">|</span>
             <a href={mailLink} className="footer-link">✉️ 관리자 문의</a>
             <span className="footer-bar">|</span>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="footer-link">GitHub</a>

@@ -7,6 +7,8 @@ import { Routes, Route } from 'react-router-dom'
 import './App.css'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
+import InstallBanner from './components/layout/InstallBanner'
+import AppInstallPage from './pages/app/AppInstallPage'
 import MainPage from './pages/main/MainPage'
 import StockPage from './pages/stock/StockPage'
 import UserSignUpPage from './pages/user/UserSignUpPage'
@@ -53,6 +55,7 @@ function App() {
         <Route path="/activity" element={<ActivityPage />} />            {/* 🏅 내 활동 · 업적 + 🤖 AI 주간 코치 */}
         <Route path="/duel" element={<DuelPage />} />                    {/* ⚔️ 친구 대결 */}
         <Route path="/duel/:code" element={<DuelPage />} />              {/* ⚔️ 대결 초대 · 점수판 */}
+        <Route path="/app" element={<AppInstallPage />} />               {/* 📲 앱 설치 안내 (QR · 기기별) */}
         <Route path="/about" element={<AboutPage />} />                  {/* 👤 만든 사람 (로그인 없이) */}
         <Route path="/couple" element={<CouplePage />} />                {/* 💕 커플 */}
         <Route path="/ideas" element={<IdeasPage />} />                  {/* 💡 기능 제안 + 투표 */}
@@ -76,6 +79,9 @@ function App() {
 
       {/* 하단 정보: 모든 화면 공통 (AI 비서·소셜 로그인 팝업 제외) */}
       <Footer />
+
+      {/* 📲 휴대폰 두 번째 방문부터 앱 설치 안내 한 줄 (닫으면 다시 안 뜸) */}
+      <InstallBanner />
     </>
   )
 }

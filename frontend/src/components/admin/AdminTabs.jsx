@@ -1,5 +1,5 @@
 // ============================================
-// 관리자 화면 위 탭 (운영 상태 / 문의함 / 신고 관리 / 초기화 신청 / AI 자기 개선 / QA 봇 / AI 피드백)
+// 관리자 화면 위 탭 (운영 상태 / 서버 상태 / 외부 연동 / 문의함 / 신고 관리 / 초기화 신청 / AI 자기 개선 / QA 봇 / AI 피드백)
 // - 문의함 탭에는 답변 기다리는 문의 수 (GET /api/admin/inquiries/count), AI 수정 탭에는 승인 기다리는 수
 // - 초기화 신청 탭에는 기다리는 신청 수 (GET /api/admin/resets/count)
 // - 신고 관리 탭에는 처리할 글 수를 숫자로 (GET /api/admin/reports/count)
@@ -11,6 +11,7 @@ import './AdminTabs.css'
 const TABS = [
   { to: '/admin/ops', label: '🛠 운영 상태' },
   { to: '/admin/server', label: '🖥 서버 상태' },
+  { to: '/admin/api', label: '🔌 외부 연동' },
   { to: '/admin/inquiries', label: '📮 문의함', badge: 'inquiries' },
   { to: '/admin/autofix', label: '🤖 AI 수정', badge: 'autofix' },
   { to: '/admin/reports', label: '🚩 신고 관리', badge: 'reports' },

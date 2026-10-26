@@ -28,6 +28,7 @@ import AdminResetsPage from './pages/admin/AdminResetsPage'
 import AdminInquiriesPage from './pages/admin/AdminInquiriesPage'
 import AdminAutofixPage from './pages/admin/AdminAutofixPage'
 import AdminServerPage from './pages/admin/AdminServerPage'
+import AdminApiPage from './pages/admin/AdminApiPage'
 import SupportPage from './pages/support/SupportPage'
 import LeaguePage from './pages/league/LeaguePage'
 import PredictPage from './pages/predict/PredictPage'
@@ -73,6 +74,7 @@ function App() {
         <Route path="/admin/reports" element={<AdminReportsPage />} />   {/* 관리자: 토론방 신고 관리 */}
         <Route path="/admin/ai-improve" element={<AdminImprovePage />} /> {/* 관리자: 🔁 AI 비서 자기 개선 */}
         <Route path="/admin/server" element={<AdminServerPage />} />     {/* 관리자: 🖥 서버 상태 (운영 서버 + DB, 5초마다) */}
+        <Route path="/admin/api" element={<AdminApiPage />} />           {/* 관리자: 🔌 외부 연동 (토스·Claude·메일… 호출 기록) */}
         <Route path="/admin/autofix" element={<AdminAutofixPage />} />   {/* 관리자: 🤖 AI 자동 수정 (승인 · 배포) */}
         <Route path="/admin/inquiries" element={<AdminInquiriesPage />} /> {/* 관리자: 📮 문의함 (AI 분류) */}
         <Route path="/admin/resets" element={<AdminResetsPage />} />    {/* 관리자: ♻️ 모의투자 계좌 초기화 신청 */}

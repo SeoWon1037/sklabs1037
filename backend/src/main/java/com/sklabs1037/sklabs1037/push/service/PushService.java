@@ -1,5 +1,7 @@
 package com.sklabs1037.sklabs1037.push.service;
 
+import com.sklabs1037.sklabs1037.client.ApiCallLog;
+import com.sklabs1037.sklabs1037.client.RestClients;
 import com.sklabs1037.sklabs1037.push.dao.PushDao;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -184,7 +186,21 @@ public class PushService {
                         .POST(HttpRequest.BodyPublishers.ofByteArray(payload))
                         .build();
 
-                int code = http.send(req, HttpResponse.BodyHandlers.discarding()).statusCode();
+                // 🔌 연동 기록 (구독 주소는 기기마다 달라서 저장 안 함, 어느 회사 푸시 서버인지만)
+                String action = pushVendor(uri.getHost());
+                long start = ApiCallLog.start();
+                int code;
+
+                try {
+                    code = http.send(req, HttpResponse.BodyHandlers.discarding()).statusCode();
+                } catch (java.io.IOException | InterruptedException e) {
+                    ApiCallLog.record("PUSH", action, false, null, ApiCallLog.elapsedMs(start), RestClients.errorText(e));
+                    throw e;
+                }
+
+                // 404·410 = 사용자가 알림을 끈 것 (우리 쪽 잘못 아님) → 성공으로 침
+                boolean ok = (code >= 200 && code < 300) || code == 404 || code == 410;
+                ApiCallLog.record("PUSH", action, ok, code, ApiCallLog.elapsedMs(start), ok ? null : "HTTP " + code);
 
                 if (code >= 200 && code < 300) {
                     pushDao.markOk(id);
@@ -256,6 +272,18 @@ public class PushService {
         } catch (Exception e) {
             throw new IllegalArgumentException("알림 키(" + what + ")를 읽지 못했어요.");
         }
+
+    }
+
+    // 푸시 서버 → 이름 (크롬·엣지 = FCM, 파이어폭스 = Mozilla, 아이폰·맥 사파리 = Apple)
+    static String pushVendor(String host) {
+
+        String h = host == null ? "" : host.toLowerCase();
+        if (h.contains("googleapis")) return "fcm";
+        if (h.contains("mozilla")) return "mozilla";
+        if (h.contains("apple")) return "apple";
+        if (h.contains("windows") || h.contains("microsoft")) return "wns";
+        return "other";
 
     }
 }

@@ -37,7 +37,7 @@ public class VoyageClient {
     @Value("${voyage.min-interval-ms:21000}")
     private long minIntervalMs;
 
-    private final RestClient restClient = RestClients.withTimeout(30);
+    private final RestClient restClient = RestClients.withTimeout("VOYAGE", 30);
 
     // 마지막 요청 시각 (요청 간격 지키기)
     private long lastCallAt = 0;

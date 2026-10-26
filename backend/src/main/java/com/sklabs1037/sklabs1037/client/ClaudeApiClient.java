@@ -35,7 +35,7 @@ public class ClaudeApiClient {
     @Value("${anthropic.max-tokens}")
     private int maxTokens;
 
-    private final RestClient restClient = RestClients.withTimeout(120);   // 긴 답변도 있어서 120초
+    private final RestClient restClient = RestClients.withTimeout("CLAUDE", 120);   // 긴 답변도 있어서 120초
 
     // 키가 설정돼 있는지
     public boolean isConfigured() {

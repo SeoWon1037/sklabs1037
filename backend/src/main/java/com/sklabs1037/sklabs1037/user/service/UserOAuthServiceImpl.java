@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import com.sklabs1037.sklabs1037.client.RestClients;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -62,7 +63,8 @@ public class UserOAuthServiceImpl implements IUserOAuthService {
     private String kakaoRedirectUri;
 
     // 다른 서버(네이버/카카오)에 HTTP 요청을 보내는 도구 (브라우저의 fetch 같은 역할을 Java에서)
-    private final RestClient restClient = RestClient.create();
+    // - 응답 10초 제한 + 🔌 연동 기록 (주소를 보고 KAKAO / NAVER로 나눠 기록)
+    private final RestClient restClient = RestClients.withTimeout(RestClients.BY_HOST, 10);
 
     // ============================================
     // 네이버

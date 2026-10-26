@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    🔌 외부 연동 기록 (T_API_CALL_LOG)
+    - 시간대 묶음은 한국 시간 기준 (CALLED_AT AT TIME ZONE 'Asia/Seoul')
+-->
+<mapper namespace="com.sklabs1037.sklabs1037.ops.dao.ApiCallLogDao">
+
+    <insert id="insertBatch">
+        INSERT INTO T_API_CALL_LOG (
+             SERVICE
+            ,ACTION
+            ,SUCCESS_YN
+            ,STATUS_CODE
+            ,ELAPSED_MS
+            ,ERROR_MSG
+            ,CALLED_AT
+        ) VALUES
+        <foreach collection="list" item="e" separator=",">
+        (
+             #{e.service}
+            ,#{e.action}
+            ,#{e.successYn}
+            ,#{e.statusCode}
+            ,#{e.elapsedMs}
+            ,#{e.errorMsg}
+            ,#{e.calledAt}
+        )
+        </foreach>
+    </insert>
+
+    <select id="selectServiceStats" resultType="java.util.LinkedHashMap">
+        SELECT  S.SERVICE                                                                      AS "service"
+               ,S.CALLS                                                                        AS "calls"
+               ,S.FAILS                                                                        AS "fails"
+               ,S.AVG_MS                                                                       AS "avgMs"
+               ,S.P95_MS                                                                       AS "p95Ms"
+               ,(EXTRACT(EPOCH FROM S.LAST_AT) * 1000)::BIGINT                                 AS "lastAt"
+               ,(EXTRACT(EPOCH FROM F.CALLED_AT) * 1000)::BIGINT                               AS "lastFailAt"
+               ,F.STATUS_CODE                                                                  AS "lastFailStatus"
+               ,F.ERROR_MSG                                                                    AS "lastFailError"
+               ,F.ACTION                                                                       AS "lastFailAction"
+          FROM (
+                SELECT  SERVICE
+                       ,COUNT(*)                                                               AS CALLS
+                       ,COUNT(*) FILTER (WHERE SUCCESS_YN = 'N')                               AS FAILS
+                       ,ROUND(AVG(ELAPSED_MS))::INT                                            AS AVG_MS
+                       ,ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ELAPSED_MS))::INT   AS P95_MS
+                       ,MAX(CALLED_AT)                                                         AS LAST_AT
+                  FROM T_API_CALL_LOG
+                 WHERE CALLED_AT &gt;= #{since}
+                 GROUP BY SERVICE
+               ) S
+          LEFT JOIN LATERAL (
+                SELECT  CALLED_AT, STATUS_CODE, ERROR_MSG, ACTION
+                  FROM T_API_CALL_LOG
+                 WHERE 1=1
+                   AND SERVICE = S.SERVICE
+                   AND SUCCESS_YN = 'N'
+                   AND CALLED_AT &gt;= #{since}
+                 ORDER BY CALLED_AT DESC
+                 LIMIT 1
+               ) F ON TRUE
+         ORDER BY S.FAILS DESC, S.CALLS DESC
+    </select>
+
+    <select id="selectHourly" resultType="java.util.LinkedHashMap">
+        SELECT  TO_CHAR(DATE_TRUNC('hour', CALLED_AT AT TIME ZONE 'Asia/Seoul'), 'YYYY-MM-DD"T"HH24')   AS "hour"
+               ,SERVICE                                                                                AS "service"
+               ,COUNT(*)                                                                               AS "calls"
+               ,COUNT(*) FILTER (WHERE SUCCESS_YN = 'N')                                               AS "fails"
+          FROM T_API_CALL_LOG
+         WHERE CALLED_AT &gt;= #{since}
+         GROUP BY 1, 2
+         ORDER BY 1, 2
+    </select>
+
+    <select id="selectActionStats" resultType="java.util.LinkedHashMap">
+        SELECT  SERVICE                                             AS "service"
+               ,ACTION                                              AS "action"
+               ,COUNT(*)                                            AS "calls"
+               ,COUNT(*) FILTER (WHERE SUCCESS_YN = 'N')            AS "fails"
+               ,ROUND(AVG(ELAPSED_MS))::INT                         AS "avgMs"
+               ,MAX(ELAPSED_MS)                                     AS "maxMs"
+          FROM T_API_CALL_LOG
+         WHERE CALLED_AT &gt;= #{since}
+         GROUP BY SERVICE, ACTION
+         ORDER BY 4 DESC, 3 DESC
+         LIMIT #{limit}
+    </select>
+
+    <select id="selectRecentFails" resultType="java.util.LinkedHashMap">
+        SELECT  ID                                              AS "id"
+               ,SERVICE                                         AS "service"
+               ,ACTION                                          AS "action"
+               ,STATUS_CODE                                     AS "status"
+               ,ELAPSED_MS                                      AS "elapsedMs"
+               ,ERROR_MSG                                       AS "error"
+               ,(EXTRACT(EPOCH FROM CALLED_AT) * 1000)::BIGINT  AS "at"
+          FROM T_API_CALL_LOG
+         WHERE SUCCESS_YN = 'N'
+         ORDER BY CALLED_AT DESC
+         LIMIT #{limit}
+    </select>
+
+    <delete id="deleteOld">
+        DELETE FROM T_API_CALL_LOG
+         WHERE CALLED_AT &lt; NOW() - MAKE_INTERVAL(DAYS =&gt; #{keepDays})
+    </delete>
+</mapper>

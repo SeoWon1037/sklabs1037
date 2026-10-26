@@ -1,5 +1,8 @@
 package com.sklabs1037.sklabs1037.autofix.service;
 
+import com.sklabs1037.sklabs1037.client.ApiCallLog;
+import com.sklabs1037.sklabs1037.client.RestClients;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -95,8 +98,22 @@ public class GitHubClient {
                     .method(method, HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(body)))
                     .build();
 
-            HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
-            if (res.statusCode() / 100 != 2) {
+            // 🔌 연동 기록 (경로의 이슈·PR 번호는 숫자 → # 으로 묶어서 "issues/#/comments"처럼)
+            String action = method + " " + path.replaceAll("/\\d+", "/#").replaceFirst("^/", "");
+            long start = ApiCallLog.start();
+            HttpResponse<String> res;
+
+            try {
+                res = http.send(req, HttpResponse.BodyHandlers.ofString());
+            } catch (java.io.IOException | InterruptedException e) {
+                ApiCallLog.record("GITHUB", action, false, null, ApiCallLog.elapsedMs(start), RestClients.errorText(e));
+                throw e;
+            }
+
+            boolean ok = res.statusCode() / 100 == 2;
+            ApiCallLog.record("GITHUB", action, ok, res.statusCode(), ApiCallLog.elapsedMs(start), ok ? null : "HTTP " + res.statusCode());
+
+            if (!ok) {
                 String msg = res.body() == null ? "" : res.body();
                 throw new IllegalStateException("GitHub " + res.statusCode() + ": " + (msg.length() > 200 ? msg.substring(0, 200) : msg));
             }

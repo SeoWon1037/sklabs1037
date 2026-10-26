@@ -43,8 +43,21 @@ public class FrankfurterClient {
                 .GET()
                 .build();
 
-        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
-        if (res.statusCode() != 200) throw new IllegalStateException("환율 API " + res.statusCode());
+        // 🔌 연동 기록 (JDK HttpClient라 인터셉터 대신 직접)
+        long start = ApiCallLog.start();
+        HttpResponse<String> res;
+
+        try {
+            res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        } catch (Exception e) {
+            ApiCallLog.record("FX", "rates", false, null, ApiCallLog.elapsedMs(start), RestClients.errorText(e));
+            throw e;
+        }
+
+        boolean ok = res.statusCode() == 200;
+        ApiCallLog.record("FX", "rates", ok, res.statusCode(), ApiCallLog.elapsedMs(start), ok ? null : "HTTP " + res.statusCode());
+
+        if (!ok) throw new IllegalStateException("환율 API " + res.statusCode());
 
         Object body = jsonMapper.readValue(res.body(), Object.class);
 

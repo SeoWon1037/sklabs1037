@@ -22,8 +22,7 @@
                ,S.LAST_CLOSE      AS CLOSE_PRICE
           FROM T_STOCK S
          WHERE 1=1
-           AND S.USE_YN  = 'Y'
-           AND S.DEL_DAY IS NULL
+           AND S.DEL_DAY IS NULL       -- USE_YN은 안 봄: 상장폐지로 수집에서 빠진 종목도 이미 산 건 마지막 종가로 평가
            AND S.ID IN
            <foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
     </select>

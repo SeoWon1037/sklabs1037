@@ -242,6 +242,29 @@
               ,UPT_DAY       = NOW()
     </insert>
 
+    <!-- 토스에 없는 종목 (404 stock-not-found) → 수집 대상에서 빼기 -->
+    <update id="deactivateStock"
+            parameterType="long">
+        UPDATE T_STOCK
+           SET USE_YN  = 'N'
+              ,UPT_DAY = NOW()
+         WHERE 1=1
+           AND ID = #{stockId}
+    </update>
+
+    <!-- 토스 종목 목록에 없는 종목 전부 빼기 (상장폐지 등) -->
+    <update id="deactivateMissing"
+            parameterType="java.util.List">
+        UPDATE T_STOCK
+           SET USE_YN  = 'N'
+              ,UPT_DAY = NOW()
+         WHERE 1=1
+           AND USE_YN = 'Y'
+           AND DEL_DAY IS NULL
+           AND SYMBOL NOT IN
+        <foreach collection="list" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+
     <!-- 과거 시세를 받은 날 표시 -->
     <update id="markHistoryDone"
             parameterType="long">

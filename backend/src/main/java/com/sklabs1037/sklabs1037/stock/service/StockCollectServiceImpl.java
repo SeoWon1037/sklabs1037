@@ -108,6 +108,13 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
         log.info("종목 목록 동기화: {}종목", saved);
 
+        // 토스 목록에서 빠진 종목(상장폐지 등)은 수집 대상에서 뺌
+        // - 목록이 비정상적으로 짧게 오면(1,000개 미만) 멀쩡한 종목까지 빠질 수 있어서 건너뜀
+        if (bySymbol.size() >= 1000) {
+            int gone = stockCollectDao.deactivateMissing(new ArrayList<>(bySymbol.keySet()));
+            if (gone > 0) log.info("토스 목록에서 빠진 종목 {}개를 수집 대상에서 뺌", gone);
+        }
+
         return saved;
 
     }
@@ -397,6 +404,7 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
         int saved = 0;
         int failed = 0;
+        int skipped = 0;
         String firstError = null;
 
         for (int i = 0; i < stocks.size(); i++) {
@@ -410,6 +418,16 @@ public class StockCollectServiceImpl implements IStockCollectService {
                 if (markHistory) stockCollectDao.markHistoryDone(stock.getStockId());
 
             } catch (Exception e) {
+
+                // 토스에 없는 종목 (상장폐지·코드 변경): 다시 받아도 계속 404 → 수집 대상에서 빼고 실패로 안 침
+                // (2026-11-02 장애 메일 "시세 시작 점검 일부 실패 4/14": 280320 등 404 stock-not-found)
+                if (isStockGone(e)) {
+                    skipped++;
+                    stockCollectDao.deactivateStock(stock.getStockId());
+                    log.info("토스에 없는 종목이라 수집 대상에서 뺌: {} {}", stock.getSymbol(), stock.getName());
+                    pause();
+                    continue;
+                }
 
                 failed++;
                 if (firstError == null) firstError = stock.getSymbol() + " " + e.getMessage();
@@ -428,9 +446,20 @@ public class StockCollectServiceImpl implements IStockCollectService {
 
         }
 
-        log.info("시세 수집 완료: 종목 {}개, 저장 {}건, 실패 {}종목", stocks.size(), saved, failed);
+        log.info("시세 수집 완료: 종목 {}개, 저장 {}건, 실패 {}종목, 토스에 없는 종목 {}개 제외", stocks.size(), saved, failed, skipped);
 
-        return new CollectResult(stocks.size(), saved, failed, firstError);
+        return new CollectResult(stocks.size(), saved, failed, firstError, skipped);
+
+    }
+
+    // 토스 응답이 "종목을 찾을 수 없습니다"(404 stock-not-found)인지
+    static boolean isStockGone(Throwable e) {
+
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String m = t.getMessage();
+            if (m != null && m.toLowerCase().contains("stock-not-found")) return true;
+        }
+        return false;
 
     }
 

@@ -52,6 +52,12 @@ public interface StockCollectDao {
     // 과거 시세를 받은 날 표시 (다시 받지 않게)
     int markHistoryDone(Long stockId);
 
+    // 토스에 없는 종목 (404 stock-not-found) → 수집 대상에서 빼기 (USE_YN = 'N')
+    int deactivateStock(Long stockId);
+
+    // 토스 종목 목록에 없는 종목 전부 빼기 → 뺀 개수
+    int deactivateMissing(java.util.List<String> symbols);
+
     // 최신 종가 · 전일 종가 · 거래량을 T_STOCK에 복사 (목록·시가총액을 빠르게)
     int updateLatestPrice(Long stockId);
 }

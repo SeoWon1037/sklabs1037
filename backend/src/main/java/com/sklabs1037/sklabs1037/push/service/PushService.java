@@ -171,44 +171,29 @@ public class PushService {
 
                 URI uri = URI.create(endpoint);
                 String audience = uri.getScheme() + "://" + uri.getHost() + (uri.getPort() > 0 ? ":" + uri.getPort() : "");
-                String jwt = WebPushCrypto.vapidJwt(audience, siteUrl.startsWith("https://") ? siteUrl : "https://sklabs1037.com",
-                        System.currentTimeMillis() / 1000 + 12 * 3600, privateKey);
+                String jwt = jwtFor(audience);
                 byte[] payload = WebPushCrypto.encrypt(plain, WebPushCrypto.unb64(String.valueOf(s.get("p256dh"))), WebPushCrypto.unb64(String.valueOf(s.get("auth"))));
-
-                HttpRequest req = HttpRequest.newBuilder(uri)
-                        .timeout(Duration.ofSeconds(15))
-                        .header("TTL", "86400")
-                        .header("Urgency", "normal")
-                        .header("Topic", topic(kind))
-                        .header("Content-Encoding", "aes128gcm")
-                        .header("Content-Type", "application/octet-stream")
-                        .header("Authorization", "vapid t=" + jwt + ", k=" + publicKey)
-                        .POST(HttpRequest.BodyPublishers.ofByteArray(payload))
-                        .build();
 
                 // 🔌 연동 기록 (구독 주소는 기기마다 달라서 저장 안 함, 어느 회사 푸시 서버인지만)
                 String action = pushVendor(uri.getHost());
-                long start = ApiCallLog.start();
-                int code;
 
-                try {
-                    code = http.send(req, HttpResponse.BodyHandlers.discarding()).statusCode();
-                } catch (java.io.IOException | InterruptedException e) {
-                    ApiCallLog.record("PUSH", action, false, null, ApiCallLog.elapsedMs(start), RestClients.errorText(e));
-                    throw e;
+                Reply r = post(uri, jwt, payload, topic(kind), action);
+                if (r.code() == 400) {
+                    // 애플은 400과 함께 {"reason":"BadWebPushTopic"} 같은 이유를 줌 → Topic·Urgency 없이 한 번 더
+                    // (Topic은 "같은 종류 알림 합치기"용 선택 항목이라 빼도 알림은 그대로 감)
+                    log.warn("푸시 400 (sub {}, {}): {} → Topic 없이 다시", id, action, r.reason());
+                    r = post(uri, jwt, payload, null, action);
                 }
 
-                // 404·410 = 사용자가 알림을 끈 것 (우리 쪽 잘못 아님) → 성공으로 침
-                boolean ok = (code >= 200 && code < 300) || code == 404 || code == 410;
-                ApiCallLog.record("PUSH", action, ok, code, ApiCallLog.elapsedMs(start), ok ? null : "HTTP " + code);
-
+                int code = r.code();
                 if (code >= 200 && code < 300) {
                     pushDao.markOk(id);
-                } else if (code == 404 || code == 410) {
-                    pushDao.deleteByEndpoint(endpoint);   // 브라우저에서 알림을 껐거나 앱을 지움
+                } else if (code == 404 || code == 410 || "VapidPkHashMismatch".equals(r.reason())) {
+                    // 404·410 = 브라우저에서 알림을 껐거나 앱을 지움 / 키 불일치 = 서버 키가 바뀌기 전 구독 → 다시 켜야 함
+                    pushDao.deleteByEndpoint(endpoint);
                 } else {
                     pushDao.markFail(id);
-                    log.warn("푸시 응답 {} (sub {})", code, id);
+                    log.warn("푸시 응답 {} {} (sub {})", code, r.reason(), id);
                 }
 
             } catch (InterruptedException e) {
@@ -220,6 +205,69 @@ public class PushService {
             }
 
         }
+
+    }
+
+    // ============================================
+    // 푸시 서버로 보내기 (응답 이유까지 읽어서 기록)
+    // ============================================
+    record Reply(int code, String reason) {
+    }
+
+    private Reply post(URI uri, String jwt, byte[] payload, String topic, String action) throws java.io.IOException, InterruptedException {
+
+        HttpRequest.Builder b = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(15))
+                .header("TTL", "86400")
+                .header("Content-Encoding", "aes128gcm")
+                .header("Content-Type", "application/octet-stream")
+                .header("Authorization", "vapid t=" + jwt + ", k=" + publicKey);
+        if (topic != null) b.header("Topic", topic).header("Urgency", "normal");
+        HttpRequest req = b.POST(HttpRequest.BodyPublishers.ofByteArray(payload)).build();
+
+        long start = ApiCallLog.start();
+        HttpResponse<String> res;
+        try {
+            res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        } catch (java.io.IOException | InterruptedException e) {
+            ApiCallLog.record("PUSH", action, false, null, ApiCallLog.elapsedMs(start), RestClients.errorText(e));
+            throw e;
+        }
+
+        int code = res.statusCode();
+        String reason = reasonOf(res.body());
+        // 404·410 = 사용자가 알림을 끈 것 (우리 쪽 잘못 아님) → 성공으로 침
+        boolean ok = (code >= 200 && code < 300) || code == 404 || code == 410;
+        ApiCallLog.record("PUSH", action, ok, code, ApiCallLog.elapsedMs(start),
+                ok ? null : "HTTP " + code + (reason == null ? "" : " " + reason) + (topic == null ? " (Topic 없이 재시도)" : ""));
+        return new Reply(code, reason);
+
+    }
+
+    // 애플·구글이 주는 실패 이유 {"reason":"BadJwtToken"} → "BadJwtToken" (없으면 본문 앞 80자)
+    static String reasonOf(String body) {
+
+        if (body == null || body.isBlank()) return null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"reason\"\\s*:\\s*\"([^\"]{1,60})\"").matcher(body);
+        if (m.find()) return m.group(1);
+        String t = body.strip().replaceAll("\\s+", " ");
+        return t.length() > 80 ? t.substring(0, 80) : t;
+
+    }
+
+    // VAPID JWT는 푸시 서버(aud)마다 만들어서 1시간 재사용 (애플 권장: 1시간보다 자주 새로 만들지 말 것)
+    private final Map<String, String[]> jwtCache = new ConcurrentHashMap<>();
+
+    private String jwtFor(String audience) {
+
+        long now = System.currentTimeMillis() / 1000;
+        String[] hit = jwtCache.get(audience);
+        if (hit != null && now < Long.parseLong(hit[1])) return hit[0];
+
+        String sub = siteUrl != null && siteUrl.startsWith("https://") ? siteUrl : "https://sklabs1037.com";
+        String jwt = WebPushCrypto.vapidJwt(audience, sub, now + 12 * 3600, privateKey);   // 만료 12시간 (애플 한도 24시간)
+        jwtCache.put(audience, new String[]{jwt, String.valueOf(now + 3600)});
+        return jwt;
 
     }
 

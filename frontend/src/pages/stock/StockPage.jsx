@@ -406,6 +406,7 @@ function StockPage() {
           )}
           <div className="stock-list-head">
             <span>{searching ? '검색 결과' : SORT_TABS.find((t) => t.value === sort)?.title}</span>
+            <span className="stock-swipe-hint" aria-hidden="true">옆으로 넘겨 보기 →</span>
             <span className="stock-list-count">
               {searching
                 ? (results.key === trimmed ? results.items.length : '…')

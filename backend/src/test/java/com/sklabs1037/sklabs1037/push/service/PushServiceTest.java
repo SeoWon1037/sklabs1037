@@ -43,4 +43,14 @@ class PushServiceTest {
         assertEquals("Windows · Edge", PushService.device("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0 Safari/537.36 Edg/130.0"));
 
     }
+
+    @Test
+    void 푸시_서버가_준_실패_이유_읽기() {
+
+        assertEquals("BadWebPushTopic", PushService.reasonOf("{\"reason\":\"BadWebPushTopic\"}"));
+        assertEquals("BadJwtToken", PushService.reasonOf("{ \"reason\" : \"BadJwtToken\" }"));
+        assertEquals("invalid request", PushService.reasonOf("  invalid   request "));
+        assertNull(PushService.reasonOf(""));
+
+    }
 }

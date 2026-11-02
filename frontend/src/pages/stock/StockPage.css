@@ -95,6 +95,9 @@
 .stock-list-head {
   flex-shrink: 0;
 }
+.stock-swipe-hint {
+  display: none;   /* 휴대폰에서만 (아래 @media) */
+}
 /* 목록 정렬: 시총 / 상승률 / 하락률 / 거래대금 */
 .stock-sort {
   display: flex;
@@ -578,21 +581,45 @@
     position: static;
     max-height: none;
   }
+  /* 휴대폰: 종목 카드를 옆으로 넘기는 목록 (QA 봇 지적: 마지막 카드가 화면 끝에서 "잘린" 것처럼 보임)
+     - 카드 폭을 화면의 약 40%로 맞춰 2장 반이 보이게 → 반쯤 보이는 카드 + 오른쪽 흐림 = "더 있어요" 신호
+     - 넘길 때 카드 단위로 딱딱 멈춤(scroll-snap), 위에 "옆으로 넘겨 보기 →" 안내 */
   .stock-list-items {
     display: flex;
     gap: 6px;
     overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 2px;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+  }
+  .stock-list-items::-webkit-scrollbar {
+    display: none;
+  }
+  .stock-list-items > li {
+    flex: 0 0 calc((100% - 12px) / 2.4);
+    scroll-snap-align: start;
+  }
+  .stock-swipe-hint {
+    display: inline;
+    margin-left: auto;
+    margin-right: 8px;
+    color: color-mix(in srgb, var(--text) 50%, transparent);
+    font-size: 12px;
+    font-weight: 600;
   }
   .stock-item {
     grid-template-columns: auto;
-    min-width: 140px;
+    width: 100%;
+    min-width: 0;
   }
   /* 가로로 넘기는 목록 끝: 세로로 꽉 찬 더보기 칸 */
   .stock-more-item {
     display: flex;
   }
   .stock-more {
-    width: 110px;
+    width: 100%;
     height: auto;
     margin-top: 0;
   }

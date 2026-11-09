@@ -142,6 +142,14 @@ public class AiUsageService {
 
     }
 
+    // 🟢 서비스 상태 화면용: 지금 AI 기능이 멈춰 있나 (긴급 정지 또는 오늘 한도)
+    public boolean blocked() {
+
+        refresh(false);
+        return paused || todayCost >= limit();
+
+    }
+
     public void update(Long userId, double usd, boolean pause) {
 
         if (!(usd >= 0.1 && usd <= 100)) throw new IllegalArgumentException("하루 한도는 $0.1 ~ $100 사이로 정해주세요.");

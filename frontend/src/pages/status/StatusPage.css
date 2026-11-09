@@ -1,0 +1,27 @@
+/* 🟢 서비스 상태 (st-) */
+.st-page { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+.st-page h1 { margin: 0 0 16px; font-size: 24px; }
+.st-OK { --s: #22c55e; }
+.st-WARN { --s: #f59e0b; }
+.st-DOWN { --s: #e5484d; }
+.st-banner { display: flex; align-items: center; gap: 14px; padding: 18px; border: 1px solid color-mix(in srgb, var(--s) 45%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--s) 10%, transparent); }
+.st-banner > span { font-size: 28px; }
+.st-banner strong { font-size: 17px; }
+.st-banner p { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; }
+.st-list { margin: 16px 0 0; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; list-style: none; }
+.st-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.st-row + .st-row { border-top: 1px solid var(--border); }
+.st-row > div { flex: 1; min-width: 0; }
+.st-row strong { font-size: 15px; }
+.st-row p { margin: 3px 0 0; color: var(--text-muted); font-size: 12px; }
+.st-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--s); box-shadow: 0 0 0 4px color-mix(in srgb, var(--s) 18%, transparent); }
+.st-tag { flex: none; color: var(--s); font-size: 12px; font-style: normal; font-weight: 700; }
+.st-checks { margin-top: 24px; }
+.st-checks h2 { margin: 0 0 4px; font-size: 16px; }
+.st-muted { color: var(--text-muted); font-size: 12px; }
+.st-checks > p { margin: 0 0 10px; line-height: 1.5; }
+.st-timeline { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.st-timeline li { display: flex; align-items: center; gap: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.st-timeline b { margin-left: auto; }
+.st-note { margin-top: 22px; color: var(--text-muted); font-size: 12px; }
+.st-note a { color: var(--primary, #3b82f6); }

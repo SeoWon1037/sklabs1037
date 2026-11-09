@@ -22,6 +22,7 @@ export const SERVICES = {
   about: { icon: '👤', label: '만든 사람', to: '/about', color: '#0ea5e9', desc: '경력 · 기술 스택' },
   app: { icon: '📲', label: '앱 설치', to: '/app', color: '#0ea5e9', desc: '휴대폰 · PC에 설치' },
   support: { icon: '📮', label: '문의하기', to: '/support', color: '#f97316', desc: '버그 · 질문 · 제안' },
+  status: { icon: '🟢', label: '서비스 상태', to: '/status', color: '#22c55e', desc: '지금 잘 도는지' },
   ideas: { icon: '💡', label: '기능 제안', to: '/ideas', color: '#facc15', desc: '원하는 기능 투표' },
 }
 
@@ -34,5 +35,5 @@ export const CATEGORIES = [
   { title: '게임 · 도전', icon: '🎮', keys: ['predict', 'quiz', 'duel', 'lotto'] },
   { title: 'AI 도구', icon: '✨', keys: ['ai', 'beauty', 'persona'] },
   { title: '내 공간', icon: '🙋', keys: ['messages', 'activity', 'couple', 'mypage'] },
-  { title: 'SKLabs', icon: '🧪', keys: ['support', 'ideas', 'app', 'about'] },
+  { title: 'SKLabs', icon: '🧪', keys: ['support', 'ideas', 'status', 'app', 'about'] },
 ]

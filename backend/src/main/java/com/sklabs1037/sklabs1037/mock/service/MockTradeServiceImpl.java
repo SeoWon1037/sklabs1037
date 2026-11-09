@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -38,8 +39,12 @@ import java.util.*;
  * 실현손익 (매도할 때)
  *   (체결 가격 - 평균 단가) × 매도 수량
  */
+@Slf4j
 @Service
 public class MockTradeServiceImpl implements IMockTradeService {
+
+    // 📈 수익률 비교 기준: KODEX 200 (코스피200 지수를 따라가는 ETF, 지수 자체는 시세 API에 없어서)
+    static final String BENCHMARK_SYMBOL = "069500";
 
     // 시작 자금 3,000만 원 (2026-10-21 1,000만 → 3,000만, 기존 계좌는 sql/mock-cash-30m.sql 로 2,000만 원 추가)
     private static final BigDecimal INIT_CASH = new BigDecimal("30000000");
@@ -721,8 +726,59 @@ public class MockTradeServiceImpl implements IMockTradeService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("initCash", summary.get("initCash"));
         result.put("points", points);
+        result.put("benchmark", benchmark(points));
 
         return result;
+
+    }
+
+    // 📈 같은 날들의 KODEX 200 종가 (코스피200 대신) → 화면이 "그때 지수에 넣었다면"으로 선을 겹쳐 그림
+    // - 각 점 날짜의 종가, 그날 종가가 없으면(휴장 등) 바로 전 종가, 마지막 "지금"은 실시간 가격
+    // - 시세가 없으면 null (그래프만 혼자)
+    private Map<String, Object> benchmark(List<Map<String, Object>> points) {
+
+        try {
+
+            List<Map<String, Object>> rows = mockTradeDao.selectBenchmarkPrices(BENCHMARK_SYMBOL);
+            if (rows.isEmpty()) return null;
+
+            Long stockId = ((Number) rows.get(0).get("stockId")).longValue();
+            MockTradeVO live = mockPriceService.getPrice(stockId);
+
+            List<Object> closes = alignCloses(points, rows, live == null ? null : live.getPrice());
+            Map<String, Object> b = new LinkedHashMap<>();
+            b.put("name", "코스피200 (KODEX 200)");
+            b.put("closes", closes);
+            return b;
+
+        } catch (Exception e) {
+
+            log.warn("비교 지수 불러오기 실패: {}", e.getMessage());
+            return null;
+
+        }
+
+    }
+
+    // 점 날짜마다 그날(없으면 그 전) 종가 · 마지막 live 점은 지금 가격 (순수 계산, 테스트 가능)
+    static List<Object> alignCloses(List<Map<String, Object>> points, List<Map<String, Object>> rows, BigDecimal livePrice) {
+
+        List<Object> out = new ArrayList<>();
+        int j = 0;
+        Object last = null;
+        for (Map<String, Object> p : points) {
+            if (Boolean.TRUE.equals(p.get("live")) && livePrice != null) {
+                out.add(livePrice);
+                continue;
+            }
+            String d = String.valueOf(p.get("date"));
+            while (j < rows.size() && String.valueOf(rows.get(j).get("date")).compareTo(d) <= 0) {
+                last = rows.get(j).get("close");
+                j++;
+            }
+            out.add(last);
+        }
+        return out;
 
     }
 

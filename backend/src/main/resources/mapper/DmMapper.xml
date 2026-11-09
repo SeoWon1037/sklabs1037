@@ -13,7 +13,7 @@
           FROM T_USER
          WHERE 1=1
            AND DEL_DAY IS NULL
-           AND COALESCE(PROVIDER, '') &lt;&gt; 'AI'
+           AND COALESCE(PROVIDER, '') NOT IN ('AI', 'DEMO')
            AND ID &lt;&gt; #{me}
            AND NICKNAME ILIKE #{q} || '%'
          ORDER BY LENGTH(NICKNAME), NICKNAME
@@ -23,7 +23,7 @@
     <select id="selectUser" resultType="java.util.LinkedHashMap">
         SELECT  ID          AS "id"
                ,NICKNAME    AS "nickname"
-               ,(DEL_DAY IS NULL AND COALESCE(PROVIDER, '') &lt;&gt; 'AI') AS "active"
+               ,(DEL_DAY IS NULL AND COALESCE(PROVIDER, '') NOT IN ('AI', 'DEMO')) AS "active"
           FROM T_USER
          WHERE ID = #{id}
     </select>

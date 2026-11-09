@@ -287,3 +287,17 @@
   .header-user-name { display: none; }
   .header-user-chip { padding: 5px 8px; }
 }
+
+/* 🧪 체험 계정 안내 줄 */
+.header-demo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 10px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, #8b5cf6 12%, transparent);
+  font-size: 12px;
+  text-align: center;
+}
+.header-demo a { color: var(--primary, #3b82f6); font-weight: 700; text-decoration: none; white-space: nowrap; }

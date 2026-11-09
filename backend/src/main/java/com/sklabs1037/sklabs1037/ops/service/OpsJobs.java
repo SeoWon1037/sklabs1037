@@ -38,7 +38,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE", "CALENDAR_ALERT", "BACKUP_CHECK");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE", "CALENDAR_ALERT", "BACKUP_CHECK", "DEMO_RESET");
 
     @Autowired
     private JobRunService jobRunService;
@@ -84,6 +84,9 @@ public class OpsJobs {
 
     @Autowired
     private BackupService backupService;
+
+    @Autowired
+    private com.sklabs1037.sklabs1037.demo.service.DemoService demoService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -187,6 +190,9 @@ public class OpsJobs {
 
             // 💾 DB 백업 확인 (26시간 안에 성공한 백업이 없으면 관리자 메일·📲)
             case "BACKUP_CHECK" -> backupService::check;
+
+            // 🧪 체험 계정 처음 상태로 (모의투자 계좌 · 알림 · 가격 알림)
+            case "DEMO_RESET" -> demoService::resetDaily;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

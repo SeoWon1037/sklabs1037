@@ -26,6 +26,7 @@ import CoupleLine from '../../components/me/CoupleLine'
 import AllMenu from '../../components/layout/AllMenu'
 import FxList from '../../components/fx/FxList'
 import { SERVICES, SHORTCUT_KEYS } from '../../components/layout/menuData'
+import DemoButton from '../../components/layout/DemoButton'
 
 // 바로가기 아이콘
 // 바로가기 (위 상단 메뉴와 같은 순서 + 기업 정보 · 투자 성향 · 뉴스 퀴즈)
@@ -293,6 +294,7 @@ function MainPage() {
               <div className="home-login-guest">
                 <p className="home-login-desc">로그인하고 AI 비서 · 모의투자 · 관심 종목을 이용해보세요.</p>
                 <Link to="/login" className="btn btn-primary home-login-btn">SKLabs 로그인</Link>
+                <DemoButton className="btn btn-ghost home-login-btn home-demo-btn" />
                 <div className="home-login-links">
                   <Link to="/find">아이디·비밀번호 찾기</Link>
                   <Link to="/signup">회원가입</Link>

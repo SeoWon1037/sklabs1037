@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🧪 체험 계정 -->
+<mapper namespace="com.sklabs1037.sklabs1037.demo.dao.DemoDao">
+
+    <select id="selectDemoUser" resultType="java.util.LinkedHashMap">
+        SELECT  ID          AS "id"
+               ,EMAIL       AS "email"
+               ,NICKNAME    AS "nickname"
+          FROM T_USER
+         WHERE 1=1
+           AND PROVIDER = 'DEMO'
+           AND DEL_DAY IS NULL
+         ORDER BY ID
+         LIMIT 1
+    </select>
+
+    <delete id="deleteNotifications">
+        DELETE FROM T_NOTIFICATION WHERE USER_ID = #{userId}
+    </delete>
+
+    <delete id="deletePriceAlerts">
+        DELETE FROM T_PRICE_ALERT WHERE USER_ID = #{userId}
+    </delete>
+</mapper>

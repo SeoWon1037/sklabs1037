@@ -4,6 +4,7 @@
 //   POST /api/user/login          이메일 로그인 { email, password }
 //   GET  /api/oauth/naver/login   네이버 로그인 (팝업으로 열기)
 //   GET  /api/oauth/kakao/login   카카오 로그인 (팝업으로 열기)
+//   POST /api/user/demo           🧪 로그인 없이 체험하기 (모두가 쓰는 체험 계정, 매일 05:10 초기화)
 // - 로그인 성공하면 서버가 세션을 만들고, 브라우저에 번호표 쿠키(JSESSIONID)를 줌
 // ============================================
 import { useEffect, useState } from 'react'
@@ -92,6 +93,23 @@ function UserLoginPage() {
     // 팝업이 차단됐으면 → 현재 창에서 이동하는 방식으로
     if (!popup) {
       window.location.href = loginUrl
+    }
+  }
+
+  // ============================================
+  // 🧪 로그인 없이 체험하기
+  // ============================================
+  const handleDemo = async () => {
+    setErrorMessage('')
+    setSubmitting(true)
+    try {
+      const data = await fetch('/api/user/demo', { method: 'POST' }).then((r) => r.json())
+      if (data.success) navigate('/mock')   // 모의투자부터 (주문해 보기 → AI 코치)
+      else setErrorMessage(data.message)
+    } catch {
+      setErrorMessage('서버에 연결할 수 없습니다.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -196,6 +214,12 @@ function UserLoginPage() {
             <path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.78 1.86 5.22 4.66 6.6l-.95 3.48c-.08.3.26.54.52.37l4.15-2.74c.53.06 1.07.09 1.62.09 5.52 0 10-3.48 10-7.8S17.52 3 12 3z" />
           </svg>
           카카오로 로그인
+        </button>
+
+        {/* 🧪 로그인 없이 체험하기 */}
+        <button type="button" className="login-demo-btn" onClick={handleDemo} disabled={submitting}>
+          🧪 로그인 없이 체험하기
+          <small>모의투자 · AI 비서 · 뷰티 랩을 바로 써 봐요 (매일 아침 초기화)</small>
         </button>
 
         {/* 회원가입 / 계정 찾기 */}

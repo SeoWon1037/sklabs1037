@@ -469,6 +469,7 @@
           JOIN T_USER U ON U.ID = A.USER_ID
          WHERE 1=1
            AND U.DEL_DAY IS NULL
+           AND COALESCE(U.PROVIDER, '') &lt;&gt; 'DEMO'   -- 🧪 체험 계정은 랭킹에서 뺌
            AND EXISTS (
                 SELECT  1
                   FROM T_MOCK_TRADE T
@@ -487,6 +488,7 @@
           JOIN T_USER U ON U.ID = H.USER_ID
          WHERE 1=1
            AND U.DEL_DAY IS NULL
+           AND COALESCE(U.PROVIDER, '') &lt;&gt; 'DEMO'
     </select>
 
     <!-- ============================================
@@ -524,6 +526,20 @@
            AND N.USER_ID   = #{userId}
            AND N.SNAP_DATE <![CDATA[>=]]> CURRENT_DATE - 365
          ORDER BY N.SNAP_DATE
+    </select>
+
+    <!-- 📈 비교 지수 (코스피200을 따라가는 KODEX 200) 최근 1년 종가 -->
+    <select id="selectBenchmarkPrices" resultType="java.util.LinkedHashMap">
+        SELECT  S.ID                            AS "stockId"
+               ,TO_CHAR(P.TRADE_DATE, 'YYYY-MM-DD') AS "date"
+               ,P.CLOSE_PRICE                   AS "close"
+          FROM T_STOCK S
+          JOIN T_STOCK_PRICE P ON P.STOCK_ID = S.ID
+         WHERE 1=1
+           AND S.SYMBOL = #{symbol}
+           AND P.TRADE_DATE <![CDATA[>=]]> CURRENT_DATE - 366
+           AND P.CLOSE_PRICE IS NOT NULL
+         ORDER BY P.TRADE_DATE
     </select>
 
     <!-- 내 기록 전체 삭제 (초기화) -->

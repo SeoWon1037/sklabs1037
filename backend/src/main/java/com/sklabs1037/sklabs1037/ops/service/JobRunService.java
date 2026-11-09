@@ -260,6 +260,7 @@ public class JobRunService {
             Map.entry("DAILY_IMPROVE", "매일 스스로 개선"),
             Map.entry("CALENDAR_ALERT", "증시 일정 알림"),
             Map.entry("BACKUP_CHECK", "DB 백업 확인"),
+            Map.entry("DEMO_RESET", "체험 계정 초기화"),
             Map.entry("WATCHDOG", "작업 감시")
     );
 

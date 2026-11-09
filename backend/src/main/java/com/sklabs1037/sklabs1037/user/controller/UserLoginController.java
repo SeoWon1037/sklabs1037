@@ -95,7 +95,9 @@ public class UserLoginController {
         }
 
         result.put("loggedIn", true);
-        result.put("user", toUserInfo(user));
+        Map<String, Object> info = toUserInfo(user);
+        info.put("demo", Boolean.TRUE.equals(session.getAttribute("DEMO")));   // 🧪 체험 계정 (DemoService.SESSION_KEY)
+        result.put("user", info);
 
         return ResponseEntity.ok(result);
 

@@ -463,7 +463,8 @@ function MockTradePage() {
   const account = data.account
 
   // 그래프 기간 자르기 (마지막 "지금" 점은 항상 포함)
-  const allPoints = history?.points ?? []
+  // 📈 비교 지수(KODEX 200) 종가를 같은 점에 붙임 (서버가 날짜를 맞춰서 줌)
+  const allPoints = (history?.points ?? []).map((p, i) => ({ ...p, close: history?.benchmark?.closes?.[i] ?? null }))
   const lastDay = allPoints.length ? new Date(allPoints[allPoints.length - 1].date).getTime() : 0   // 오늘 (마지막 "지금" 점)
   const historyPoints = historyDays === 0
     ? allPoints
@@ -547,7 +548,7 @@ function MockTradePage() {
                 ))}
               </div>
             </div>
-            {historyPoints.length > 0 && <ReturnChart points={historyPoints} />}
+            {historyPoints.length > 0 && <ReturnChart points={historyPoints} benchName={history?.benchmark ? '코스피200' : null} />}
             <p className="mock-note">
               {historyPoints.length < 2
                 ? '평일 장 마감(15:40)마다 하루 한 점씩 쌓여요. 다음 장 마감부터 선이 그려져요.'

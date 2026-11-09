@@ -155,6 +155,13 @@ function Header() {
           )}
         </div>
       </div>
+      {/* 🧪 체험 계정이면 얇은 안내 줄 */}
+      {user?.demo && (
+        <div className="header-demo" role="status">
+          🧪 체험 중이에요 · 모두가 같이 쓰는 계정이라 매일 아침 초기화돼요
+          <Link to="/signup">회원가입하고 내 계좌 만들기 ›</Link>
+        </div>
+      )}
     </header>
   )
 }

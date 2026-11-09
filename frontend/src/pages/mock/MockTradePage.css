@@ -1136,3 +1136,12 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* 📈 지수 비교 범례 */
+.ret-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.ret-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.ret-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+.ret-legend .ret-legend-dash { background: repeating-linear-gradient(90deg, #9ca3af 0 4px, transparent 4px 7px); }
+.ret-legend strong { margin-left: auto; font-size: 12px; }
+.ret-beat { color: #e5484d; }
+.ret-lag { color: #3b82f6; }

@@ -89,5 +89,8 @@ public interface MockTradeDao {
 
     List<MockTradeVO> selectSnapshots(Long userId);
 
+    // 📈 비교 지수 (KODEX 200) 최근 1년 종가 { stockId, date, close } 오래된 날부터
+    List<java.util.Map<String, Object>> selectBenchmarkPrices(String symbol);
+
     int deleteSnapshots(Long userId);
 }

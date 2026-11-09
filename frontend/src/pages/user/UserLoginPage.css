@@ -117,3 +117,24 @@
   color: var(--text);
   text-decoration: underline;
 }
+/* 🧪 로그인 없이 체험하기 */
+.login-demo-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--primary, #3b82f6) 60%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary, #3b82f6) 7%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.login-demo-btn small { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+.login-demo-btn:hover { background: color-mix(in srgb, var(--primary, #3b82f6) 12%, transparent); }
+.login-demo-btn:disabled { opacity: 0.6; cursor: default; }

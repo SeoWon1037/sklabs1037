@@ -15,3 +15,5 @@
 # 운영체제가 자동으로 만드는 파일
 .DS_Store
 Thumbs.db
+# 💾 DB 백업 파일 (EC2의 ~/sklabs1037/backups, 개인정보가 들어 있으니 절대 올리지 않음)
+backups/

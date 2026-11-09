@@ -88,6 +88,47 @@ function Chart({ title, series, max, unit, fmt }) {
   )
 }
 
+const day = (ms) => {
+  const d = new Date(ms)
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+// 💾 DB 백업 (backup 컨테이너가 매일 04:30 pg_dump, 최근 7개)
+const BACKUP = {
+  OK: ['정상', 'sv-ok'], STALE: ['오래됨 (26시간 넘음)', 'sv-warn'], FAILED: ['마지막 백업 실패', 'sv-bad'], NONE: ['아직 백업 없음', 'sv-warn'],
+}
+
+function BackupCard({ b, onRun, busy }) {
+
+  if (!b || b.status === 'OFF') return null
+  const [label, tone] = BACKUP[b.status] ?? ['-', '']
+  const newest = b.files?.[0]
+
+  return (
+    <section className="sv-card sv-backup">
+      <h2>💾 DB 백업 <small>매일 04:30 · pg_dump · 최근 7개 보관</small></h2>
+      <div className="sv-stats sv-stats-top">
+        <Stat label="상태" value={label} tone={tone} />
+        <Stat label="마지막 성공" value={newest ? `${since(newest.at)} 전` : '-'} />
+        <Stat label="마지막 크기" value={newest ? gb(newest.bytes) : '-'} />
+        <Stat label="보관" value={`${b.files?.length ?? 0}개 · ${gb(b.totalBytes)}`} />
+      </div>
+      {b.lastError && <p className="sv-note sv-bad">실패 이유: {b.lastError}</p>}
+      <div className="sv-backup-row">
+        <div className="sv-chips">
+          {(b.files ?? []).map((f) => <span key={f.name}>{day(f.at)} · {gb(f.bytes)}</span>)}
+        </div>
+        <button type="button" className="sv-btn" disabled={busy || b.running} onClick={onRun}>
+          {b.running || busy ? '백업 중… (30초 안에 시작)' : '지금 백업'}
+        </button>
+      </div>
+      <p className="sv-note">
+        EC2의 ~/sklabs1037/backups 에 저장돼요 (RDS 자동 백업과 별도로 한 벌 더). 26시간 넘게 새 백업이 없으면 메일·📲으로 알려줘요.
+      </p>
+    </section>
+  )
+}
+
 function AdminServerPage() {
 
   const [data, setData] = useState(null)
@@ -117,6 +158,15 @@ function AdminServerPage() {
   const app = data?.app
   const db = data?.db ?? {}
   const fresh = at && s && at - s.t < 20000   // 받은 시각 기준 (렌더 중 Date.now() 금지)
+
+  const [backupBusy, setBackupBusy] = useState(false)
+  const runBackup = async () => {
+    if (!window.confirm('지금 DB 백업을 시작할까요? (1분 안쪽, 사이트는 그대로 동작해요)')) return
+    setBackupBusy(true)
+    const j = await fetch('/api/admin/backup/run', { method: 'POST' }).then((r) => r.json()).catch(() => ({ success: false, message: '서버에 연결하지 못했어요.' }))
+    if (!j.success) window.alert(j.message)
+    setTimeout(() => { setBackupBusy(false); load() }, 2000)
+  }
 
   return (
     <main className="admin-page">
@@ -170,6 +220,8 @@ function AdminServerPage() {
               </div>
             </section>
           </div>
+
+          <BackupCard b={data.backup} onRun={runBackup} busy={backupBusy} />
 
           {/* ===== 최근 1시간 ===== */}
           <h2 className="sv-h2">최근 1시간</h2>

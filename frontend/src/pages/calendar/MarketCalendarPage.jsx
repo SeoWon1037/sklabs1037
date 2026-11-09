@@ -2,7 +2,9 @@
 // 📅 증시 일정 (주소: /calendar, 로그인 없이 누구나)
 // - 다가오는 일정 (D-day) · 달력 (날짜를 누르면 그날 일정)
 // - 휴장일 · 🇺🇸 FOMC 금리 결정(한국 시간) · 🇰🇷 한국은행 금통위 · 선물·옵션 만기일(동시만기 = 네 마녀의 날)
+// - 🔔 전날 저녁 7시 알림 받기 (로그인, 종류 고르기) → 사이트 알림 + 📲 푸시
 // - 백엔드: GET /api/market/calendar?month=YYYY-MM (MarketCalendar: 발표된 일정 표 + 만기일 규칙)
+//           GET/POST /api/market/calendar/alert
 // ============================================
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -48,6 +50,80 @@ function EventRow({ e, today }) {
         <p>{e.detail}</p>
       </div>
     </li>
+  )
+}
+
+const ALERT_KINDS = [['FOMC', '🇺🇸 FOMC'], ['BOK', '🇰🇷 금통위'], ['EXPIRY', '만기일'], ['HOLIDAY', '휴장']]
+
+// 🔔 전날 저녁 알림 켜기 (로그인 안 했으면 로그인 안내)
+function AlertBox() {
+
+  const [state, setState] = useState(null)   // null 불러오는 중 / 'guest' / { enabled, kinds }
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let ignore = false
+    fetch('/api/market/calendar/alert')
+      .then((r) => (r.status === 401 ? { guest: true } : r.json()))
+      .then((j) => { if (!ignore) setState(j.guest ? 'guest' : j.success ? j : 'error') })
+      .catch(() => { if (!ignore) setState('error') })
+    return () => { ignore = true }
+  }, [])
+
+  const save = async (enabled, kinds) => {
+    setBusy(true)
+    setError('')
+    const j = await fetch('/api/market/calendar/alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled, kinds }),
+    }).then((r) => r.json()).catch(() => ({ success: false, message: '서버에 연결하지 못했어요.' }))
+    setBusy(false)
+    if (!j.success) return setError(j.message)
+    setState(j)
+  }
+
+  if (state === null || state === 'error') return null
+
+  if (state === 'guest') {
+    return (
+      <div className="mc-alert">
+        <p>🔔 <Link to="/login">로그인</Link>하면 FOMC·만기일 전날 저녁에 알려드려요.</p>
+      </div>
+    )
+  }
+
+  const toggleKind = (k) => {
+    const next = state.kinds.includes(k) ? state.kinds.filter((x) => x !== k) : [...state.kinds, k]
+    if (next.length === 0) return save(false, ALERT_KINDS.map(([x]) => x))
+    save(true, next)
+  }
+
+  return (
+    <div className={`mc-alert ${state.enabled ? 'mc-alert-on' : ''}`}>
+      <div className="mc-alert-top">
+        <div>
+          <strong>🔔 전날 저녁 7시에 알려드려요</strong>
+          <p>{state.enabled ? '사이트 알림과 📲 푸시로 보내드려요.' : '내일 큰 일정이 있으면 미리 알려드려요.'}</p>
+        </div>
+        <button type="button" role="switch" aria-checked={state.enabled} className="mc-switch" disabled={busy}
+          onClick={() => save(!state.enabled, state.kinds)} aria-label="증시 일정 알림">
+          <span />
+        </button>
+      </div>
+      {state.enabled && (
+        <div className="mc-alert-kinds">
+          {ALERT_KINDS.map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={state.kinds.includes(k)} disabled={busy}
+              className={state.kinds.includes(k) ? 'mc-chip-on' : ''} onClick={() => toggleKind(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {error && <p className="mc-error">{error}</p>}
+    </div>
   )
 }
 
@@ -113,6 +189,7 @@ function MarketCalendarPage() {
         <div className="mc-grid">
           <section className="mc-card mc-upcoming" aria-label="다가오는 일정">
             <h2>다가오는 일정</h2>
+            <AlertBox />
             {data.upcoming.length === 0
               ? <p className="mc-muted">두 달 안에 정해진 일정이 없어요.</p>
               : <ul className="mc-list">{data.upcoming.map((e) => <EventRow key={`${e.date}${e.kind}`} e={e} today={data.today} />)}</ul>}

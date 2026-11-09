@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🔔 증시 일정 알림 (T_CALENDAR_ALERT) -->
+<mapper namespace="com.sklabs1037.sklabs1037.calendar.dao.CalendarAlertDao">
+
+    <select id="selectKinds" resultType="java.lang.String">
+        SELECT KINDS FROM T_CALENDAR_ALERT WHERE USER_ID = #{userId}
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO T_CALENDAR_ALERT (USER_ID, KINDS)
+        VALUES (#{userId}, #{kinds})
+        ON CONFLICT (USER_ID) DO UPDATE
+           SET  KINDS   = EXCLUDED.KINDS
+               ,UPD_DAY = NOW()
+    </insert>
+
+    <delete id="delete">
+        DELETE FROM T_CALENDAR_ALERT WHERE USER_ID = #{userId}
+    </delete>
+
+    <select id="selectAll" resultType="java.util.LinkedHashMap">
+        SELECT  A.USER_ID   AS "userId"
+               ,A.KINDS     AS "kinds"
+          FROM T_CALENDAR_ALERT A
+          JOIN T_USER U ON U.ID = A.USER_ID
+         ORDER BY A.USER_ID
+    </select>
+</mapper>

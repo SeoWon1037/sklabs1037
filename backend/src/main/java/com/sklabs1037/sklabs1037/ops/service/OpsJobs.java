@@ -38,7 +38,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE", "CALENDAR_ALERT", "BACKUP_CHECK");
 
     @Autowired
     private JobRunService jobRunService;
@@ -78,6 +78,12 @@ public class OpsJobs {
 
     @Autowired
     private com.sklabs1037.sklabs1037.autofix.service.DailyImproveService dailyImproveService;
+
+    @Autowired
+    private com.sklabs1037.sklabs1037.calendar.service.CalendarAlertService calendarAlertService;
+
+    @Autowired
+    private BackupService backupService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -175,6 +181,12 @@ public class OpsJobs {
 
             // 🔁 매일 스스로 개선 (운영 기록에서 고칠 거리 1개 → AI 자동 수정 → 관리자 승인)
             case "DAILY_IMPROVE" -> dailyImproveService::run;
+
+            // 🔔 증시 일정 알림 (내일 FOMC·금통위·만기·휴장 → 켠 회원에게 📲)
+            case "CALENDAR_ALERT" -> calendarAlertService::sendAll;
+
+            // 💾 DB 백업 확인 (26시간 안에 성공한 백업이 없으면 관리자 메일·📲)
+            case "BACKUP_CHECK" -> backupService::check;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

@@ -9,6 +9,8 @@ services:
     build: ./backend
     image: ghcr.io/seowon1037/sklabs1037-backend:latest   # 자동 배포(CD) 때 사용할 이미지 이름
     env_file: .env                                         # 키/비밀번호는 서버의 .env 파일에서
+    volumes:
+      - ./backups:/backups                                 # 💾 DB 백업 상태 읽기 · [지금 백업] 신호 (backup 서비스와 같은 폴더)
     restart: unless-stopped                                # 서버가 죽거나 EC2가 재부팅돼도 자동 재시작
 
   # 프론트 (nginx + React)
@@ -22,4 +24,17 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro               # EC2에 발급받은 인증서를 읽기 전용으로 연결
     depends_on:
       - backend
+    restart: unless-stopped
+
+  # 💾 DB 백업 (매일 04:30 pg_dump → ~/sklabs1037/backups, 최근 7개, 스크립트: ops/backup/loop.sh)
+  # - 평소엔 30초마다 시계만 보는 작은 컨테이너 (메모리 몇 MB)
+  # - pg_dump 버전이 DB(PostgreSQL 18)와 맞아야 해서 postgres:18 이미지
+  backup:
+    image: postgres:18-alpine
+    env_file: .env
+    entrypoint: ["sh", "/scripts/loop.sh"]
+    volumes:
+      - ./ops/backup:/scripts:ro
+      - ./backups:/backups
+    mem_limit: 256m
     restart: unless-stopped

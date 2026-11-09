@@ -2,6 +2,10 @@
 # CD: main 브랜치에 push하면 CI(백엔드/프론트) 통과 후 EC2 서버에 자동 배포
 # 흐름: Backend CI + Frontend CI → 둘 다 성공하면 → SSH로 EC2 접속 → 최신 코드 받기 → Docker 이미지 빌드 → 컨테이너 교체
 # - CI가 하나라도 실패하면 배포하지 않음 (깨진 코드가 운영 서버에 올라가는 것 방지)
+# - ⏪ 배포 지킴이: 배포 전 지금 버전에 :prev 표시 → 배포 후 문제면 바로 전 버전으로 자동 되돌리기
+#   1차: 서버가 3분 안에 /api/health OK가 아니면 (deploy 단계 안에서 바로)
+#   2차: 배포 직후 QA 봇이 "규칙으로 찾은 심각한 문제"를 새로 찾으면 (guard 단계, 판단은 서버 DeployGuardService)
+#   되돌리는 방법: .github/deploy/rollback.sh (빌드 없이 이미지만 바꿔서 1분 안쪽)
 # ============================================
 name: Deploy
 
@@ -51,6 +55,11 @@ jobs:
             set -e
             cd ~/sklabs1037
 
+            # ⏪ 지금 돌고 있는 버전에 :prev 표시 (문제 생기면 이걸로 되돌림)
+            for img in ghcr.io/seowon1037/sklabs1037-backend ghcr.io/seowon1037/sklabs1037-frontend; do
+              if docker image inspect "$img:latest" >/dev/null 2>&1; then docker tag "$img:latest" "$img:prev"; fi
+            done
+
             # 최신 코드로 맞추기 (.env는 Git이 관리하지 않는 파일이라 그대로 유지됨)
             git fetch origin main
             git reset --hard origin/main
@@ -58,16 +67,83 @@ jobs:
             # 바뀐 부분만 다시 빌드해서 컨테이너 교체
             docker compose up -d --build
 
+            # ⏪ 1차 확인: 3분 안에 서버가 뜨고 DB에 붙는지 (/api/health). 아니면 바로 전 버전으로
+            ok=0
+            for n in $(seq 1 36); do
+              code=$(curl -sk -o /dev/null -w '%{http_code}' --resolve sklabs1037.com:443:127.0.0.1 https://sklabs1037.com/api/health || true)
+              if [ "$code" = "200" ]; then ok=1; break; fi
+              sleep 5
+            done
+            if [ "$ok" != "1" ]; then
+              echo "❌ 새 버전이 3분 안에 정상으로 뜨지 않았어요 (마지막 응답 $code) → 바로 전 버전으로 되돌려요"
+              docker compose logs --tail 60 backend || true
+              bash .github/deploy/rollback.sh HEALTH "${{ github.sha }}" "health $code"
+              exit 1
+            fi
+            echo "✅ 새 버전 정상 (/api/health 200)"
+
             # 이전 버전 이미지 정리 (디스크 용량 확보)
             docker image prune -f
 
             docker compose ps
 
   # 4. 배포 직후 🤖 AI QA 봇 (진짜 브라우저로 주요 화면 점검 → 문제 있으면 관리자 메일)
-  # - 점검이 실패해도 이미 배포는 끝난 상태 (배포를 되돌리지는 않음, 알려주기만)
   qa:
     needs: [ deploy ]
     uses: ./.github/workflows/qa-bot.yml
     with:
       source: DEPLOY
     secrets: inherit
+
+  # 5. ⏪ 배포 지킴이 2차: QA 결과를 서버에 물어보고, 새로 생긴 "규칙 · 심각" 문제가 있으면 바로 전 버전으로
+  # - AI 화면 판정만으로는 되돌리지 않음 (알림만)
+  # - 전에도 있던 문제(외부 서비스 장애 등)는 이번 배포 탓이 아니므로 되돌리지 않음
+  guard:
+    needs: [ qa ]
+    if: ${{ needs.qa.outputs.run_id != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: QA 판정 기다리기 (최대 8분)
+        id: verdict
+        env:
+          QA_TOKEN: ${{ secrets.QA_TOKEN }}
+          RUN_ID: ${{ needs.qa.outputs.run_id }}
+        run: |
+          for n in $(seq 1 32); do
+            body=$(curl -s --max-time 15 -H "X-QA-Token: $QA_TOKEN" "https://sklabs1037.com/api/qa/verdict/$RUN_ID" || true)
+            status=$(printf '%s' "$body" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("status",""))' 2>/dev/null || true)
+            if [ -n "$status" ] && [ "$status" != "ANALYZING" ]; then break; fi
+            sleep 15
+          done
+          echo "QA 점검 #$RUN_ID 결과: ${status:-알 수 없음}"
+          printf '%s' "$body" | python3 -c '
+          import sys, json, re, os
+          try: v = json.load(sys.stdin)
+          except Exception: v = {}
+          rb = bool(v.get("rollback"))
+          # 서버가 준 이유에서 글자·숫자·기본 기호만 남김 (EC2 명령에 그대로 들어가므로)
+          reason = re.sub(r"[^0-9A-Za-z가-힣 ·:/._()-]", "", " | ".join(v.get("reasons") or []))[:400]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"rollback={str(rb).lower()}\nreason={reason}\n")
+          print("되돌리기:", rb, reason)
+          '
+
+      - name: ⏪ 바로 전 버전으로 되돌리기
+        if: ${{ steps.verdict.outputs.rollback == 'true' }}
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          REASON: ${{ steps.verdict.outputs.reason }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: REASON
+          script: |
+            bash ~/sklabs1037/.github/deploy/rollback.sh QA "${{ github.sha }}" "$REASON"
+
+      - name: 되돌렸으면 빨간 X로 표시
+        if: ${{ steps.verdict.outputs.rollback == 'true' }}
+        run: |
+          echo "::error::배포 직후 새 심각한 문제가 있어 바로 전 버전으로 되돌렸어요: ${{ steps.verdict.outputs.reason }}"
+          exit 1

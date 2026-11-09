@@ -49,6 +49,21 @@
          LIMIT  #{limit}
     </select>
 
+    <select id="selectPrevRun"
+            resultType="com.sklabs1037.sklabs1037.qa.vo.QaRunVO">
+        SELECT  ID                                          AS RUN_ID
+               ,SOURCE
+               ,COMMIT_SHA
+               ,STATUS
+               ,FINDINGS_JSON
+          FROM T_QA_RUN
+         WHERE 1=1
+           AND ID &lt; #{runId}
+           AND STATUS &lt;&gt; 'ANALYZING'
+         ORDER BY ID DESC
+         LIMIT 1
+    </select>
+
     <select id="selectRun"
             resultType="com.sklabs1037.sklabs1037.qa.vo.QaRunVO">
         SELECT  ID                                          AS RUN_ID

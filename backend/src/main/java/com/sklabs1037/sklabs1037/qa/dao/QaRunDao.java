@@ -23,6 +23,9 @@ public interface QaRunDao {
     // 점검 하나 (캡처 포함)
     QaRunVO selectRun(Long runId);
 
+    // runId 바로 전의 분석 끝난 점검 (⏪ 배포 지킴이: 이번에 새로 생긴 문제인지 비교)
+    QaRunVO selectPrevRun(Long runId);
+
     // 최근 keep개만 남기기
     int deleteOld(QaRunVO vo);
 }

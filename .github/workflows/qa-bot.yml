@@ -19,11 +19,17 @@ on:
     secrets:
       QA_TOKEN:
         required: false
+    outputs:
+      run_id:
+        description: 서버가 받은 점검 번호 (⏪ 배포 지킴이가 판정을 물어볼 때)
+        value: ${{ jobs.qa.outputs.run_id }}
 
 jobs:
   qa:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      run_id: ${{ steps.report.outputs.run_id }}
     defaults:
       run:
         working-directory: qa
@@ -46,6 +52,7 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: 화면 점검 → 서버로 보내기
+        id: report
         env:
           QA_BASE_URL: https://sklabs1037.com
           QA_TOKEN: ${{ secrets.QA_TOKEN }}

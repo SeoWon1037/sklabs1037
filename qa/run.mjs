@@ -11,6 +11,7 @@
 // 로컬에서 보내지 않고 결과만 보기: QA_DRY_RUN=1 node run.mjs
 // ============================================
 import { chromium } from 'playwright'
+import { appendFileSync } from 'node:fs'
 
 const BASE = (process.env.QA_BASE_URL || 'https://sklabs1037.com').replace(/\/$/, '')
 const TOKEN = process.env.QA_TOKEN || ''
@@ -173,5 +174,8 @@ if (!res.ok || !body.success) {
   console.error(`결과 보내기 실패: ${res.status} ${body.message || ''}`)
   process.exit(1)
 }
+
+// ⏪ 배포 지킴이가 이 번호로 판정을 물어봄
+if (process.env.GITHUB_OUTPUT && body.runId) appendFileSync(process.env.GITHUB_OUTPUT, `run_id=${body.runId}\n`)
 
 console.log(`보냈어요 (점검 #${body.runId}). 서버가 Claude로 화면을 분석해서 관리자 화면 /admin/qa 에 올려요.`)

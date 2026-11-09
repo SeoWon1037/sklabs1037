@@ -1,6 +1,7 @@
 package com.sklabs1037.sklabs1037.qa.controller;
 
 import com.sklabs1037.sklabs1037.admin.service.IAdminFeedbackService;
+import com.sklabs1037.sklabs1037.qa.service.DeployGuardService;
 import com.sklabs1037.sklabs1037.qa.service.QaBotService;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
 import com.sklabs1037.sklabs1037.user.vo.UserLoginVO;
@@ -20,6 +21,8 @@ import java.util.Map;
  *
  * API 목록
  *   POST /api/qa/report          GitHub Actions가 점검 결과를 보냄 (헤더 X-QA-Token) → { success, runId }
+ *   GET  /api/qa/verdict/{runId}       ⏪ 배포 지킴이: 되돌릴지 (X-QA-Token) → { status, rollback, reasons }
+ *   POST /api/qa/rolled-back           ⏪ 되돌렸다고 알림 (X-QA-Token) { kind: HEALTH|QA, commit, reason }
  *   GET  /api/admin/qa           최근 점검 목록 (관리자)
  *   GET  /api/admin/qa/{runId}   점검 하나 + 화면별 측정값 + 캡처 (관리자)
  */
@@ -32,6 +35,9 @@ public class QaController {
 
     @Autowired
     private IAdminFeedbackService adminFeedbackService;
+
+    @Autowired
+    private DeployGuardService deployGuardService;
 
     @PostMapping("/api/qa/report")
     public ResponseEntity<Map<String, Object>> report(@RequestHeader(value = "X-QA-Token", required = false) String token,
@@ -58,6 +64,38 @@ public class QaController {
             return fail(HttpStatus.INTERNAL_SERVER_ERROR, "저장하지 못했습니다.");
 
         }
+
+    }
+
+    @GetMapping("/api/qa/verdict/{runId}")
+    public ResponseEntity<Map<String, Object>> verdict(@RequestHeader(value = "X-QA-Token", required = false) String token,
+                                                       @PathVariable Long runId) {
+
+        if (!qaBotService.tokenOk(token)) return fail(HttpStatus.UNAUTHORIZED, "토큰이 맞지 않습니다.");
+
+        try {
+
+            Map<String, Object> body = new HashMap<>(deployGuardService.verdict(runId));
+            body.put("success", true);
+            return ResponseEntity.ok(body);
+
+        } catch (IllegalArgumentException e) {
+
+            return fail(HttpStatus.NOT_FOUND, e.getMessage());
+
+        }
+
+    }
+
+    @PostMapping("/api/qa/rolled-back")
+    public ResponseEntity<Map<String, Object>> rolledBack(@RequestHeader(value = "X-QA-Token", required = false) String token,
+                                                          @RequestBody Map<String, Object> payload) {
+
+        if (!qaBotService.tokenOk(token)) return fail(HttpStatus.UNAUTHORIZED, "토큰이 맞지 않습니다.");
+
+        deployGuardService.rolledBack(String.valueOf(payload.get("kind")), String.valueOf(payload.getOrDefault("commit", "")),
+                String.valueOf(payload.getOrDefault("reason", "")));
+        return ResponseEntity.ok(Map.of("success", true));
 
     }
 

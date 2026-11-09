@@ -25,6 +25,11 @@ class DemoServiceTest {
         assertTrue(DemoService.allowed("POST", "/api/ai/chat"));
         assertTrue(DemoService.allowed("POST", "/api/beauty/analyze"));
         assertTrue(DemoService.allowed("POST", "/api/user/logout"));
+        // 체험 중에 진짜 계정으로 바꾸기
+        assertTrue(DemoService.allowed("POST", "/api/user/login"));
+        assertTrue(DemoService.allowed("POST", "/api/user/signup"));
+        assertTrue(DemoService.allowed("POST", "/api/user/signup/send-code"));
+        assertTrue(DemoService.allowed("POST", "/api/user/find/reset/send-code"));
         assertTrue(DemoService.allowed("DELETE", "/api/watchlist/5"));
 
     }

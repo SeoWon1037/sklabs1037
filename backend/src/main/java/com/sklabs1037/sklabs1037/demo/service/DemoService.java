@@ -27,6 +27,8 @@ public class DemoService {
     // 체험 계정이 쓰기(POST·PUT·DELETE)를 할 수 있는 주소 (앞부분이 같으면 허용)
     static final List<String> ALLOWED = List.of(
             "/api/user/logout",
+            // 체험하다가 진짜 계정으로 로그인 · 회원가입 · 비밀번호 찾기 · 체험 다시 시작은 막으면 안 됨
+            "/api/user/login", "/api/user/signup", "/api/user/find/", "/api/user/demo",
             "/api/mock/order", "/api/mock/orders/", "/api/mock/coach", "/api/mock/diagnosis",
             "/api/ai/",
             "/api/beauty/",

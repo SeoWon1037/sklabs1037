@@ -64,8 +64,16 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            # 바뀐 부분만 다시 빌드해서 컨테이너 교체
-            docker compose up -d --build
+            # 바뀐 부분만 다시 빌드 (빌드 중에는 지금 컨테이너가 그대로 돌아감)
+            # - Gradle·npm 서버가 잠깐 안 될 때가 있어서 실패하면 1분 쉬고 한 번 더
+            if ! docker compose build; then
+              echo "⚠️ 빌드 실패 → 1분 뒤 한 번 더 (외부 다운로드 일시 장애일 수 있어요)"
+              sleep 60
+              docker compose build
+            fi
+
+            # 컨테이너 교체 (backup 같은 새 서비스 이미지는 여기서 자동으로 받음)
+            docker compose up -d
 
             # ⏪ 1차 확인: 3분 안에 서버가 뜨고 DB에 붙는지 (/api/health). 아니면 바로 전 버전으로
             ok=0

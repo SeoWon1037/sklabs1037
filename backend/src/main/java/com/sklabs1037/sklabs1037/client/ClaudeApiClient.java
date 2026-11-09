@@ -1,5 +1,7 @@
 package com.sklabs1037.sklabs1037.client;
 
+import com.sklabs1037.sklabs1037.ops.service.AiUsageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -16,6 +18,8 @@ import java.util.Map;
  * - 질문(messages) + 쓸 수 있는 도구 목록(tools)을 보내면
  *   Claude가 "답변" 또는 "이 도구를 써줘(tool_use)"를 돌려줌
  * - 도구가 필요 없는 호출(뉴스 요약 등)은 tools 에 null 을 넘기면 됨
+ * - 💸 AI 비용 안전장치: 부르기 전 한도 확인(넘으면 AiBudgetException), 부른 뒤 토큰 수로 비용 기록 (AiUsageService)
+ *   → 모든 AI 기능이 이 한 곳을 지나가서 기능마다 따로 막을 필요가 없음
  */
 @Component
 public class ClaudeApiClient {
@@ -34,6 +38,9 @@ public class ClaudeApiClient {
 
     @Value("${anthropic.max-tokens}")
     private int maxTokens;
+
+    @Autowired
+    private AiUsageService aiUsageService;
 
     private final RestClient restClient = RestClients.withTimeout("CLAUDE", 120);   // 긴 답변도 있어서 120초
 
@@ -77,14 +84,30 @@ public class ClaudeApiClient {
             body.put("tool_choice", toolChoice);
         }
 
-        return restClient.post()
-                .uri(MESSAGES_URL)
-                .header("x-api-key", apiKey)
-                .header("anthropic-version", API_VERSION)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(MAP_TYPE);
+        // 💸 한도 확인 (넘었으면 여기서 멈춤, Claude를 부르지 않음)
+        aiUsageService.check();
+        String feature = AiUsageService.feature(StackWalker.getInstance().walk(f -> f.limit(12).toArray(StackWalker.StackFrame[]::new)));
+
+        try {
+
+            Map<String, Object> res = restClient.post()
+                    .uri(MESSAGES_URL)
+                    .header("x-api-key", apiKey)
+                    .header("anthropic-version", API_VERSION)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(MAP_TYPE);
+
+            aiUsageService.record(feature, res, false);
+            return res;
+
+        } catch (RuntimeException e) {
+
+            aiUsageService.record(feature, null, true);
+            throw e;
+
+        }
 
     }
 }

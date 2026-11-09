@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 💸 AI 비용 안전장치 (T_AI_USAGE, T_AI_BUDGET) -->
+<mapper namespace="com.sklabs1037.sklabs1037.ops.dao.AiUsageDao">
+
+    <insert id="upsert" parameterType="java.util.Map">
+        INSERT INTO T_AI_USAGE (DAY, FEATURE, CALLS, FAILS, IN_TOKENS, OUT_TOKENS, CACHE_READ, CACHE_WRITE, COST_USD)
+        VALUES ((NOW() AT TIME ZONE 'Asia/Seoul')::DATE, #{feature}, #{calls}, #{fails}, #{inTokens}, #{outTokens}, #{cacheRead}, #{cacheWrite}, #{cost})
+        ON CONFLICT (DAY, FEATURE) DO UPDATE
+           SET  CALLS       = T_AI_USAGE.CALLS       + EXCLUDED.CALLS
+               ,FAILS       = T_AI_USAGE.FAILS       + EXCLUDED.FAILS
+               ,IN_TOKENS   = T_AI_USAGE.IN_TOKENS   + EXCLUDED.IN_TOKENS
+               ,OUT_TOKENS  = T_AI_USAGE.OUT_TOKENS  + EXCLUDED.OUT_TOKENS
+               ,CACHE_READ  = T_AI_USAGE.CACHE_READ  + EXCLUDED.CACHE_READ
+               ,CACHE_WRITE = T_AI_USAGE.CACHE_WRITE + EXCLUDED.CACHE_WRITE
+               ,COST_USD    = T_AI_USAGE.COST_USD    + EXCLUDED.COST_USD
+               ,UPD_DAY     = NOW()
+    </insert>
+
+    <select id="selectTodayCost" resultType="java.lang.Double">
+        SELECT  COALESCE(SUM(COST_USD), 0)::FLOAT8
+          FROM T_AI_USAGE
+         WHERE DAY = (NOW() AT TIME ZONE 'Asia/Seoul')::DATE
+    </select>
+
+    <select id="selectBudget" resultType="java.util.LinkedHashMap">
+        SELECT  DAILY_USD::FLOAT8                               AS "dailyUsd"
+               ,PAUSED_YN = 'Y'                                 AS "paused"
+               ,(EXTRACT(EPOCH FROM UPD_DAY) * 1000)::BIGINT    AS "updAt"
+          FROM T_AI_BUDGET
+         WHERE ID = 1
+    </select>
+
+    <update id="updateBudget" parameterType="java.util.Map">
+        UPDATE T_AI_BUDGET
+           SET  DAILY_USD = #{dailyUsd}
+               ,PAUSED_YN = #{pausedYn}
+               ,UPD_BY    = #{userId}
+               ,UPD_DAY   = NOW()
+         WHERE ID = 1
+    </update>
+
+    <select id="selectDays" resultType="java.util.LinkedHashMap">
+        SELECT  TO_CHAR(DAY, 'YYYY-MM-DD')          AS "day"
+               ,SUM(CALLS)::INT                     AS "calls"
+               ,SUM(FAILS)::INT                     AS "fails"
+               ,SUM(COST_USD)::FLOAT8               AS "cost"
+          FROM T_AI_USAGE
+         WHERE DAY &gt; (NOW() AT TIME ZONE 'Asia/Seoul')::DATE - #{days}
+         GROUP BY DAY
+         ORDER BY DAY
+    </select>
+
+    <select id="selectTodayFeatures" resultType="java.util.LinkedHashMap">
+        SELECT  FEATURE                 AS "feature"
+               ,CALLS                   AS "calls"
+               ,FAILS                   AS "fails"
+               ,IN_TOKENS               AS "inTokens"
+               ,OUT_TOKENS              AS "outTokens"
+               ,CACHE_READ              AS "cacheRead"
+               ,COST_USD::FLOAT8        AS "cost"
+          FROM T_AI_USAGE
+         WHERE DAY = (NOW() AT TIME ZONE 'Asia/Seoul')::DATE
+         ORDER BY COST_USD DESC
+    </select>
+
+    <select id="selectMonth" resultType="java.util.LinkedHashMap">
+        SELECT  COALESCE(SUM(CALLS), 0)::INT        AS "calls"
+               ,COALESCE(SUM(COST_USD), 0)::FLOAT8  AS "cost"
+          FROM T_AI_USAGE
+         WHERE DAY &gt;= DATE_TRUNC('month', NOW() AT TIME ZONE 'Asia/Seoul')::DATE
+    </select>
+</mapper>

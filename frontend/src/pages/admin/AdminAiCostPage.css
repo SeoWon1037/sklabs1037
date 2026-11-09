@@ -1,0 +1,29 @@
+/* 💸 AI 비용 (ac-) — 숫자 카드 · 표 · 막대는 AdminApiPage.css(ap-)를 같이 씀 */
+.ac-status { --tone: #22c55e; display: flex; gap: 14px; align-items: center; margin-bottom: 14px; padding: 14px 16px; border: 1px solid var(--border); border-left: 4px solid var(--tone); border-radius: 14px; }
+.ac-warn { --tone: #f59e0b; }
+.ac-stop { --tone: #e5484d; }
+.ac-status-main { flex: 1; min-width: 0; }
+.ac-status-main strong { display: block; font-size: 15px; }
+.ac-status-main p { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; }
+.ac-meter { height: 10px; margin-top: 10px; border-radius: 99px; background: color-mix(in srgb, var(--text) 10%, transparent); overflow: hidden; }
+.ac-meter span { display: block; height: 100%; border-radius: 99px; background: var(--tone); }
+.ac-big { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ac-big small { color: var(--text-muted); font-size: 13px; font-weight: 500; }
+
+.ac-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 18px; }
+.ac-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-muted); }
+.ac-input { display: flex; align-items: center; gap: 4px; padding: 0 10px; height: 38px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface, transparent); color: var(--text); }
+.ac-input input { width: 70px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ac-input input:focus { outline: none; }
+.ac-input:focus-within { outline: 2px solid var(--primary); outline-offset: -1px; }
+.ac-stop-btn { border-color: #e5484d; color: #e5484d; }
+.ac-gap { flex: 1; }
+
+.ac-limit { stroke: #e5484d; stroke-width: 1; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.ac-bar-over { fill: #e5484d; }
+.ac-legend { margin: 6px 0 0; color: var(--text-muted); font-size: 11px; }
+
+@media (max-width: 600px) {
+  .ac-status { flex-direction: column; align-items: stretch; gap: 6px; }
+  .ac-gap { display: none; }
+}

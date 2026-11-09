@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.ops.service;
 
+import com.sklabs1037.sklabs1037.client.AiBudgetException;
 import com.sklabs1037.sklabs1037.ops.dao.JobRunDao;
 import com.sklabs1037.sklabs1037.ops.vo.JobRunVO;
 import lombok.extern.slf4j.Slf4j;
@@ -123,6 +124,12 @@ public class JobRunService {
                         label(job) + " 작업에서 실패가 있었어요. (" + trigger + ")\n\n" + nullToEmpty(out.message()));
             }
 
+            return true;
+
+        } catch (AiBudgetException e) {
+
+            // 💸 AI 한도·긴급 정지 → 실패 메일 대신 "건너뜀" (한도 알림은 따로 감)
+            finish(runId, "SUCCESS", 0, 0, "⏸ AI 한도로 건너뜀: " + e.getMessage());
             return true;
 
         } catch (Exception e) {

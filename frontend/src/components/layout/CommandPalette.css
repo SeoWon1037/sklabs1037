@@ -1,0 +1,22 @@
+/* ⌘K 빠른 이동 (cp-) */
+.cp-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px 16px; background: rgb(0 0 0 / 45%); }
+.cp-box { width: min(560px, 100%); overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--bg, #fff); box-shadow: 0 20px 50px rgb(0 0 0 / 35%); }
+.cp-input { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.cp-input input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 16px; }
+.cp-input input:focus { outline: none; }
+.cp-box kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 5px; color: var(--text-muted); font: inherit; font-size: 11px; }
+.cp-list { max-height: min(420px, 55vh); overflow-y: auto; margin: 0; padding: 6px; list-style: none; }
+.cp-group { margin: 8px 10px 4px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.cp-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.cp-active { background: color-mix(in srgb, var(--primary, #3b82f6) 14%, transparent); }
+.cp-item i { width: 28px; font-size: 18px; font-style: normal; text-align: center; }
+.cp-item span { display: flex; flex-direction: column; min-width: 0; }
+.cp-item b { overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+.cp-item small { color: var(--text-muted); font-size: 12px; }
+.cp-foot { margin: 0; padding: 8px 14px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 11px; }
+.cp-foot kbd { margin: 0 2px; }
+/* 휴대폰: 상단바가 좁아서 버튼은 숨김 (☰ 메뉴 검색을 씀) */
+@media (max-width: 720px) {
+  .cp-open { display: none; }
+  .cp-foot { display: none; }
+}

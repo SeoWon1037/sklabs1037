@@ -10,6 +10,7 @@
 // ============================================
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import VoiceButton from '../../components/ai/VoiceButton'
 import './AiChatPage.css'
 
 // 예시 질문 (처음 화면에 버튼으로 표시)
@@ -241,6 +242,7 @@ function AiChatPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
           />
+          <VoiceButton onText={setInput} disabled={loading} />
           <button
             type="button"
             className="btn btn-primary ai-send"

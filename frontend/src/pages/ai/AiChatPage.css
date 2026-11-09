@@ -228,3 +228,12 @@
   .ai-welcome-head strong { font-size: 17px; }
   .ai-welcome-head p { display: none; }
 }
+
+/* 🎤 말로 묻기 */
+.ai-input-row { position: relative; }
+.ai-voice { flex: none; width: 44px; border: 1px solid var(--border); border-radius: 10px; background: transparent; font-size: 18px; cursor: pointer; }
+.ai-voice:disabled { opacity: 0.5; cursor: default; }
+.ai-voice-on { border-color: #e5484d; background: color-mix(in srgb, #e5484d 14%, transparent); color: #e5484d; animation: ai-voice-pulse 1.2s ease-in-out infinite; }
+@keyframes ai-voice-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, #e5484d 18%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .ai-voice-on { animation: none; } }
+.ai-voice-error { position: absolute; left: 16px; bottom: calc(100% - 6px); padding: 3px 8px; border-radius: 6px; background: var(--bg, #111); color: #e5484d; font-size: 12px; }

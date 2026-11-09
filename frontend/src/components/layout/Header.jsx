@@ -13,6 +13,7 @@ import MessageButton from './MessageButton'
 import AllMenu from './AllMenu'
 import './Header.css'
 import './HeaderUser.css'
+import CommandPalette from './CommandPalette'
 
 // 상단 메뉴 탭: 진짜 메인 기능만 (나머지는 ☰ 전체 메뉴 · 메인 바로가기에서)
 // - 뉴스(메인)는 SKLabs 로고로
@@ -123,6 +124,7 @@ function Header() {
 
         {/* 오른쪽 버튼 영역 */}
         <div className="header-actions">
+          <CommandPalette />
           <button
             type="button"
             className="theme-toggle"

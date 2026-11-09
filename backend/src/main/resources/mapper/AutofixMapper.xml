@@ -8,8 +8,8 @@
 <mapper namespace="com.sklabs1037.sklabs1037.autofix.dao.AutofixDao">
 
     <insert id="insertRun" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
-        INSERT INTO T_AUTOFIX (INQUIRY_ID, ISSUE_NO, REQUESTED_BY)
-        VALUES (#{inquiryId}, #{issueNo}, #{requestedBy})
+        INSERT INTO T_AUTOFIX (INQUIRY_ID, ISSUE_NO, REQUESTED_BY, SOURCE, TITLE, SIGNATURE)
+        VALUES (#{inquiryId}, #{issueNo}, #{requestedBy}, COALESCE(#{source}, 'INQUIRY'), #{title}, #{signature})
     </insert>
 
     <select id="countToday" resultType="int">
@@ -37,6 +37,8 @@
        ,A.FILES                                             AS "files"
        ,A.ERROR                                             AS "error"
        ,A.RUN_URL                                           AS "runUrl"
+       ,A.SOURCE                                            AS "source"
+       ,A.TITLE                                             AS "title"
        ,I.TITLE                                             AS "inquiryTitle"
        ,I.AI_SUMMARY                                        AS "inquirySummary"
        ,(EXTRACT(EPOCH FROM A.INS_DAY) * 1000)::BIGINT      AS "insAt"
@@ -96,4 +98,59 @@
            AND ID = #{id}
            AND STATUS IN ('READY', 'FAILED', 'NO_CHANGE')
     </update>
+
+    <!-- ===== 🔁 매일 스스로 개선: 고칠 거리 후보 ===== -->
+
+    <select id="selectLatestQaIssues" resultType="java.util.LinkedHashMap">
+        SELECT  ID              AS "id"
+               ,STATUS          AS "status"
+               ,SUMMARY         AS "summary"
+               ,FINDINGS_JSON   AS "findingsJson"
+          FROM T_QA_RUN
+         WHERE 1=1
+           AND STATUS IN ('WARN', 'FAIL')
+           AND INS_DAY &gt;= NOW() - INTERVAL '2 days'
+         ORDER BY ID DESC
+         LIMIT 1
+    </select>
+
+    <select id="selectApiFailures" resultType="java.util.LinkedHashMap">
+        SELECT  SERVICE                                     AS "service"
+               ,ACTION                                      AS "action"
+               ,COUNT(*)                                    AS "fails"
+               ,MAX(STATUS_CODE)                            AS "statusCode"
+               ,(ARRAY_AGG(ERROR_MSG ORDER BY CALLED_AT DESC))[1]  AS "lastError"
+          FROM T_API_CALL_LOG
+         WHERE 1=1
+           AND SUCCESS_YN = 'N'
+           AND CALLED_AT &gt;= NOW() - INTERVAL '2 days'
+         GROUP BY SERVICE, ACTION
+         ORDER BY COUNT(*) DESC
+         LIMIT 8
+    </select>
+
+    <select id="selectJobFailures" resultType="java.util.LinkedHashMap">
+        SELECT  JOB_NAME                                    AS "job"
+               ,COUNT(*)                                    AS "fails"
+               ,(ARRAY_AGG(MESSAGE ORDER BY ID DESC))[1]    AS "lastMessage"
+          FROM T_JOB_RUN
+         WHERE 1=1
+           AND STATUS IN ('FAIL', 'PARTIAL')
+           AND STARTED_AT &gt;= NOW() - INTERVAL '2 days'
+         GROUP BY JOB_NAME
+         ORDER BY COUNT(*) DESC
+         LIMIT 8
+    </select>
+
+    <select id="selectRecentSignatures" resultType="java.lang.String">
+        SELECT  DISTINCT SIGNATURE
+          FROM T_AUTOFIX
+         WHERE 1=1
+           AND SIGNATURE IS NOT NULL
+           AND INS_DAY &gt;= NOW() - INTERVAL '14 days'
+    </select>
+
+    <select id="countAnyActive" resultType="int">
+        SELECT COUNT(*) FROM T_AUTOFIX WHERE STATUS IN ('REQUESTED', 'WORKING', 'READY')
+    </select>
 </mapper>

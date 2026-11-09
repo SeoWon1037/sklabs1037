@@ -1,0 +1,14 @@
+-- ============================================
+-- 🔁 매일 스스로 개선 (pgAdmin에서 한 번만 실행, push 전에!)
+-- - 문의 없이도 서버가 매일 09:20 운영 기록(QA 봇 지적 · 외부 연동 실패 · 작업 실패)에서 고칠 거리 1개를 골라 AI 자동 수정으로 보냄
+-- - SOURCE: INQUIRY(문의에서) / DAILY(매일 개선)
+-- - SIGNATURE: 같은 문제를 매일 또 고르지 않게 (최근 14일 안에 고른 건 건너뜀)
+-- ============================================
+ALTER TABLE T_AUTOFIX ADD COLUMN IF NOT EXISTS SOURCE    VARCHAR(10)  NOT NULL DEFAULT 'INQUIRY';
+ALTER TABLE T_AUTOFIX ADD COLUMN IF NOT EXISTS TITLE     VARCHAR(200);
+ALTER TABLE T_AUTOFIX ADD COLUMN IF NOT EXISTS SIGNATURE VARCHAR(200);
+
+ALTER TABLE T_AUTOFIX DROP CONSTRAINT IF EXISTS CK_AUTOFIX_SOURCE;
+ALTER TABLE T_AUTOFIX ADD CONSTRAINT CK_AUTOFIX_SOURCE CHECK (SOURCE IN ('INQUIRY', 'DAILY'));
+
+CREATE INDEX IF NOT EXISTS IX_AUTOFIX_SIGNATURE ON T_AUTOFIX (SIGNATURE, INS_DAY DESC);

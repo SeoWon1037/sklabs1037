@@ -4,7 +4,9 @@
 //   요청됨 → AI가 고치는 중(GitHub Actions) → 승인 대기(테스트 통과 + PR) / 고칠 곳 못 찾음 / 실패
 // - 승인 대기: AI 요약 · 바뀐 파일 · PR 링크를 보고 [승인 · 배포] → 서버가 PR을 main에 합침 → 자동 배포 → 문의한 사람에게 답변
 //              [거절] → PR·이슈 닫기
-// - 백엔드 API (관리자만): GET /api/admin/autofix, POST /api/admin/autofix/{id}/approve | reject
+// - 🔁 매일 스스로 개선: 매일 09:20 서버가 QA 봇 지적·외부 연동 실패·작업 실패 중 코드로 고칠 것 1개를 골라 같은 흐름으로 보냄
+//   [지금 고칠 거리 찾기]로 바로 실행 (진행 중인 수정이 있거나 오늘 횟수를 다 쓰면 건너뜀 → 결과는 운영 > 작업 기록)
+// - 백엔드 API (관리자만): GET /api/admin/autofix, POST /api/admin/autofix/{id}/approve | reject, POST /api/admin/autofix/daily
 // ============================================
 import { useCallback, useEffect, useState } from 'react'
 import AdminTabs from '../../components/admin/AdminTabs'
@@ -68,8 +70,15 @@ function AdminAutofixPage() {
         <p className="admin-desc">
           문의함의 자동 수정 후보를 AI(Claude Code)가 GitHub Actions에서 고치고, 손대면 안 되는 파일 검사와 빌드·테스트를 통과하면 PR로 올려요.
           승인하면 main에 합쳐져 자동 배포돼요.
+          {' '}🔁 문의가 없어도 매일 09:20 운영 기록에서 고칠 거리 1개를 스스로 골라요.
           {data && ` 오늘 ${data.today}/${data.dailyLimit}번 사용.`}
         </p>
+        {data?.configured && (
+          <button type="button" className="iq-btn" style={{ marginTop: 10 }} disabled={busy === 'daily'}
+            onClick={() => act('daily', '/api/admin/autofix/daily', null, '찾기 시작했어요. 고를 게 있으면 잠시 뒤 목록에 🔁 로 나와요. (결과: 운영 > 작업 기록)')}>
+            🔁 지금 고칠 거리 찾기
+          </button>
+        )}
       </div>
 
       {data && !data.configured && <p className="admin-empty admin-error">서버 .env 에 GITHUB_TOKEN 이 없어서 아직 쓸 수 없어요.</p>}
@@ -82,7 +91,9 @@ function AdminAutofixPage() {
         {data?.runs.map((r) => (
           <li key={r.id} className="iq-card">
             <div className="iq-head">
-              <strong>문의 #{r.inquiryId} · {r.inquirySummary || r.inquiryTitle}</strong>
+              <strong>
+                {r.source === 'DAILY' ? `🔁 매일 개선 · ${r.title}` : `문의 #${r.inquiryId} · ${r.inquirySummary || r.inquiryTitle}`}
+              </strong>
               <span className="iq-meta">{time(r.insAt)} 요청 · {time(r.updAt)} 갱신</span>
             </div>
             <div className="iq-chips">

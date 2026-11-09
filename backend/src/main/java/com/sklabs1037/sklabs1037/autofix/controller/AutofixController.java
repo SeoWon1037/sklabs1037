@@ -2,6 +2,7 @@ package com.sklabs1037.sklabs1037.autofix.controller;
 
 import com.sklabs1037.sklabs1037.admin.service.IAdminFeedbackService;
 import com.sklabs1037.sklabs1037.autofix.service.AutofixService;
+import com.sklabs1037.sklabs1037.ops.service.OpsJobs;
 import com.sklabs1037.sklabs1037.qa.service.QaBotService;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
 import com.sklabs1037.sklabs1037.user.vo.UserLoginVO;
@@ -25,6 +26,7 @@ import java.util.Map;
  *   GET  /api/admin/autofix/count              승인 기다리는 수 (탭 배지)
  *   POST /api/admin/autofix/{id}/approve       PR 합치기 → 배포
  *   POST /api/admin/autofix/{id}/reject { note }   PR·이슈 닫기
+ *   POST /api/admin/autofix/daily              🔁 지금 고칠 거리 찾기 (작업 DAILY_IMPROVE, 별도 스레드)
  * GitHub Actions (ai-fix.yml)
  *   POST /api/autofix/callback (헤더 X-QA-Token) { issue, status, pr, branch, summary, files, error, runUrl }
  */
@@ -37,6 +39,9 @@ public class AutofixController {
 
     @Autowired
     private QaBotService qaBotService;
+
+    @Autowired
+    private OpsJobs opsJobs;
 
     @Autowired
     private IAdminFeedbackService adminFeedbackService;
@@ -88,6 +93,14 @@ public class AutofixController {
             autofixService.reject(admin, id, req == null || req.get("note") == null ? null : String.valueOf(req.get("note")));
             return Map.of();
         });
+
+    }
+
+    @PostMapping("/api/admin/autofix/daily")
+    public ResponseEntity<Map<String, Object>> daily(HttpServletRequest request) {
+
+        if (admin(request) == null) return fail(HttpStatus.FORBIDDEN, "관리자만 할 수 있어요.");
+        return run("매일 개선", () -> Map.of("started", opsJobs.runAsync("DAILY_IMPROVE")));
 
     }
 

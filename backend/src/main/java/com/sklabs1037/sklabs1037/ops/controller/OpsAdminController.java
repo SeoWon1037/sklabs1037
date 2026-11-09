@@ -54,6 +54,7 @@ public class OpsAdminController {
             new String[]{"AI_LEAGUE", "평일 09:10"},
             new String[]{"AI_IMPROVE", "매일 04:10 (새 👎 3개 이상일 때)"},
             new String[]{"QA_BOT", "매일 08:30 + 배포 직후 (GitHub Actions)"},
+            new String[]{"DAILY_IMPROVE", "매일 09:20 (고칠 거리 있을 때만 AI 수정)"},
             new String[]{"PREDICT_GRADE", "평일 21:10"},
             new String[]{"NEWS_QUIZ", "매일 07:40"},
             new String[]{"WEEKLY_COACH", "월요일 08:10"},

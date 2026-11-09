@@ -250,6 +250,7 @@ public class JobRunService {
             Map.entry("NEWS_QUIZ", "뉴스 퀴즈 출제"),
             Map.entry("WEEKLY_COACH", "AI 주간 코치"),
             Map.entry("DUEL_SETTLE", "친구 대결 정산"),
+            Map.entry("DAILY_IMPROVE", "매일 스스로 개선"),
             Map.entry("WATCHDOG", "작업 감시")
     );
 

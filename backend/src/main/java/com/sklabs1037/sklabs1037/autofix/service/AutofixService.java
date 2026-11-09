@@ -72,9 +72,28 @@ public class AutofixService {
         row.put("inquiryId", inquiryId);
         row.put("issueNo", issue);
         row.put("requestedBy", adminId);
+        row.put("source", "INQUIRY");
         autofixDao.insertRun(row);
 
         return Map.of("id", row.get("id"), "issueNo", issue);
+
+    }
+
+    // 🔁 매일 스스로 개선 (DailyImproveService): 문의 없이 운영 기록에서 고른 문제 → 같은 흐름으로
+    public int requestSystem(String title, String body, String signature) {
+
+        if (autofixDao.countToday() >= dailyLimit) throw new IllegalArgumentException("AI 수정은 하루 " + dailyLimit + "번까지예요.");
+        if (!gitHub.configured()) throw new IllegalArgumentException("서버에 GITHUB_TOKEN이 없어요.");
+
+        int issue = gitHub.createIssue(cut("[매일 개선] " + title, 120), body, List.of(LABEL));
+
+        Map<String, Object> row = new HashMap<>();
+        row.put("issueNo", issue);
+        row.put("source", "DAILY");
+        row.put("title", cut(title, 200));
+        row.put("signature", cut(signature, 200));
+        autofixDao.insertRun(row);
+        return issue;
 
     }
 
@@ -109,7 +128,9 @@ public class AutofixService {
         };
         if (head == null) return;
 
-        String what = "문의 #" + run.get("inquiryId") + " · " + Objects.toString(run.get("inquirySummary"), Objects.toString(run.get("inquiryTitle"), ""));
+        String what = "DAILY".equals(run.get("source"))
+                ? "🔁 매일 개선 · " + Objects.toString(run.get("title"), "")
+                : "문의 #" + run.get("inquiryId") + " · " + Objects.toString(run.get("inquirySummary"), Objects.toString(run.get("inquiryTitle"), ""));
         for (Long admin : inquiryDao.selectAdminIds()) {
             notificationService.notify(admin, "ADMIN", head, ("READY".equals(status) ? "승인하면 배포돼요 · " : "") + what,
                     "/admin/autofix", "AUTOFIX:" + issue + ":" + status);
@@ -128,7 +149,8 @@ public class AutofixService {
         }
 
         int pr = intOf(run.get("prNo"));
-        gitHub.mergePull(pr, "fix: 🤖 AI 수정 · 문의 #" + run.get("inquiryId") + " (#" + pr + ")");
+        String label = "DAILY".equals(run.get("source")) ? "매일 개선 · " + cut(run.get("title"), 60) : "문의 #" + run.get("inquiryId");
+        gitHub.mergePull(pr, "fix: 🤖 AI 수정 · " + label + " (#" + pr + ")");
         autofixDao.handle(id, "MERGED", adminId, null);
 
         // 문의한 사람에게 답변 (🔔·📲)
@@ -163,6 +185,18 @@ public class AutofixService {
 
         return Map.of("runs", autofixDao.selectRuns(), "ready", autofixDao.countReady(),
                 "repo", gitHub.repo(), "configured", gitHub.configured(), "dailyLimit", dailyLimit, "today", autofixDao.countToday());
+
+    }
+
+    public boolean githubConfigured() {
+
+        return gitHub.configured();
+
+    }
+
+    public int dailyLimit() {
+
+        return dailyLimit;
 
     }
 

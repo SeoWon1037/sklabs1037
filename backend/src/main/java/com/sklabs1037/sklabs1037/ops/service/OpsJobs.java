@@ -38,7 +38,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE");
 
     @Autowired
     private JobRunService jobRunService;
@@ -75,6 +75,9 @@ public class OpsJobs {
 
     @Autowired
     private DuelService duelService;
+
+    @Autowired
+    private com.sklabs1037.sklabs1037.autofix.service.DailyImproveService dailyImproveService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -169,6 +172,9 @@ public class OpsJobs {
 
             // ⚔️ 친구 대결 정산 (끝난 대결 점수·승자·알림, 3일 지난 초대 만료)
             case "DUEL_SETTLE" -> duelService::settleAll;
+
+            // 🔁 매일 스스로 개선 (운영 기록에서 고칠 거리 1개 → AI 자동 수정 → 관리자 승인)
+            case "DAILY_IMPROVE" -> dailyImproveService::run;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

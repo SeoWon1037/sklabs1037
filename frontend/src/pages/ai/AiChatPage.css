@@ -9,7 +9,7 @@
 .ai-card {
   width: 100%;
   max-width: 760px;
-  height: calc(100vh - 140px);
+  height: calc((100vh - 140px) / var(--tz, 1));
   min-height: 480px;
   display: flex;
   flex-direction: column;
@@ -215,8 +215,8 @@
     padding: 12px;
   }
   .ai-card {
-    height: calc(100vh - 120px);
-    height: calc(100dvh - 120px);
+    height: calc((100vh - 120px) / var(--tz, 1));
+    height: calc((100dvh - 120px) / var(--tz, 1));
     min-height: 420px;
   }
 }

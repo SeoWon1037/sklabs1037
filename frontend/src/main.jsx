@@ -6,6 +6,10 @@ import './index.css'                                // 기본 스타일
 import { ThemeProvider } from './theme/ThemeProvider'
 import App from './App.jsx'
 import { registerPwa } from './pwa'
+import { applyTextSize, getTextSize } from './textSize'
+
+// 🔠 저장된 글자 크기 먼저 적용 (화면 그리기 전, 깜빡임 방지)
+applyTextSize(getTextSize())
 
 registerPwa()   // 📲 서비스 워커(푸시) + 앱 설치 버튼
 

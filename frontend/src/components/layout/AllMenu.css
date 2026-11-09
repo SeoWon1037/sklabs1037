@@ -13,7 +13,7 @@
   left: 0;
   display: flex;
   flex-direction: column;
-  width: min(400px, 100vw);
+  width: min(400px, calc(100vw / var(--tz, 1)));
   border-right: 1px solid var(--border);
   background: var(--bg);
   box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
@@ -150,4 +150,37 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+}
+
+/* 🔠 글자 크기 */
+.am-textsize {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.am-textsize strong { font-size: 14px; }
+.am-seg { display: flex; padding: 3px; border-radius: 10px; background: color-mix(in srgb, var(--text) 7%, transparent); }
+.am-seg button {
+  min-width: 52px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 70%, transparent);
+  font-weight: 600;
+  cursor: pointer;
+}
+.am-seg button.am-seg-on { background: var(--bg, #fff); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 18%); }
+
+/* 🔠 휴대폰에서는 상단바만 원래 크기로 (아이콘이 많아 크게 하면 두 줄로 밀림) */
+@media (max-width: 480px) {
+  html[data-text-size='l'] .header { zoom: calc(1 / 1.08); }
+  html[data-text-size='xl'] .header { zoom: calc(1 / 1.15); }
 }

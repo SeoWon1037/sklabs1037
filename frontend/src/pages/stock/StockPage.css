@@ -36,7 +36,7 @@
 .stock-list {
   position: sticky;
   top: 84px;
-  max-height: calc(100vh - 104px);
+  max-height: calc((100vh - 104px) / var(--tz, 1));
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);

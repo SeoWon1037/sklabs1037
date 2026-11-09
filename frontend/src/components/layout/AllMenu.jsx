@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { CATEGORIES, SERVICES, SHORTCUT_KEYS } from './menuData'
 import { installMode, onPwaChange, promptInstall } from '../../pwa'
+import { TEXT_SIZES, applyTextSize, getTextSize } from '../../textSize'
 import './AllMenu.css'
 
 function Tile({ s, onClose }) {
@@ -17,6 +18,31 @@ function Tile({ s, onClose }) {
       <span className="am-tile-icon" style={{ '--c': s.color }}>{s.icon}</span>
       <span className="am-tile-label">{s.label}</span>
     </Link>
+  )
+}
+
+// 🔠 글자 크기 (textSize.js, 이 브라우저에 저장)
+function TextSizeBox() {
+
+  const [size, setSize] = useState(getTextSize)
+
+  const pick = (key) => {
+    setSize(key)
+    applyTextSize(key)
+  }
+
+  return (
+    <section className="am-textsize" aria-label="글자 크기">
+      <strong>🔠 글자 크기</strong>
+      <div className="am-seg" role="radiogroup">
+        {TEXT_SIZES.map((s) => (
+          <button key={s.key} type="button" role="radio" aria-checked={size === s.key}
+            className={size === s.key ? 'am-seg-on' : ''} style={{ fontSize: `${12 * s.zoom}px` }} onClick={() => pick(s.key)}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -127,6 +153,7 @@ function AllMenu({ user, onClose }) {
             ))
           )}
 
+          <TextSizeBox />
           <InstallBox onClose={onClose} />
         </div>
       </aside>

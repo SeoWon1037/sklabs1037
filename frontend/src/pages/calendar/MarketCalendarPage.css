@@ -1,0 +1,68 @@
+/* 📅 증시 일정 (mc-) */
+.mc-page { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+.mc-head h1 { margin: 0; font-size: 24px; }
+.mc-today { display: inline-block; margin: 8px 0 18px; padding: 6px 12px; border-radius: 99px; font-size: 13px; font-weight: 600; }
+.mc-today-open { background: color-mix(in srgb, #22c55e 14%, transparent); color: #16a34a; }
+.mc-today-closed { background: color-mix(in srgb, #e5484d 14%, transparent); color: #e5484d; }
+.mc-error { color: #e5484d; }
+.mc-muted { color: var(--text-muted); font-size: 13px; }
+
+.mc-grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.mc-card { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface, transparent); }
+.mc-card h2 { margin: 0 0 12px; font-size: 16px; }
+
+/* 종류별 색 */
+.mc-holiday { --k: #e5484d; }
+.mc-fomc { --k: #3b82f6; }
+.mc-bok { --k: #10b981; }
+.mc-expiry { --k: #f59e0b; }
+.mc-open { --k: #8b5cf6; }
+
+.mc-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.mc-event { display: flex; gap: 12px; padding: 10px 12px; border-radius: 12px; border-left: 3px solid var(--k); background: color-mix(in srgb, var(--k) 7%, transparent); }
+.mc-big { background: color-mix(in srgb, var(--k) 13%, transparent); }
+.mc-when { display: flex; flex-direction: column; min-width: 64px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mc-when em { margin-top: 2px; color: var(--k); font-style: normal; font-size: 12px; font-weight: 700; }
+.mc-what { min-width: 0; }
+.mc-what strong { font-size: 14px; }
+.mc-what small { color: var(--text-muted); font-weight: 500; }
+.mc-what p { margin: 3px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+
+.mc-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.mc-nav h2 { margin: 0; }
+.mc-nav button { width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font-size: 18px; cursor: pointer; }
+.mc-nav button:disabled { opacity: 0.35; cursor: default; }
+
+.mc-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.mc-dow { padding: 4px 0; text-align: center; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.mc-day {
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px;
+  min-height: 70px; padding: 6px 4px; border: 1px solid transparent; border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 3%, transparent); color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.mc-day:hover { border-color: var(--border); }
+.mc-num { padding-left: 2px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mc-sun .mc-num, .mc-dow.mc-sun { color: #e5484d; }
+.mc-sat .mc-num, .mc-dow.mc-sat { color: #3b82f6; }
+.mc-is-today { border-color: var(--primary, #3b82f6); }
+.mc-is-today .mc-num { color: var(--primary, #3b82f6); }
+.mc-picked { background: color-mix(in srgb, var(--primary, #3b82f6) 14%, transparent); }
+.mc-tags { display: flex; flex-direction: column; gap: 2px; }
+.mc-tags i { overflow: hidden; padding: 1px 4px; border-radius: 5px; background: color-mix(in srgb, var(--k) 18%, transparent); color: var(--k); font-size: 10px; font-style: normal; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+
+.mc-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 4px; color: var(--text-muted); font-size: 12px; }
+.mc-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.mc-legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--k); }
+.mc-picked-list, .mc-month-list { margin-top: 14px; }
+
+.mc-note { margin: 18px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+.mc-note a { color: var(--primary, #3b82f6); }
+
+@media (max-width: 800px) {
+  .mc-grid { grid-template-columns: 1fr; }
+  .mc-day { min-height: 52px; padding: 5px 2px; }
+  /* 휴대폰: 칸이 좁아서 글자 대신 색 점 */
+  .mc-tags { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; }
+  .mc-tags i { width: 7px; height: 7px; padding: 0; border-radius: 50%; background: var(--k); font-size: 0; }
+  .mc-num { text-align: center; padding: 0; }
+}

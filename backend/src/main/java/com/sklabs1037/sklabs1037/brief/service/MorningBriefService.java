@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.brief.service;
 
+import com.sklabs1037.sklabs1037.calendar.service.MarketCalendar;
 import com.sklabs1037.sklabs1037.brief.dao.MorningBriefDao;
 import com.sklabs1037.sklabs1037.brief.vo.MorningBriefVO;
 import com.sklabs1037.sklabs1037.mock.dao.MockTradeDao;
@@ -214,13 +215,32 @@ public class MorningBriefService {
         // 3. 모의투자 (계좌가 있는 회원만)
         appendMock(sb, userId);
 
+        // 4. 📅 증시 일정 (오늘 ~ 사흘 뒤, 있을 때만)
+        sb.append(calendarLines(LocalDate.now(KST)));
+
         sb.append("\n바로가기\n")
                 .append("- 오늘의 뉴스: ").append(siteUrl).append("/\n")
                 .append("- 관심 종목: ").append(siteUrl).append("/stock\n")
                 .append("- 모의투자: ").append(siteUrl).append("/mock\n")
+                .append("- 증시 일정: ").append(siteUrl).append("/calendar\n")
                 .append("\n※ SKLabs의 시세·뉴스·AI 요약은 참고용이며, 투자 판단은 본인 책임입니다.\n")
                 .append("※ 메일을 그만 받으려면 마이페이지 > 아침 브리핑 메일에서 끌 수 있어요.");
 
+        return sb.toString();
+
+    }
+
+    // 📅 오늘부터 사흘 뒤까지 증시 일정 (없으면 빈 글자, 순수 계산)
+    public static String calendarLines(LocalDate today) {
+
+        List<MarketCalendar.Event> events = MarketCalendar.between(today, today.plusDays(3));
+        if (events.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder("\n■ 증시 일정\n");
+        for (MarketCalendar.Event e : events) {
+            String when = e.date().equals(today) ? "오늘" : e.date().equals(today.plusDays(1)) ? "내일" : e.date().getMonthValue() + "/" + e.date().getDayOfMonth();
+            sb.append("- ").append(when).append(e.time() == null ? "" : " " + e.time()).append(" · ").append(e.title()).append("\n");
+        }
         return sb.toString();
 
     }

@@ -13,6 +13,7 @@ export const SERVICES = {
   quiz: { icon: '📰', label: '뉴스 퀴즈', to: '/quiz', color: '#64748b', desc: '매일 5문제' },
   duel: { icon: '⚔️', label: '친구 대결', to: '/duel', color: '#8b5cf6', desc: '7일 1:1 승부' },
   persona: { icon: '🧭', label: '투자 성향', to: '/persona', color: '#06b6d4', desc: '12문항 테스트' },
+  calendar: { icon: '📅', label: '증시 일정', to: '/calendar', color: '#0ea5e9', desc: '휴장 · 금리 · 만기일' },
   company: { icon: '🏭', label: '기업 정보', to: '/ai?q=', color: '#78716c', desc: 'AI가 정리' },
   activity: { icon: '🏅', label: '내 활동', to: '/activity', color: '#f97316', desc: '배지 · AI 코치' },
   mypage: { icon: '👤', label: '마이페이지', to: '/mypage', color: '#6366f1', desc: '내 정보 · 알림' },
@@ -29,7 +30,7 @@ export const SHORTCUT_KEYS = ['stock', 'mock', 'predict', 'league', 'ai', 'beaut
 
 // ☰ 전체 메뉴: 카테고리별
 export const CATEGORIES = [
-  { title: '투자', icon: '📈', keys: ['stock', 'mock', 'league', 'company'] },
+  { title: '투자', icon: '📈', keys: ['stock', 'mock', 'calendar', 'league', 'company'] },
   { title: '게임 · 도전', icon: '🎮', keys: ['predict', 'quiz', 'duel', 'lotto'] },
   { title: 'AI 도구', icon: '✨', keys: ['ai', 'beauty', 'persona'] },
   { title: '내 공간', icon: '🙋', keys: ['messages', 'activity', 'couple', 'mypage'] },

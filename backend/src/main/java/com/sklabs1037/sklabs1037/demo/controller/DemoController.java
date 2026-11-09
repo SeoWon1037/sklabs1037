@@ -24,6 +24,9 @@ public class DemoController {
     @Autowired
     private DemoService demoService;
 
+    @Autowired
+    private com.sklabs1037.sklabs1037.ops.service.UsageStatService usageStatService;
+
     @PostMapping("/api/user/demo")
     public ResponseEntity<Map<String, Object>> demo(HttpServletRequest request) {
 
@@ -39,6 +42,7 @@ public class DemoController {
             HttpSession session = request.getSession(true);
             session.setAttribute(UserLoginController.LOGIN_USER, user);
             session.setAttribute(DemoService.SESSION_KEY, true);
+            usageStatService.event("demo_login");   // 📊 체험 시작
 
             Map<String, Object> info = new HashMap<>();
             info.put("id", user.getId());

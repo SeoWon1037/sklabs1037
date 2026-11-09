@@ -237,3 +237,15 @@
 @keyframes ai-voice-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, #e5484d 18%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .ai-voice-on { animation: none; } }
 .ai-voice-error { position: absolute; left: 16px; bottom: calc(100% - 6px); padding: 3px 8px; border-radius: 6px; background: var(--bg, #111); color: #e5484d; font-size: 12px; }
+
+/* 🧾 참고한 자료 */
+.ai-sources { margin-top: 6px; font-size: 12px; }
+.ai-sources summary { width: fit-content; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--text) 6%, transparent); color: color-mix(in srgb, var(--text) 75%, transparent); cursor: pointer; list-style: none; }
+.ai-sources summary::-webkit-details-marker { display: none; }
+.ai-sources[open] summary { margin-bottom: 6px; }
+.ai-sources ul { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; list-style: none; }
+.ai-sources li { overflow: hidden; line-height: 1.45; text-overflow: ellipsis; }
+.ai-sources a { color: var(--primary, #3b82f6); text-decoration: none; }
+.ai-sources a:hover { text-decoration: underline; }
+.ai-sources small { color: var(--text-muted); }
+.ai-src-type { display: inline-block; min-width: 38px; margin-right: 6px; padding: 0 5px; border-radius: 5px; background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text-muted); font-size: 11px; text-align: center; }

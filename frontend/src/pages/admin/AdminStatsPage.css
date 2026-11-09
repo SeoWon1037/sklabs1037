@@ -1,0 +1,21 @@
+/* 📊 사용 통계 (stt-) — 숫자 카드·막대·표는 AdminApiPage.css(ap-) */
+.stt-bar-today { fill: var(--primary, #3b82f6); }
+.stt-dot { fill: #22c55e; }
+.stt-legend { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--text-muted); font-size: 11px; }
+.stt-legend i { display: inline-block; width: 10px; height: 10px; margin-left: 6px; }
+.stt-key-bar { border-radius: 2px; background: color-mix(in srgb, var(--text) 22%, transparent); }
+.stt-key-dot { height: 4px !important; border-radius: 1px; background: #22c55e; }
+.stt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.stt-pages { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px; list-style: none; }
+.stt-pages li { display: grid; grid-template-columns: 90px minmax(0, 1fr) 48px; align-items: center; gap: 10px; font-size: 13px; }
+.stt-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.stt-track { height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--text) 7%, transparent); }
+.stt-track i { display: block; height: 100%; border-radius: 99px; background: var(--primary, #3b82f6); }
+.stt-pages b { text-align: right; font-variant-numeric: tabular-nums; }
+.stt-funnel { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.stt-funnel > div { flex: 1; min-width: 90px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+.stt-funnel span { display: block; color: var(--text-muted); font-size: 12px; }
+.stt-funnel b { font-size: 18px; font-variant-numeric: tabular-nums; }
+@media (max-width: 800px) {
+  .stt-grid { grid-template-columns: 1fr; }
+}

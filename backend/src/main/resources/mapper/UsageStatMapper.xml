@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 📊 사용 통계 (T_DAILY_STAT, T_DAILY_VISITOR + 기존 기능 테이블 읽기만) -->
+<mapper namespace="com.sklabs1037.sklabs1037.ops.dao.UsageStatDao">
+
+    <insert id="addStat">
+        INSERT INTO T_DAILY_STAT (DAY, METRIC, KEY, CNT)
+        VALUES (#{day}, #{metric}, #{key}, #{cnt})
+        ON CONFLICT (DAY, METRIC, KEY) DO UPDATE SET CNT = T_DAILY_STAT.CNT + EXCLUDED.CNT
+    </insert>
+
+    <insert id="addVisitors">
+        INSERT INTO T_DAILY_VISITOR (DAY, VID) VALUES
+        <foreach collection="vids" item="v" separator=",">(#{day}, #{v})</foreach>
+        ON CONFLICT (DAY, VID) DO NOTHING
+    </insert>
+
+    <delete id="deleteOld">
+        DELETE FROM T_DAILY_STAT WHERE DAY &lt; CURRENT_DATE - 90
+    </delete>
+
+    <delete id="deleteOldVisitors">
+        DELETE FROM T_DAILY_VISITOR WHERE DAY &lt; CURRENT_DATE - 90
+    </delete>
+
+    <select id="selectDaily" resultType="java.util.LinkedHashMap">
+        SELECT  TO_CHAR(D.DAY, 'YYYY-MM-DD')                                                    AS "day"
+               ,(SELECT COUNT(*) FROM T_DAILY_VISITOR V WHERE V.DAY = D.DAY)::INT                 AS "visitors"
+               ,(SELECT COALESCE(SUM(S.CNT), 0) FROM T_DAILY_STAT S WHERE S.DAY = D.DAY AND S.METRIC = 'PV')::INT AS "pv"
+          FROM GENERATE_SERIES((NOW() AT TIME ZONE 'Asia/Seoul')::DATE - (#{days} - 1), (NOW() AT TIME ZONE 'Asia/Seoul')::DATE, INTERVAL '1 day') AS D(DAY)
+         ORDER BY D.DAY
+    </select>
+
+    <select id="selectPages" resultType="java.util.LinkedHashMap">
+        SELECT  KEY             AS "key"
+               ,SUM(CNT)::INT   AS "pv"
+          FROM T_DAILY_STAT
+         WHERE 1=1
+           AND METRIC = 'PV'
+           AND DAY &gt; (NOW() AT TIME ZONE 'Asia/Seoul')::DATE - #{days}
+         GROUP BY KEY
+         ORDER BY SUM(CNT) DESC
+         LIMIT 20
+    </select>
+
+    <select id="selectEvents" resultType="java.util.LinkedHashMap">
+        SELECT  KEY             AS "key"
+               ,SUM(CNT)::INT   AS "cnt"
+          FROM T_DAILY_STAT
+         WHERE 1=1
+           AND METRIC = 'EVENT'
+           AND DAY &gt; (NOW() AT TIME ZONE 'Asia/Seoul')::DATE - #{days}
+         GROUP BY KEY
+    </select>
+
+    <select id="selectSignups" resultType="java.util.LinkedHashMap">
+        SELECT  TO_CHAR((U.INS_DAY AT TIME ZONE 'Asia/Seoul')::DATE, 'YYYY-MM-DD')  AS "day"
+               ,COUNT(*)::INT                                                       AS "signups"
+          FROM T_USER U
+         WHERE 1=1
+           AND COALESCE(U.PROVIDER, '') NOT IN ('AI', 'DEMO')
+           AND U.INS_DAY &gt;= NOW() - (#{days} || ' days')::INTERVAL
+         GROUP BY 1
+         ORDER BY 1
+    </select>
+
+    <!-- 기능별: 오늘(한국 날짜) · 최근 7일 (기능 테이블은 읽기만) -->
+    <select id="selectFeatures" resultType="java.util.LinkedHashMap">
+        WITH T AS (SELECT (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul') AS TODAY)
+        SELECT 0 AS "ord", 'AI 비서 질문' AS "feature"
+              ,(SELECT COUNT(*) FROM T_AI_CHAT_LOG X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
+              ,(SELECT COUNT(*) FROM T_AI_CHAT_LOG X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
+        UNION ALL
+        SELECT 1 AS "ord", '모의투자 체결' AS "feature"
+              ,(SELECT COUNT(*) FROM T_MOCK_TRADE X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
+              ,(SELECT COUNT(*) FROM T_MOCK_TRADE X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
+        UNION ALL
+        SELECT 2 AS "ord", '뷰티 랩' AS "feature"
+              ,(SELECT COUNT(*) FROM T_BEAUTY_LOG X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
+              ,(SELECT COUNT(*) FROM T_BEAUTY_LOG X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
+        UNION ALL
+        SELECT 3 AS "ord", '예측 게임 투표' AS "feature"
+              ,(SELECT COUNT(*) FROM T_PREDICT_VOTE X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
+              ,(SELECT COUNT(*) FROM T_PREDICT_VOTE X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
+        UNION ALL
+        SELECT 4 AS "ord", '뉴스 퀴즈' AS "feature"
+              ,(SELECT COUNT(*) FROM T_NEWS_QUIZ_PLAY X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
+              ,(SELECT COUNT(*) FROM T_NEWS_QUIZ_PLAY X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
+        UNION ALL
+        SELECT 5 AS "ord", '토론 글' AS "feature"
+              ,(SELECT COUNT(*) FROM T_STOCK_POST X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
+              ,(SELECT COUNT(*) FROM T_STOCK_POST X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
+        UNION ALL
+        SELECT 6 AS "ord", '메시지' AS "feature"
+              ,(SELECT COUNT(*) FROM T_DM_MSG X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
+              ,(SELECT COUNT(*) FROM T_DM_MSG X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
+        UNION ALL
+        SELECT 7 AS "ord", '문의' AS "feature"
+              ,(SELECT COUNT(*) FROM T_INQUIRY X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
+              ,(SELECT COUNT(*) FROM T_INQUIRY X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
+        ORDER BY 1
+    </select>
+</mapper>

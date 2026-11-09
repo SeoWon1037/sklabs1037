@@ -528,6 +528,25 @@
          ORDER BY N.SNAP_DATE
     </select>
 
+    <!-- 🏆 주간 시즌 -->
+    <insert id="insertSeasonWinner" parameterType="java.util.Map">
+        INSERT INTO T_MOCK_SEASON (WEEK_START, RANK_NO, USER_ID, NICKNAME, RETURN_RATE, TOTAL_ASSET)
+        VALUES (#{weekStart}, #{rank}, #{userId}, #{nickname}, #{returnRate}, #{totalAsset})
+        ON CONFLICT (WEEK_START, USER_ID) DO NOTHING
+    </insert>
+
+    <select id="selectSeasons" resultType="java.util.LinkedHashMap">
+        SELECT  TO_CHAR(S.WEEK_START, 'YYYY-MM-DD')   AS "weekStart"
+               ,S.RANK_NO                             AS "rank"
+               ,S.NICKNAME                            AS "nickname"
+               ,S.RETURN_RATE                         AS "returnRate"
+               ,S.TOTAL_ASSET                         AS "totalAsset"
+          FROM T_MOCK_SEASON S
+         WHERE 1=1
+           AND S.WEEK_START &gt;= (NOW() AT TIME ZONE 'Asia/Seoul')::DATE - (#{weeks} * 7)
+         ORDER BY S.WEEK_START DESC, S.RANK_NO, S.RETURN_RATE DESC
+    </select>
+
     <!-- 📈 비교 지수 (코스피200을 따라가는 KODEX 200) 최근 1년 종가 -->
     <select id="selectBenchmarkPrices" resultType="java.util.LinkedHashMap">
         SELECT  S.ID                            AS "stockId"

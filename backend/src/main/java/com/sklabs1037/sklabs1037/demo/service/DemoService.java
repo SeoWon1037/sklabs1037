@@ -37,7 +37,8 @@ public class DemoService {
             "/api/persona/",
             "/api/watchlist",
             "/api/alerts",
-            "/api/me/notifications/read");
+            "/api/me/notifications/read",
+            "/api/track");   // 📊 화면 열기 통계
 
     @Autowired
     private DemoDao demoDao;

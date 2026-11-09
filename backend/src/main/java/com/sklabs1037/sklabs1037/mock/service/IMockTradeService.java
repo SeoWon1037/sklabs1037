@@ -34,6 +34,9 @@ public interface IMockTradeService {
     // period: ALL(시작 자금 대비) / WEEK(이번 주 월요일 전 마지막 기록 대비)
     Map<String, Object> getRanking(Long userId, int size, String period);
 
+    // 🏆 이번 주 수익률 (시즌 마감용) [{ userId, nickname, returnRate, totalAsset, ai }]
+    List<Map<String, Object>> weekStandings();
+
     // 내 수익률 추이 (일별 기록 + 지금 시점 1개)
     Map<String, Object> getHistory(Long userId);
 

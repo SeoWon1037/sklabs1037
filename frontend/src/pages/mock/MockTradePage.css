@@ -1145,3 +1145,12 @@
 .ret-legend strong { margin-left: auto; font-size: 12px; }
 .ret-beat { color: #e5484d; }
 .ret-lag { color: #3b82f6; }
+
+/* 🏆 지난 시즌 */
+.season-hall { display: flex; flex-direction: column; gap: 10px; }
+.season-week { padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+.season-week-title { margin: 0 0 6px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.season-week ol { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.season-week li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.season-week li b { flex: 1; min-width: 0; overflow: hidden; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.season-week li em { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }

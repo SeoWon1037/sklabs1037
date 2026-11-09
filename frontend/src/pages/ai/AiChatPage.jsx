@@ -1,7 +1,7 @@
 // ============================================
 // AI 주식 비서 화면 (주소: /ai)
 // - 백엔드 API
-//   POST /api/ai/chat     { message }         → { success, chatId, answer, toolsUsed }
+//   POST /api/ai/chat     { message }         → { success, chatId, answer, toolsUsed, sources(🧾 참고한 기사·종목) }
 //   POST /api/ai/feedback { chatId, rating }  → { success }
 //   GET  /api/watchlist                       → 관심 종목 (브리핑 버튼용)
 // - AI가 어떤 도구(DB 조회, 문서 검색 등)를 썼는지 + 답변 피드백(👍/👎)
@@ -9,8 +9,11 @@
 // - /ai?briefing=1 로 들어오면 관심 종목 브리핑 질문을 미리 채움 (메인 화면의 "AI 브리핑 받기")
 // ============================================
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import VoiceButton from '../../components/ai/VoiceButton'
+
+// 🧾 답변 근거 종류
+const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터' }
 import './AiChatPage.css'
 
 // 예시 질문 (처음 화면에 버튼으로 표시)
@@ -94,7 +97,7 @@ function AiChatPage() {
       if (data.success) {
         setMessages((prev) => [
           ...prev,
-          { role: 'ai', text: data.answer, tools: data.toolsUsed, chatId: data.chatId, rating: null },
+          { role: 'ai', text: data.answer, tools: data.toolsUsed, sources: data.sources, chatId: data.chatId, rating: null },
         ])
       } else {
         setMessages((prev) => [...prev, { role: 'ai', text: data.message, error: true }])
@@ -197,6 +200,26 @@ function AiChatPage() {
                     <span key={j} className="ai-tool">🔧 {t}</span>
                   ))}
                 </div>
+              )}
+
+              {/* 🧾 참고한 자료 (뉴스는 새 창, 종목·계좌는 사이트 안) */}
+              {m.sources && m.sources.length > 0 && (
+                <details className="ai-sources">
+                  <summary>🧾 참고한 자료 {m.sources.length}개</summary>
+                  <ul>
+                    {m.sources.map((src, j) => (
+                      <li key={j}>
+                        <span className="ai-src-type">{SOURCE_TYPE[src.type] ?? '자료'}</span>
+                        {src.link
+                          ? (src.link.startsWith('/')
+                            ? <Link to={src.link}>{src.title}</Link>
+                            : <a href={src.link} target="_blank" rel="noopener noreferrer">{src.title}</a>)
+                          : <span>{src.title}</span>}
+                        {src.sub && src.type === 'NEWS' && <small> · {src.sub}</small>}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               )}
 
               {/* 답변 피드백 */}

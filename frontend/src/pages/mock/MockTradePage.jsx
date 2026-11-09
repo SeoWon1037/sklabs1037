@@ -16,6 +16,7 @@
 //   POST /api/mock/orders/{orderId}/cancel          지정가 주문 취소
 //   POST /api/mock/reset-request (+/cancel)        계좌 초기화 신청 (관리자 승인 후 초기화)
 //   GET  /api/mock/ranking?size=10&period=ALL|WEEK  수익률 랭킹 (누구나, 전체 / 이번 주)
+//   GET  /api/mock/seasons?weeks=8                  🏆 지난 시즌 TOP 3 (SeasonHall)
 //   GET  /api/mock/history                          내 수익률 추이 (평일 15:40 기록 + 지금)
 // ============================================
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -23,6 +24,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import ReturnChart from '../../components/mock/ReturnChart'
 import './MockTradePage.css'
 import DiagnosisCard from '../../components/mock/DiagnosisCard'
+import SeasonHall from '../../components/mock/SeasonHall'
 
 // 현재가 자동 새로고침 간격 (30초)
 const REFRESH_MS = 30_000
@@ -143,6 +145,7 @@ function MockTradePage() {
   }, [])
 
   const loadRanking = useCallback(() => {
+    if (rankPeriod === 'SEASON') return Promise.resolve()   // 🏆 지난 시즌은 SeasonHall이 따로 불러옴
     return fetch(`/api/mock/ranking?size=10&period=${rankPeriod}`)
       .then((res) => res.json())
       .then((json) => json.success && setRanking(json))
@@ -372,7 +375,7 @@ function MockTradePage() {
         <h2>수익률 랭킹</h2>
         {ranking && <span className="mock-muted">{ranking.participants}명 참여</span>}
         <div className="mock-seg mock-seg-right">
-          {[['ALL', '전체'], ['WEEK', '이번 주']].map(([value, label]) => (
+          {[['ALL', '전체'], ['WEEK', '이번 주'], ['SEASON', '🏆 지난 시즌']].map(([value, label]) => (
             <button
               key={value}
               type="button"
@@ -384,9 +387,10 @@ function MockTradePage() {
           ))}
         </div>
       </div>
-      {!ranking && <p className="mock-empty">불러오는 중...</p>}
-      {ranking && ranking.ranking.length === 0 && <p className="mock-empty">아직 참여한 사람이 없어요. 첫 주문의 주인공이 되어보세요!</p>}
-      {ranking && ranking.ranking.length > 0 && (
+      {rankPeriod === 'SEASON' && <SeasonHall />}
+      {rankPeriod !== 'SEASON' && !ranking && <p className="mock-empty">불러오는 중...</p>}
+      {rankPeriod !== 'SEASON' && ranking && ranking.ranking.length === 0 && <p className="mock-empty">아직 참여한 사람이 없어요. 첫 주문의 주인공이 되어보세요!</p>}
+      {rankPeriod !== 'SEASON' && ranking && ranking.ranking.length > 0 && (
         <ol className="mock-rank-list">
           {ranking.ranking.map((r, i) => (
             <li key={`${r.rank}-${r.nickname}-${i}`} className={`mock-rank-item ${r.me ? 'mock-rank-me' : ''}`}>
@@ -420,8 +424,10 @@ function MockTradePage() {
           ? '이번 주 수익률 = 지난주 마지막 장 마감 기록 대비 (이번 주에 시작했으면 3,000만 원 대비)'
           : '총자산 = 현금 + 주문에 묶인 돈 + 보유 주식 평가금액 · 거래 1번 이상 한 계좌만'}
       >
-        {rankPeriod === 'WEEK'
-          ? '이번 주 = 지난주 장 마감 대비 (처음이면 3,000만 원)'
+        {rankPeriod === 'SEASON'
+          ? '매주 토요일 아침, 그 주 수익률 TOP 3(사람만)를 기록하고 👑·🏅 배지를 드려요'
+          : rankPeriod === 'WEEK'
+          ? '이번 주 = 지난주 장 마감 대비 (처음이면 3,000만 원) · 토요일 아침 시즌 마감'
           : '총자산 = 현금 + 주문 대기 + 주식 평가 · 거래한 계좌만'}
       </p>
     </section>

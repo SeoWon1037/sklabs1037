@@ -58,6 +58,7 @@ public class OpsAdminController {
             new String[]{"CALENDAR_ALERT", "매일 19:00 (내일 일정 있을 때만)"},
             new String[]{"BACKUP_CHECK", "매일 06:00 (백업은 04:30 backup 컨테이너)"},
             new String[]{"DEMO_RESET", "매일 05:10"},
+            new String[]{"SEASON_CLOSE", "토요일 09:00"},
             new String[]{"PREDICT_GRADE", "평일 21:10"},
             new String[]{"NEWS_QUIZ", "매일 07:40"},
             new String[]{"WEEKLY_COACH", "월요일 08:10"},

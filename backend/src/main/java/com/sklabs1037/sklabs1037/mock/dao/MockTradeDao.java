@@ -89,6 +89,12 @@ public interface MockTradeDao {
 
     List<MockTradeVO> selectSnapshots(Long userId);
 
+    // 🏆 주간 시즌 TOP 3 기록 (같은 주·같은 사람은 한 번만)
+    int insertSeasonWinner(java.util.Map<String, Object> row);
+
+    // 🏆 최근 n주 시즌 기록 (최근 주부터)
+    List<java.util.Map<String, Object>> selectSeasons(int weeks);
+
     // 📈 비교 지수 (KODEX 200) 최근 1년 종가 { stockId, date, close } 오래된 날부터
     List<java.util.Map<String, Object>> selectBenchmarkPrices(String symbol);
 

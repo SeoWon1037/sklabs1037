@@ -60,7 +60,9 @@ public class BadgeService {
             new Badge("ALERT_FIRST", "🔔", "기다리는 법", "첫 목표가 알림", "탐험", s -> s.alertCount() >= 1),
             // 도전: 숫자로 판정하지 않고 그 일이 일어날 때 바로 줌 (awardOne)
             new Badge("COACH_CLEAR", "🎖️", "미션 클리어", "AI 코치 주간 미션 3개 모두 달성", "도전", s -> false),
-            new Badge("DUEL_WIN", "⚔️", "대결 승리", "친구와 1:1 대결에서 승리", "도전", s -> false)
+            new Badge("DUEL_WIN", "⚔️", "대결 승리", "친구와 1:1 대결에서 승리", "도전", s -> false),
+            new Badge("SEASON_TOP3", "🏅", "주간 TOP 3", "모의투자 주간 시즌 3등 안에", "도전", s -> false),
+            new Badge("SEASON_WIN", "👑", "주간 챔피언", "모의투자 주간 시즌 1등", "도전", s -> false)
     );
 
     @Autowired

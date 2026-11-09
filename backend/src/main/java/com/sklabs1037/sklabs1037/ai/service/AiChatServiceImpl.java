@@ -141,6 +141,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
         AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId());
 
+        vo.setSources(r.sources());
         return finish(vo, r.answer(), r.toolsUsed());
 
     }
@@ -159,7 +160,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
     }
 
-    record AgentResult(String answer, List<String> toolsUsed) {
+    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources) {
     }
 
     // 질문 하나를 Claude + 도구 반복으로 답하기
@@ -171,6 +172,7 @@ public class AiChatServiceImpl implements IAiChatService {
         messages.add(Map.of("role", "user", "content", question));
 
         List<String> toolsUsed = new ArrayList<>();
+        List<Map<String, Object>> sources = new ArrayList<>();   // 🧾 답변 근거 (화면에 링크로)
 
         for (int turn = 0; turn < MAX_TURNS; turn++) {
 
@@ -192,7 +194,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     answer += "\n\n(답변이 길어 일부가 생략되었습니다. 궁금한 부분을 나눠서 질문해주세요.)";
                 }
 
-                return new AgentResult(answer, toolsUsed);
+                return new AgentResult(answer, toolsUsed, sources);
 
             }
 
@@ -215,7 +217,10 @@ public class AiChatServiceImpl implements IAiChatService {
 
                 try {
 
-                    result.put("content", jsonMapper.writeValueAsString(runTool(toolName, input, userId)));
+                    Object out = runTool(toolName, input, userId);
+                    collectSources(toolName, input, out, sources);
+                    // 기사 주소는 화면용 (AI에게는 안 보냄 → 토큰 절약)
+                    result.put("content", jsonMapper.writeValueAsString(withoutLinks(out)));
 
                 } catch (Exception e) {
 
@@ -235,7 +240,7 @@ public class AiChatServiceImpl implements IAiChatService {
         }
 
         // 최대 횟수 안에 답을 못 끝낸 경우
-        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed);
+        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources);
 
     }
 
@@ -277,6 +282,84 @@ public class AiChatServiceImpl implements IAiChatService {
     // 도구 실행
     // ============================================
     // userId: 질문한 회원 (내 포트폴리오 조회용, AI가 고를 수 없게 서버 세션 값만 사용)
+    // ============================================
+    // 🧾 답변 근거 모으기 (순수 계산, 테스트 가능)
+    // - NEWS: 기사 제목 · 언론사 · 주소 (search_news)
+    // - STOCK: 종목 화면 (시세·이력·문서를 본 종목)
+    // - MOCK: 내 모의투자 계좌 / DATA: 순위·조건 검색 (주소 없음)
+    // - 같은 것은 한 번만, 최대 8개
+    // ============================================
+    static final int MAX_SOURCES = 8;
+
+    @SuppressWarnings("unchecked")
+    static void collectSources(String tool, Map<String, Object> input, Object out, List<Map<String, Object>> sources) {
+
+        List<Map<String, Object>> rows = out instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+
+        switch (tool) {
+            case "search_news" -> rows.forEach(r -> {
+                if (r.get("link") != null) addSource(sources, "NEWS", str(r.get("title")), str(r.get("press")), str(r.get("link")));
+            });
+            case "get_current_price", "get_price_history" -> {
+                String sym = str(input.get("symbol"));
+                if (!sym.isBlank()) addSource(sources, "STOCK", nameOf(sources, sym), sym, "/stock?symbol=" + sym);
+            }
+            case "find_stock" -> rows.stream().limit(1).forEach(r ->
+                    addSource(sources, "STOCK", str(r.get("name")), str(r.get("symbol")), "/stock?symbol=" + str(r.get("symbol"))));
+            case "search_stock_docs" -> rows.stream().limit(3).forEach(r ->
+                    addSource(sources, "DOC", str(r.get("name")) + " · " + str(r.get("title")), str(r.get("symbol")), "/stock?symbol=" + str(r.get("symbol"))));
+            case "get_my_mock_portfolio" -> addSource(sources, "MOCK", "내 모의투자 계좌", "", "/mock");
+            case "get_return_ranking" -> addSource(sources, "DATA", "수익률 순위 (" + input.get("days") + "거래일, 우리 DB 종가)", "", null);
+            case "screen_stocks" -> addSource(sources, "DATA", "조건 검색 (우리 DB 종가·거래량)", "", null);
+            default -> {
+            }
+        }
+
+    }
+
+    private static void addSource(List<Map<String, Object>> sources, String type, String title, String sub, String link) {
+
+        if (sources.size() >= MAX_SOURCES || title == null || title.isBlank()) return;
+        // 같은 주소(없으면 같은 제목)는 한 번만 · 종목은 이름을 나중에 알게 되면 채움
+        for (Map<String, Object> s : sources) {
+            boolean same = link != null ? link.equals(s.get("link")) : title.equals(s.get("title"));
+            if (same) {
+                if ("STOCK".equals(type) && String.valueOf(s.get("title")).equals(sub) && !title.equals(sub)) s.put("title", title);
+                return;
+            }
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("type", type);
+        m.put("title", title.length() > 80 ? title.substring(0, 80) : title);
+        m.put("sub", sub);
+        m.put("link", link);
+        sources.add(m);
+
+    }
+
+    // 앞에서 find_stock으로 이름을 알았으면 그 이름, 아니면 코드
+    private static String nameOf(List<Map<String, Object>> sources, String symbol) {
+
+        return sources.stream().filter(s -> "STOCK".equals(s.get("type")) && symbol.equals(s.get("sub")))
+                .map(s -> String.valueOf(s.get("title"))).findFirst().orElse(symbol);
+
+    }
+
+    // AI에게 보낼 때는 기사 주소 빼기
+    @SuppressWarnings("unchecked")
+    static Object withoutLinks(Object out) {
+
+        if (!(out instanceof List<?> l) || l.isEmpty() || !(l.get(0) instanceof Map<?, ?> first) || !first.containsKey("link")) return out;
+        List<Map<String, Object>> copy = new ArrayList<>();
+        for (Object o : l) {
+            Map<String, Object> m = new LinkedHashMap<>((Map<String, Object>) o);
+            m.remove("link");
+            copy.add(m);
+        }
+        return copy;
+
+    }
+
     private Object runTool(String toolName, Map<String, Object> input, Long userId) {
 
         switch (toolName) {
@@ -382,6 +465,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     row.put("press", n.getPress());
                     row.put("publishedAt", n.getPubDate().toString());
                     row.put("stock", n.getName());
+                    row.put("link", n.getLink());
                     list.add(row);
                 }
 
@@ -598,7 +682,7 @@ public class AiChatServiceImpl implements IAiChatService {
     }
 
     // null 안전 문자열 변환
-    private String str(Object value) {
+    private static String str(Object value) {
 
         return (value == null) ? "" : String.valueOf(value);
 

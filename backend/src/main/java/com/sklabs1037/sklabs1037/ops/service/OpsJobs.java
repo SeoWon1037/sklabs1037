@@ -38,7 +38,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE", "CALENDAR_ALERT", "BACKUP_CHECK", "DEMO_RESET");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE", "CALENDAR_ALERT", "BACKUP_CHECK", "DEMO_RESET", "SEASON_CLOSE");
 
     @Autowired
     private JobRunService jobRunService;
@@ -87,6 +87,9 @@ public class OpsJobs {
 
     @Autowired
     private com.sklabs1037.sklabs1037.demo.service.DemoService demoService;
+
+    @Autowired
+    private com.sklabs1037.sklabs1037.mock.service.MockSeasonService mockSeasonService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -193,6 +196,9 @@ public class OpsJobs {
 
             // 🧪 체험 계정 처음 상태로 (모의투자 계좌 · 알림 · 가격 알림)
             case "DEMO_RESET" -> demoService::resetDaily;
+
+            // 🏆 모의투자 주간 시즌 마감 (TOP 3 기록 · 배지 · 알림)
+            case "SEASON_CLOSE" -> mockSeasonService::closeWeek;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

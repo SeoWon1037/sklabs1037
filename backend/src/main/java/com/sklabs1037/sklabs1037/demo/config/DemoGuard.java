@@ -19,6 +19,9 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 public class DemoGuard implements WebMvcConfigurer, HandlerInterceptor {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.sklabs1037.sklabs1037.ops.service.UsageStatService usageStatService;
+
     private static final byte[] BLOCKED = "{\"success\":false,\"demo\":true,\"message\":\"체험 계정에서는 할 수 없어요. 회원가입하면 바로 쓸 수 있어요.\"}"
             .getBytes(StandardCharsets.UTF_8);
 
@@ -34,6 +37,9 @@ public class DemoGuard implements WebMvcConfigurer, HandlerInterceptor {
 
         HttpSession session = request.getSession(false);
         if (session == null || !Boolean.TRUE.equals(session.getAttribute(DemoService.SESSION_KEY))) return true;
+
+        // 📊 체험하다가 회원가입을 끝까지 누름 (체험 → 가입 전환)
+        if ("POST".equalsIgnoreCase(request.getMethod()) && "/api/user/signup".equals(request.getRequestURI())) usageStatService.event("demo_signup");
         if (DemoService.allowed(request.getMethod(), request.getRequestURI())) return true;
 
         response.setStatus(403);

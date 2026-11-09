@@ -10,6 +10,7 @@ import './AdminTabs.css'
 
 const TABS = [
   { to: '/admin/ops', label: '🛠 운영 상태' },
+  { to: '/admin/stats', label: '📊 사용 통계' },
   { to: '/admin/server', label: '🖥 서버 상태' },
   { to: '/admin/api', label: '🔌 외부 연동' },
   { to: '/admin/ai-cost', label: '💸 AI 비용' },

@@ -3,7 +3,7 @@
 // - 앱의 뼈대: 상단바 + "주소에 맞는 화면" 연결 + 하단 정보
 // - 백엔드의 @RequestMapping처럼 "어떤 주소 → 어떤 화면"을 정하는 곳
 // ============================================
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import './App.css'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
@@ -45,8 +45,16 @@ import CouplePage from './pages/couple/CouplePage'
 import AboutPage from './pages/about/AboutPage'
 import LottoPage from './pages/lotto/LottoPage'
 import BeautyLabPage from './pages/beauty/BeautyLabPage'
+import { useEffect } from 'react'
+import { trackPage } from './track'
+import AdminStatsPage from './pages/admin/AdminStatsPage'
 
 function App() {
+
+  // 📊 화면 열기 통계 (track.js)
+  const location = useLocation()
+  useEffect(() => { trackPage(location.pathname) }, [location.pathname])
+
   return (
     <>
       {/* 상단바: 모든 화면에 공통으로 표시 */}
@@ -79,6 +87,7 @@ function App() {
         <Route path="/admin/server" element={<AdminServerPage />} />     {/* 관리자: 🖥 서버 상태 (운영 서버 + DB, 5초마다) */}
         <Route path="/status" element={<StatusPage />} />              {/* 🟢 서비스 상태 (누구나) */}
         <Route path="/calendar" element={<MarketCalendarPage />} />     {/* 📅 증시 일정 (휴장 · FOMC · 금통위 · 만기일) */}
+        <Route path="/admin/stats" element={<AdminStatsPage />} />      {/* 관리자: 📊 사용 통계 */}
         <Route path="/admin/ai-cost" element={<AdminAiCostPage />} />   {/* 관리자: 💸 AI 비용 (하루 한도 · 긴급 정지) */}
         <Route path="/admin/api" element={<AdminApiPage />} />           {/* 관리자: 🔌 외부 연동 (토스·Claude·메일… 호출 기록) */}
         <Route path="/admin/autofix" element={<AdminAutofixPage />} />   {/* 관리자: 🤖 AI 자동 수정 (승인 · 배포) */}

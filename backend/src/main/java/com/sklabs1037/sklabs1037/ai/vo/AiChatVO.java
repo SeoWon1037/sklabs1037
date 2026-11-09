@@ -19,6 +19,7 @@ public class AiChatVO {
     private String answer;           // AI 답변
     private List<String> toolsUsed;  // AI가 사용한 도구 목록 (화면에 표시)
     private String toolsText;        // 도구 목록을 한 줄로 (DB 저장용)
+    private List<java.util.Map<String, Object>> sources;   // 🧾 답변 근거 자료 (뉴스 기사 링크 · 종목 · 문서), 화면 표시용 (DB 저장 안 함)
     private String rating;           // 피드백 (UP / DOWN)
     private Integer promptVersion;   // 답한 시스템 프롬프트 버전 (0 = 기본, 🔁 개선 버전별 👎 비율 비교)
 }

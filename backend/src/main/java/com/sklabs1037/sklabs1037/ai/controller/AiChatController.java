@@ -21,7 +21,7 @@ import java.util.Map;
  * AI 주식 비서 Controller
  *
  * API 목록
- *   POST /api/ai/chat       질문하기   { message }          → { success, chatId, answer, toolsUsed }
+ *   POST /api/ai/chat       질문하기   { message }          → { success, chatId, answer, toolsUsed, sources }
  *   POST /api/ai/feedback   답변 평가  { chatId, rating }   → { success }   (rating: UP / DOWN)
  *
  * 비용 보호
@@ -94,6 +94,7 @@ public class AiChatController {
             body.put("chatId", result.getChatId());
             body.put("answer", result.getAnswer());
             body.put("toolsUsed", result.getToolsUsed());
+            body.put("sources", result.getSources());
 
             return ResponseEntity.ok(body);
 

@@ -655,6 +655,24 @@ public class MockTradeServiceImpl implements IMockTradeService {
 
     }
 
+    // 🏆 이번 주 수익률 (MockSeasonService가 토요일에 TOP 3를 뽑음)
+    @Override
+    public List<Map<String, Object>> weekStandings() {
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (MockTradeVO a : accountTotals()) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("userId", a.getUserId());
+            row.put("nickname", a.getNickname());
+            row.put("returnRate", rate(a.getTotalAsset().subtract(a.getWeekBase()), a.getWeekBase()));
+            row.put("totalAsset", a.getTotalAsset());
+            row.put("ai", a.getAiCode() != null);
+            rows.add(row);
+        }
+        return rows;
+
+    }
+
     // 거래한 적 있는 계좌들의 지금 총자산 (= 현금 + 매수 주문에 묶인 돈 + 주식 평가금액)
     // - 랭킹(전체·이번 주)과 장 마감 기록에서 같이 씀
     private List<MockTradeVO> accountTotals() {

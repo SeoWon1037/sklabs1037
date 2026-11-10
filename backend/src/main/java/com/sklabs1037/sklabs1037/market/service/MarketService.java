@@ -25,7 +25,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *         결제 기능은 없음 (대화로 직접 거래)
  * - 판매자: 수정 · 판매중/예약중/판매완료 · 끌어올리기(24시간에 한 번) · 삭제
  * - 안전: 금지 품목은 등록 불가, 사기에 자주 쓰이는 말은 상세 화면에 주의 안내,
- *         신고 3번이면 자동 숨김 + 관리자 알림, 관리자는 어떤 상품이든 삭제 가능
+ *         신고 3번이면 자동 숨김 + 관리자 알림, 관리자는 어떤 상품이든 삭제 · 숨김 풀기 가능
+ * - ⭐ 거래 후기: 판매완료 때 "누구와 거래했는지"를 채팅한 사람 중에서 고르면, 두 사람이 서로 한 번씩 후기를 남김
+ *         → 받은 후기로 매너 온도 계산 (MarketRules.temperature), 판매자 프로필에서 누구나 볼 수 있음
+ * - 🔔 키워드 알림: 등록한 낱말이 제목에 들어간 새 상품이 올라오면 알림 (한 사람 10개)
+ * - 📉 가격 내림: 판매자가 가격을 내리면 찜한 사람들에게 알림, 상세·목록에 전 가격 표시
  * - ✨ AI 글쓰기 도우미: 상품 이름·메모 → 제목·설명·카테고리 초안 (하루 10번, 결과는 서버 규칙으로 다시 검사)
  */
 @Slf4j
@@ -139,7 +143,18 @@ public class MarketService {
         out.put("cautions", mine ? List.of() : MarketRules.cautions(item.get("title") + "\n" + item.get("description")));
         if (!admin && !mine) out.remove("reports");
 
-        out.put("seller", marketDao.selectSeller(sellerId));
+        // 거래 후기: 판매완료 + 거래한 사람이 정해졌을 때, 판매자와 그 사람만
+        Long buyerId = num(item.get("buyerId"));
+        boolean iAmBuyer = buyerId != null && buyerId.equals(me);
+        boolean sold = "SOLD".equals(item.get("status"));
+        boolean reviewed = me != null && (mine || iAmBuyer) && marketDao.countReview(id, me) > 0;
+        out.put("iAmBuyer", sold && iAmBuyer);
+        out.put("canReview", sold && buyerId != null && (mine || iAmBuyer) && !reviewed);
+        out.put("reviewed", reviewed);
+        out.remove("buyerId");
+        if (!mine) out.remove("buyerName");   // 누구와 거래했는지는 판매자만
+
+        out.put("seller", seller(sellerId));
 
         Map<String, Object> cond = new HashMap<>();
         cond.put("sellerId", sellerId);
@@ -148,6 +163,45 @@ public class MarketService {
         cond.put("limit", 4);
         cond.put("offset", 0);
         out.put("others", decorate(marketDao.selectItems(cond)));
+        return out;
+
+    }
+
+    // 판매자 카드: 닉네임 · 판매 수 + 매너 온도 · 받은 후기 수
+    private Map<String, Object> seller(Long userId) {
+
+        Map<String, Object> row = marketDao.selectSeller(userId);
+        if (row == null) return null;
+
+        Map<String, Object> out = new LinkedHashMap<>(row);
+        Map<String, Object> st = marketDao.selectReviewStats(userId);
+        int good = intOf(st, "good"), ok = intOf(st, "ok"), bad = intOf(st, "bad");
+        out.put("id", userId);
+        out.put("temp", MarketRules.temperature(good, ok, bad));
+        out.put("good", good);
+        out.put("ok", ok);
+        out.put("bad", bad);
+        out.put("reviewCount", good + ok + bad);
+        return out;
+
+    }
+
+    // 판매자 프로필 (누구나): 매너 온도 · 받은 후기 · 판매 상품
+    public Map<String, Object> profile(Long userId) {
+
+        Map<String, Object> seller = seller(userId);
+        if (seller == null) throw new NoSuchElementException("없는 회원이에요.");
+
+        Map<String, Object> cond = new HashMap<>();
+        cond.put("sellerId", userId);
+        cond.put("sort", "RECENT");
+        cond.put("limit", 60);
+        cond.put("offset", 0);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("seller", seller);
+        out.put("reviews", marketDao.selectReviews(userId, 30));
+        out.put("items", decorate(marketDao.selectItems(cond)));
         return out;
 
     }
@@ -171,6 +225,8 @@ public class MarketService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("selling", decorate(marketDao.selectItems(mineCond)));
         out.put("likes", decorate(marketDao.selectItems(likeCond)));
+        out.put("keywords", marketDao.selectKeywords(me));
+        out.put("maxKeywords", MarketRules.MAX_KEYWORDS);
         return out;
 
     }
@@ -206,7 +262,22 @@ public class MarketService {
             marketDao.insertPhoto(p);
         }
 
+        notifyKeywords(id, me, d);
         return Map.of("id", id);
+
+    }
+
+    // 🔔 제목에 등록한 키워드가 들어간 회원들에게 (판매자 빼고, 한 사람에 한 번)
+    private void notifyKeywords(Long id, Long sellerId, Draft d) {
+
+        try {
+            for (Map<String, Object> m : marketDao.selectKeywordMatches(d.title(), sellerId)) {
+                notificationService.notify(num(m.get("userId")), "MARKET", "🔔 키워드 알림: " + m.get("keyword"),
+                        d.title() + " · " + priceText(d.price()), "/market/" + id, "MARKET_KW:" + id);
+            }
+        } catch (Exception e) {
+            log.warn("키워드 알림 실패 (상품은 올라감): {}", e.getMessage());
+        }
 
     }
 
@@ -214,11 +285,14 @@ public class MarketService {
     public Map<String, Object> update(Long me, Long id, Map<String, Object> in) {
 
         Draft d = MarketRules.clean(in);
+        Map<String, Object> before = marketDao.selectItem(id, me);
 
         Map<String, Object> row = toRow(d);
         row.put("id", id);
         row.put("sellerId", me);
         if (marketDao.updateItem(row) == 0) throw new IllegalArgumentException("고칠 수 없는 상품이에요.");
+
+        priceChanged(id, before, d);
 
         // 남길 사진(보낸 순서대로) + 새 사진
         List<Long> existing = marketDao.selectPhotoIds(id);
@@ -244,13 +318,162 @@ public class MarketService {
 
     }
 
+    // 📉 가격을 내리면 전 가격을 남기고 찜한 사람들에게 알림, 다시 올리면(전 가격 이상) 표시를 지움
+    private void priceChanged(Long id, Map<String, Object> before, Draft d) {
+
+        if (before == null) return;
+        Long old = num(before.get("price"));
+        Long prev = num(before.get("prevPrice"));
+
+        if (MarketRules.priceDropped(old, d.price())) {
+            marketDao.setPrevPrice(id, prev != null && prev > old ? prev : old);   // 여러 번 내려도 처음 가격을 기억
+            if (!"SALE".equals(before.get("status")) && !"RESERVED".equals(before.get("status"))) return;
+            for (Long liker : marketDao.selectLikers(id)) {
+                notificationService.notify(liker, "MARKET", "📉 찜한 상품 가격이 내렸어요",
+                        d.title() + " · " + priceText(old) + " → " + priceText(d.price()), "/market/" + id, "MARKET_DROP:" + id + ":" + d.price());
+            }
+        } else if (prev != null && d.price() >= prev) {
+            marketDao.setPrevPrice(id, null);
+        }
+
+    }
+
     public void status(Long me, Long id, String status) {
 
         Map<String, Object> item = marketDao.selectItem(id, me);
         if (item == null || !me.equals(num(item.get("sellerId")))) throw new IllegalArgumentException("내 상품만 바꿀 수 있어요.");
         String to = status == null ? "" : status.toUpperCase(Locale.ROOT);
         if (!MarketRules.canChange(String.valueOf(item.get("status")), to)) throw new IllegalArgumentException("바꿀 수 없는 상태예요.");
+        if ("SOLD".equals(item.get("status")) && marketDao.countItemReviews(id) > 0) throw new IllegalArgumentException("후기가 남겨진 거래는 되돌릴 수 없어요.");
         marketDao.updateStatus(id, me, to);
+
+    }
+
+    // ============================================
+    // ⭐ 거래 완료 · 후기
+    // ============================================
+    // 판매완료 때 고를 "거래한 사람" 후보 = 이 상품으로 채팅을 건 사람들
+    public Map<String, Object> buyers(Long me, Long id) {
+
+        mine(me, id);
+        return Map.of("buyers", marketDao.selectChatBuyers(id));
+
+    }
+
+    // 판매완료 (+ 거래한 사람, 안 골라도 됨) → 고른 사람에게 후기 요청 알림
+    public void sold(Long me, Long id, Long buyerId) {
+
+        Map<String, Object> item = mine(me, id);
+        if ("HIDDEN".equals(item.get("status"))) throw new IllegalArgumentException("숨겨진 상품은 바꿀 수 없어요.");
+        if (marketDao.countItemReviews(id) > 0) throw new IllegalArgumentException("후기가 남겨진 거래는 바꿀 수 없어요.");
+
+        if (buyerId != null) {
+            boolean chatted = marketDao.selectChatBuyers(id).stream().anyMatch((b) -> buyerId.equals(num(b.get("userId"))));
+            if (!chatted) throw new IllegalArgumentException("이 상품으로 채팅한 사람 중에서 골라주세요.");
+        }
+
+        if (marketDao.markSold(id, me, buyerId) == 0) throw new IllegalArgumentException("바꿀 수 없는 상품이에요.");
+
+        if (buyerId != null) {
+            notificationService.notify(buyerId, "MARKET", "🤝 거래는 어떠셨나요?",
+                    item.get("title") + " · 판매자에게 후기를 남겨주세요", "/market/" + id, "MARKET_SOLD:" + id + ":" + buyerId);
+        }
+
+    }
+
+    // 후기 남기기 (판매자 ↔ 거래한 사람, 한 거래에 한 번씩) { rating 1~3, tags[], comment }
+    public void review(Long me, Long id, Map<String, Object> in) {
+
+        Map<String, Object> item = marketDao.selectItem(id, me);
+        if (item == null) throw new NoSuchElementException("없거나 지워진 상품이에요.");
+        if (!"SOLD".equals(item.get("status"))) throw new IllegalArgumentException("판매완료된 거래에만 후기를 남길 수 있어요.");
+
+        Long sellerId = num(item.get("sellerId"));
+        Long buyerId = num(item.get("buyerId"));
+        if (buyerId == null) throw new IllegalArgumentException("판매자가 거래한 사람을 아직 고르지 않았어요.");
+
+        boolean seller = sellerId.equals(me);
+        if (!seller && !buyerId.equals(me)) throw new IllegalArgumentException("거래한 두 사람만 후기를 남길 수 있어요.");
+
+        int rating = in.get("rating") instanceof Number n ? n.intValue() : 0;
+        if (rating < 1 || rating > 3) throw new IllegalArgumentException("거래가 어땠는지 골라주세요.");
+
+        Long target = seller ? buyerId : sellerId;
+        Map<String, Object> row = new HashMap<>();
+        row.put("itemId", id);
+        row.put("writerId", me);
+        row.put("targetId", target);
+        row.put("writerRole", seller ? "SELLER" : "BUYER");
+        row.put("rating", rating);
+        row.put("tags", MarketRules.reviewTags(rating, in.get("tags")));
+        row.put("comment", MarketRules.reviewComment(in.get("comment")));
+        if (marketDao.insertReview(row) == 0) throw new IllegalArgumentException("이미 후기를 남겼어요.");
+
+        // 별로예요는 조용히 온도에만 반영 (받은 사람에게 알리지 않음)
+        if (rating >= 2) {
+            notificationService.notify(target, "MARKET", "⭐ 거래 후기가 도착했어요",
+                    item.get("title") + " · " + (rating == 3 ? "좋아요" : "보통이에요"), "/market/user/" + target, "MARKET_REVIEW:" + id + ":" + me);
+        }
+
+    }
+
+    // ============================================
+    // 🔔 키워드 알림
+    // ============================================
+    public Map<String, Object> addKeyword(Long me, String raw) {
+
+        String k = MarketRules.alertKeyword(raw);
+        List<String> now = marketDao.selectKeywords(me);
+        if (!now.contains(k) && now.size() >= MarketRules.MAX_KEYWORDS) throw new IllegalArgumentException("키워드는 " + MarketRules.MAX_KEYWORDS + "개까지 등록할 수 있어요.");
+        marketDao.insertKeyword(me, k);
+        return Map.of("keywords", marketDao.selectKeywords(me));
+
+    }
+
+    public Map<String, Object> removeKeyword(Long me, String raw) {
+
+        marketDao.deleteKeyword(me, raw == null ? "" : raw.strip());
+        return Map.of("keywords", marketDao.selectKeywords(me));
+
+    }
+
+    // ============================================
+    // 🛠 관리자: 신고된 · 숨겨진 상품
+    // ============================================
+    public Map<String, Object> reported() {
+
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> r : marketDao.selectReported()) {
+            Map<String, Object> m = new LinkedHashMap<>(r);
+            m.put("statusName", MarketRules.STATUSES.getOrDefault(String.valueOf(r.get("status")), ""));
+            m.put("thumb", r.get("photoId") == null ? null : "/api/market/photos/" + r.get("photoId") + "?thumb=1");
+            m.remove("photoId");
+            out.add(m);
+        }
+        return Map.of("items", out);
+
+    }
+
+    // 문제없음: 숨김을 풀고(판매중) 신고 기록을 지움 → 판매자에게 알림
+    @Transactional
+    public void restore(Long id) {
+
+        Map<String, Object> item = marketDao.selectItem(id, null);
+        if (item == null || marketDao.restore(id) == 0) throw new IllegalArgumentException("없거나 지워진 상품이에요.");
+        marketDao.deleteReports(id);
+
+        if ("HIDDEN".equals(item.get("status"))) {
+            notificationService.notify(num(item.get("sellerId")), "MARKET", "상품이 다시 보이게 됐어요",
+                    item.get("title") + " · 관리자가 확인했고 문제가 없었어요", "/market/" + id, "MARKET_RESTORE:" + id + ":" + System.currentTimeMillis() / 60000);
+        }
+
+    }
+
+    private Map<String, Object> mine(Long me, Long id) {
+
+        Map<String, Object> item = marketDao.selectItem(id, me);
+        if (item == null || !me.equals(num(item.get("sellerId")))) throw new IllegalArgumentException("내 상품만 바꿀 수 있어요.");
+        return item;
 
     }
 
@@ -391,8 +614,19 @@ public class MarketService {
     // ============================================
     static String introMessage(Long id, String title, Long price) {
 
-        String p = price == null || price == 0 ? "나눔" : String.format("%,d원", price);
-        return "🛍️ 상품 문의: " + title + " (" + p + ")\n/market/" + id;
+        return "🛍️ 상품 문의: " + title + " (" + priceText(price) + ")\n/market/" + id;
+
+    }
+
+    static String priceText(Long price) {
+
+        return price == null || price == 0 ? "나눔" : String.format("%,d원", price);
+
+    }
+
+    private static int intOf(Map<String, Object> m, String key) {
+
+        return m != null && m.get(key) instanceof Number n ? n.intValue() : 0;
 
     }
 

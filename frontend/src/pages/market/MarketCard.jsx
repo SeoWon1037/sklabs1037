@@ -1,5 +1,5 @@
 // ============================================
-// 🛍️ 상품 카드 (목록 한 칸) — 사진 · 제목 · 가격 · 지역·시간 · 찜/채팅 수
+// 🛍️ 상품 카드 (목록 한 칸) — 사진 · 제목 · 가격(📉 내렸으면 표시) · 지역·시간 · 찜/채팅 수
 // ============================================
 import { Link } from 'react-router-dom'
 import { CATEGORY_ICON, priceText, timeAgo } from './marketUtil'
@@ -18,7 +18,10 @@ function MarketCard({ item, now }) {
       </div>
       <div className="mk-card-body">
         <p className="mk-card-title">{item.title}</p>
-        <p className="mk-card-price">{priceText(item.price)}</p>
+        <p className="mk-card-price">
+          {priceText(item.price)}
+          {item.prevPrice > item.price && <span className="mk-drop" title={`전 가격 ${priceText(item.prevPrice)}`}>↓ 내림</span>}
+        </p>
         <p className="mk-card-meta">
           <span>{[item.region, timeAgo(item.bumpAt, now)].filter(Boolean).join(' · ')}</span>
           {(item.likes > 0 || item.chats > 0) && (

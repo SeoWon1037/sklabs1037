@@ -89,6 +89,65 @@ public final class MarketRules {
 
     }
 
+    // ============================================
+    // ⭐ 거래 후기 · 매너 온도
+    // ============================================
+    public static final int MAX_KEYWORDS = 10;
+    public static final double BASE_TEMP = 36.5;
+
+    // 후기에서 고를 수 있는 말 (좋았던 점 / 아쉬웠던 점)
+    public static final List<String> GOOD_TAGS = List.of("시간 약속을 잘 지켜요", "친절하고 매너가 좋아요", "응답이 빨라요", "상품 상태가 설명과 같아요", "좋은 상품을 저렴하게 주셨어요");
+    public static final List<String> BAD_TAGS = List.of("약속 시간에 늦었어요", "응답이 느려요", "설명과 상품이 달라요", "불친절해요", "약속 장소에 나오지 않았어요");
+
+    // 매너 온도: 36.5도에서 시작, 좋아요 +0.5 · 보통 +0.1 · 별로예요 −1.0 (0~99.9, 소수 한 자리)
+    public static double temperature(int good, int ok, int bad) {
+
+        double t = BASE_TEMP + 0.5 * Math.max(0, good) + 0.1 * Math.max(0, ok) - 1.0 * Math.max(0, bad);
+        return Math.round(Math.max(0, Math.min(99.9, t)) * 10) / 10.0;
+
+    }
+
+    // 고른 말 정리: 점수에 맞는 목록에 있는 것만, 겹치지 않게 3개까지 → "a,b" (없으면 null)
+    public static String reviewTags(int rating, Object raw) {
+
+        List<String> allowed = rating == 1 ? BAD_TAGS : GOOD_TAGS;
+        List<String> out = new ArrayList<>();
+        if (raw instanceof List<?> l) {
+            for (Object o : l) {
+                String t = str(o);
+                if (allowed.contains(t) && !out.contains(t) && out.size() < 3) out.add(t);
+            }
+        }
+        return out.isEmpty() ? null : String.join(",", out);
+
+    }
+
+    // 후기 한마디: 300자까지 (없으면 null)
+    public static String reviewComment(Object raw) {
+
+        String c = str(raw).replace("\r\n", "\n").replaceAll("\n{3,}", "\n\n");
+        if (c.length() > 300) c = c.substring(0, 300);
+        return c.isEmpty() ? null : c;
+
+    }
+
+    // 알림 키워드 정리: 2~20자, LIKE 특수문자 제거 (못 쓰면 예외)
+    public static String alertKeyword(String raw) {
+
+        String k = keyword(raw);
+        if (k.length() < 2) throw new IllegalArgumentException("키워드는 2자 이상 적어주세요.");
+        if (k.length() > 20) throw new IllegalArgumentException("키워드는 20자까지예요.");
+        return k;
+
+    }
+
+    // 가격을 내렸는지 (나눔으로 바꾼 것도 내림)
+    public static boolean priceDropped(Long before, long after) {
+
+        return before != null && after < before;
+
+    }
+
     // 금지 품목 이름 (없으면 null)
     public static String banned(String text) {
 

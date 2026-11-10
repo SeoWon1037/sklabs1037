@@ -69,4 +69,50 @@ public interface MarketDao {
 
     // 신고 수 +1, limit 이상이면 숨김 → 지금 신고 수
     Integer addReport(@Param("itemId") Long itemId, @Param("limit") int limit);
+
+    // ===== 거래 완료 · 후기 =====
+    // 이 상품으로 채팅을 건 사람들 { userId, nickname }
+    List<Map<String, Object>> selectChatBuyers(Long itemId);
+
+    // 판매완료 + 거래한 사람 (buyerId는 null 가능)
+    int markSold(@Param("id") Long id, @Param("sellerId") Long sellerId, @Param("buyerId") Long buyerId);
+
+    Long selectBuyerId(Long itemId);
+
+    int insertReview(Map<String, Object> review);
+
+    // 이 거래에 남겨진 후기 수 (있으면 판매완료를 되돌릴 수 없음)
+    int countItemReviews(Long itemId);
+
+    int countReview(@Param("itemId") Long itemId, @Param("writerId") Long writerId);
+
+    // 받은 후기 수 { good, ok, bad }
+    Map<String, Object> selectReviewStats(Long userId);
+
+    // 받은 후기 (최근 것부터) { rating, tags, comment, writerName, writerRole, itemTitle, at }
+    List<Map<String, Object>> selectReviews(@Param("userId") Long userId, @Param("limit") int limit);
+
+    // ===== 키워드 알림 =====
+    List<String> selectKeywords(Long userId);
+
+    int insertKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
+
+    int deleteKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
+
+    // 제목에 내 키워드가 들어간 회원들 { userId, keyword } (판매자 제외)
+    List<Map<String, Object>> selectKeywordMatches(@Param("title") String title, @Param("sellerId") Long sellerId);
+
+    // ===== 가격 내림 =====
+    int setPrevPrice(@Param("id") Long id, @Param("prevPrice") Long prevPrice);
+
+    List<Long> selectLikers(Long itemId);
+
+    // ===== 관리자 =====
+    // 신고가 있거나 숨겨진 상품 (최근 신고 이유 포함)
+    List<Map<String, Object>> selectReported();
+
+    // 숨김 풀기: 판매중으로 + 신고 기록 지움
+    int restore(Long id);
+
+    int deleteReports(Long itemId);
 }

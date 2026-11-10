@@ -34,6 +34,14 @@ import java.util.function.Supplier;
  *   POST /api/market/items/{id}/chat              판매자와 채팅 시작 → { roomId } → /messages?room=
  *   POST /api/market/items/{id}/report { reason } 신고
  *   POST /api/market/ai-write { name, memo }      ✨ AI 글쓰기 도우미
+ *   GET  /api/market/users/{id}                   판매자 프로필: 매너 온도 · 받은 후기 · 판매 상품 (누구나)
+ *   GET  /api/market/items/{id}/buyers            판매완료 때 고를 "거래한 사람" 후보 (판매자)
+ *   POST /api/market/items/{id}/sold { buyerId }  판매완료 + 거래한 사람 (buyerId 없어도 됨)
+ *   POST /api/market/items/{id}/review { rating, tags[], comment }   거래 후기 (판매자 ↔ 거래한 사람)
+ *   POST /api/market/keywords { keyword }         🔔 키워드 알림 등록 (10개까지)
+ *   POST /api/market/keywords/delete { keyword }  키워드 지우기
+ *   GET  /api/market/admin/reported               🛠 신고된 · 숨겨진 상품 (관리자)
+ *   POST /api/market/admin/{id}/restore           🛠 숨김 풀기 + 신고 기록 지움 (관리자)
  */
 @Slf4j
 @RestController
@@ -195,6 +203,89 @@ public class MarketController {
         if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 쓸 수 있어요.");
         return run("AI 글쓰기", () -> marketService.aiWrite(me, body.get("name") == null ? null : String.valueOf(body.get("name")),
                 body.get("memo") == null ? null : String.valueOf(body.get("memo"))));
+
+    }
+
+    // ============================================
+    // ⭐ 거래 후기 · 프로필 · 🔔 키워드
+    // ============================================
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<Map<String, Object>> profile(@PathVariable Long userId) {
+
+        return run("프로필", () -> marketService.profile(userId));
+
+    }
+
+    @GetMapping("/items/{id}/buyers")
+    public ResponseEntity<Map<String, Object>> buyers(@PathVariable Long id, HttpServletRequest request) {
+
+        Long me = userId(request);
+        if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+        return run("거래한 사람 목록", () -> marketService.buyers(me, id));
+
+    }
+
+    @PostMapping("/items/{id}/sold")
+    public ResponseEntity<Map<String, Object>> sold(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
+
+        Long me = userId(request);
+        if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+        return run("판매완료", () -> {
+            marketService.sold(me, id, body.get("buyerId") instanceof Number n ? Long.valueOf(n.longValue()) : null);
+            return Map.of();
+        });
+
+    }
+
+    @PostMapping("/items/{id}/review")
+    public ResponseEntity<Map<String, Object>> review(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
+
+        Long me = userId(request);
+        if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 후기를 남길 수 있어요.");
+        return run("후기 남기기", () -> {
+            marketService.review(me, id, body);
+            return Map.of();
+        });
+
+    }
+
+    @PostMapping("/keywords")
+    public ResponseEntity<Map<String, Object>> addKeyword(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+
+        Long me = userId(request);
+        if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+        return run("키워드 등록", () -> marketService.addKeyword(me, body.get("keyword") == null ? null : String.valueOf(body.get("keyword"))));
+
+    }
+
+    @PostMapping("/keywords/delete")
+    public ResponseEntity<Map<String, Object>> removeKeyword(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+
+        Long me = userId(request);
+        if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+        return run("키워드 지우기", () -> marketService.removeKeyword(me, body.get("keyword") == null ? null : String.valueOf(body.get("keyword"))));
+
+    }
+
+    // ============================================
+    // 🛠 관리자
+    // ============================================
+    @GetMapping("/admin/reported")
+    public ResponseEntity<Map<String, Object>> reported(HttpServletRequest request) {
+
+        if (!isAdmin(userId(request))) return fail(HttpStatus.FORBIDDEN, "관리자만 볼 수 있어요.");
+        return run("신고된 상품", marketService::reported);
+
+    }
+
+    @PostMapping("/admin/{id}/restore")
+    public ResponseEntity<Map<String, Object>> restore(@PathVariable Long id, HttpServletRequest request) {
+
+        if (!isAdmin(userId(request))) return fail(HttpStatus.FORBIDDEN, "관리자만 할 수 있어요.");
+        return run("숨김 풀기", () -> {
+            marketService.restore(id);
+            return Map.of();
+        });
 
     }
 

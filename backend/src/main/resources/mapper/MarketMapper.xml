@@ -22,6 +22,7 @@
                ,(EXTRACT(EPOCH FROM I.BUMP_DAY) * 1000)::BIGINT AS "bumpAt"
                ,(EXTRACT(EPOCH FROM I.INS_DAY) * 1000)::BIGINT  AS "insAt"
                ,(SELECT P.ID FROM T_MARKET_PHOTO P WHERE P.ITEM_ID = I.ID ORDER BY P.ORD, P.ID LIMIT 1) AS "photoId"
+               ,I.PREV_PRICE                                    AS "prevPrice"
     </sql>
 
     <insert id="insertItem" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
@@ -50,6 +51,8 @@
         <include refid="itemCols"/>
                ,I.DESCRIPTION                                   AS "description"
                ,I.REPORT_CNT                                    AS "reports"
+               ,I.BUYER_ID                                      AS "buyerId"
+               ,(SELECT B.NICKNAME FROM T_USER B WHERE B.ID = I.BUYER_ID) AS "buyerName"
         <choose>
             <when test="me != null">
                ,EXISTS (SELECT 1 FROM T_MARKET_LIKE L WHERE L.ITEM_ID = I.ID AND L.USER_ID = #{me}) AS "liked"
@@ -118,8 +121,9 @@
 
     <update id="updateStatus">
         UPDATE T_MARKET_ITEM
-           SET  STATUS  = #{status}
-               ,UPD_DAY = NOW()
+           SET  STATUS   = #{status}
+               ,BUYER_ID = CASE WHEN #{status} = 'SOLD' THEN BUYER_ID ELSE NULL END
+               ,UPD_DAY  = NOW()
          WHERE 1=1
            AND ID = #{id}
            AND SELLER_ID = #{sellerId}
@@ -243,4 +247,141 @@
          WHERE ID = #{itemId}
         RETURNING REPORT_CNT
     </select>
+
+    <!-- ===== 거래 완료 · 후기 ===== -->
+    <select id="selectChatBuyers" resultType="java.util.LinkedHashMap">
+        SELECT  U.ID            AS "userId"
+               ,U.NICKNAME      AS "nickname"
+          FROM T_MARKET_CHAT C
+          JOIN T_USER U ON U.ID = C.BUYER_ID
+         WHERE 1=1
+           AND C.ITEM_ID = #{itemId}
+           AND U.DEL_DAY IS NULL
+         ORDER BY C.INS_DAY DESC
+         LIMIT 30
+    </select>
+
+    <update id="markSold">
+        UPDATE T_MARKET_ITEM
+           SET  STATUS   = 'SOLD'
+               ,BUYER_ID = #{buyerId,jdbcType=BIGINT}
+               ,UPD_DAY  = NOW()
+         WHERE 1=1
+           AND ID = #{id}
+           AND SELLER_ID = #{sellerId}
+           AND DEL_DAY IS NULL
+           AND STATUS &lt;&gt; 'HIDDEN'
+    </update>
+
+    <select id="selectBuyerId" resultType="java.lang.Long">
+        SELECT BUYER_ID FROM T_MARKET_ITEM WHERE ID = #{itemId}
+    </select>
+
+    <insert id="insertReview" parameterType="java.util.Map">
+        INSERT INTO T_MARKET_REVIEW (ITEM_ID, WRITER_ID, TARGET_ID, WRITER_ROLE, RATING, TAGS, COMMENT)
+        VALUES (#{itemId}, #{writerId}, #{targetId}, #{writerRole}, #{rating}, #{tags,jdbcType=VARCHAR}, #{comment,jdbcType=VARCHAR})
+        ON CONFLICT (ITEM_ID, WRITER_ID) DO NOTHING
+    </insert>
+
+    <select id="countItemReviews" resultType="int">
+        SELECT COUNT(*) FROM T_MARKET_REVIEW WHERE ITEM_ID = #{itemId}
+    </select>
+
+    <select id="countReview" resultType="int">
+        SELECT COUNT(*) FROM T_MARKET_REVIEW WHERE ITEM_ID = #{itemId} AND WRITER_ID = #{writerId}
+    </select>
+
+    <select id="selectReviewStats" resultType="java.util.LinkedHashMap">
+        SELECT  COUNT(*) FILTER (WHERE RATING = 3)::INT  AS "good"
+               ,COUNT(*) FILTER (WHERE RATING = 2)::INT  AS "ok"
+               ,COUNT(*) FILTER (WHERE RATING = 1)::INT  AS "bad"
+          FROM T_MARKET_REVIEW
+         WHERE TARGET_ID = #{userId}
+    </select>
+
+    <select id="selectReviews" resultType="java.util.LinkedHashMap">
+        SELECT  R.RATING                                        AS "rating"
+               ,R.TAGS                                          AS "tags"
+               ,R.COMMENT                                       AS "comment"
+               ,R.WRITER_ROLE                                   AS "writerRole"
+               ,W.NICKNAME                                      AS "writerName"
+               ,I.TITLE                                         AS "itemTitle"
+               ,(EXTRACT(EPOCH FROM R.INS_DAY) * 1000)::BIGINT  AS "at"
+          FROM T_MARKET_REVIEW R
+          JOIN T_USER W ON W.ID = R.WRITER_ID
+          JOIN T_MARKET_ITEM I ON I.ID = R.ITEM_ID
+         WHERE R.TARGET_ID = #{userId}
+         ORDER BY R.ID DESC
+         LIMIT #{limit}
+    </select>
+
+    <!-- ===== 키워드 알림 ===== -->
+    <select id="selectKeywords" resultType="java.lang.String">
+        SELECT KEYWORD FROM T_MARKET_KEYWORD WHERE USER_ID = #{userId} ORDER BY INS_DAY
+    </select>
+
+    <insert id="insertKeyword">
+        INSERT INTO T_MARKET_KEYWORD (USER_ID, KEYWORD) VALUES (#{userId}, #{keyword})
+        ON CONFLICT (USER_ID, KEYWORD) DO NOTHING
+    </insert>
+
+    <delete id="deleteKeyword">
+        DELETE FROM T_MARKET_KEYWORD WHERE USER_ID = #{userId} AND KEYWORD = #{keyword}
+    </delete>
+
+    <!-- 한 사람에 알림 하나 (여러 키워드가 맞아도 처음 것만) -->
+    <select id="selectKeywordMatches" resultType="java.util.LinkedHashMap">
+        SELECT  K.USER_ID       AS "userId"
+               ,MIN(K.KEYWORD)  AS "keyword"
+          FROM T_MARKET_KEYWORD K
+          JOIN T_USER U ON U.ID = K.USER_ID
+         WHERE 1=1
+           AND U.DEL_DAY IS NULL
+           AND K.USER_ID &lt;&gt; #{sellerId}
+           AND POSITION(LOWER(K.KEYWORD) IN LOWER(#{title})) &gt; 0
+         GROUP BY K.USER_ID
+         LIMIT 300
+    </select>
+
+    <!-- ===== 가격 내림 ===== -->
+    <update id="setPrevPrice">
+        UPDATE T_MARKET_ITEM SET PREV_PRICE = #{prevPrice,jdbcType=BIGINT} WHERE ID = #{id}
+    </update>
+
+    <select id="selectLikers" resultType="java.lang.Long">
+        SELECT USER_ID FROM T_MARKET_LIKE WHERE ITEM_ID = #{itemId} LIMIT 300
+    </select>
+
+    <!-- ===== 관리자 ===== -->
+    <select id="selectReported" resultType="java.util.LinkedHashMap">
+        SELECT  I.ID                                            AS "id"
+               ,I.TITLE                                         AS "title"
+               ,I.PRICE                                         AS "price"
+               ,I.STATUS                                        AS "status"
+               ,I.REPORT_CNT                                    AS "reports"
+               ,U.NICKNAME                                      AS "sellerName"
+               ,(EXTRACT(EPOCH FROM I.INS_DAY) * 1000)::BIGINT  AS "insAt"
+               ,(SELECT STRING_AGG(R.REASON, ' / ' ORDER BY R.INS_DAY DESC) FROM T_MARKET_REPORT R WHERE R.ITEM_ID = I.ID) AS "reasons"
+               ,(SELECT P.ID FROM T_MARKET_PHOTO P WHERE P.ITEM_ID = I.ID ORDER BY P.ORD, P.ID LIMIT 1) AS "photoId"
+          FROM T_MARKET_ITEM I
+          JOIN T_USER U ON U.ID = I.SELLER_ID
+         WHERE 1=1
+           AND I.DEL_DAY IS NULL
+           AND (I.REPORT_CNT &gt; 0 OR I.STATUS = 'HIDDEN')
+         ORDER BY (I.STATUS = 'HIDDEN') DESC, I.REPORT_CNT DESC, I.ID DESC
+         LIMIT 100
+    </select>
+
+    <update id="restore">
+        UPDATE T_MARKET_ITEM
+           SET  STATUS     = CASE WHEN STATUS = 'HIDDEN' THEN 'SALE' ELSE STATUS END
+               ,REPORT_CNT = 0
+               ,UPD_DAY    = NOW()
+         WHERE ID = #{id}
+           AND DEL_DAY IS NULL
+    </update>
+
+    <delete id="deleteReports">
+        DELETE FROM T_MARKET_REPORT WHERE ITEM_ID = #{itemId}
+    </delete>
 </mapper>

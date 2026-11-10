@@ -4,12 +4,13 @@
 // - 상품을 누르면 상세 → [채팅하기]로 판매자와 1:1 메시지
 // - [판매하기] → /market/new (로그인 필요)
 // - 검색 조건은 주소에 남김 (?c=DIGITAL&q=아이폰&sort=LOW) → 뒤로 가기·공유해도 그대로
+// - 🕘 최근 본 상품: 이 브라우저에 남긴 12개를 목록 아래에 한 줄로 (조건 없이 볼 때만)
 // - 백엔드: GET /api/market/items
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import MarketCard from './MarketCard'
-import { CATEGORIES, SORTS, getJson } from './marketUtil'
+import { CATEGORIES, CATEGORY_ICON, SORTS, clearRecent, getJson, priceText, readRecent } from './marketUtil'
 import './Market.css'
 
 // 목록 요청 주소
@@ -38,6 +39,7 @@ function MarketPage() {
   const [error, setError] = useState('')
   const [now, setNow] = useState(0)
   const [keyword, setKeyword] = useState(q)
+  const [recent, setRecent] = useState(readRecent)
 
   // 조건이 바뀌면 처음부터
   useEffect(() => {
@@ -142,6 +144,26 @@ function MarketPage() {
             </button>
           )}
         </>
+      )}
+
+      {!filtered && recent.length > 0 && (
+        <section className="mk-recent" aria-label="최근 본 상품">
+          <div className="mk-recent-head">
+            <h2>🕘 최근 본 상품</h2>
+            <button type="button" className="mk-link-btn" onClick={() => { clearRecent(); setRecent([]) }}>지우기</button>
+          </div>
+          <div className="mk-recent-row">
+            {recent.map((r) => (
+              <Link key={r.id} to={`/market/${r.id}`} className="mk-recent-item">
+                <span className="mk-thumb">
+                  {r.thumb ? <img src={r.thumb} alt="" loading="lazy" /> : <span className="mk-thumb-empty" aria-hidden="true">{CATEGORY_ICON[r.category] ?? '📦'}</span>}
+                </span>
+                <span className="mk-recent-title">{r.title}</span>
+                <b>{priceText(r.price)}</b>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       <p className="mk-safe">

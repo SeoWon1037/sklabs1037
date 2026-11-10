@@ -1,17 +1,19 @@
 // ============================================
-// 🛍️ 내 장터 (주소: /market/my, 로그인 필요) — 내 판매 목록 / 찜한 상품
-// - 백엔드: GET /api/market/my
+// 🛍️ 내 장터 (주소: /market/my, 로그인 필요) — 내 판매 목록 / 찜한 상품 / 🔔 키워드 알림
+// - 키워드 알림: 등록한 낱말이 제목에 들어간 새 상품이 올라오면 알림 (10개까지)
+// - 백엔드: GET /api/market/my, POST /api/market/keywords | keywords/delete
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import MarketCard from './MarketCard'
+import { postJson } from './marketUtil'
 import './Market.css'
 
 function MarketMyPage() {
 
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'likes' ? 'likes' : 'selling'
+  const tab = ['likes', 'keywords'].includes(params.get('tab')) ? params.get('tab') : 'selling'
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [now, setNow] = useState(0)
@@ -33,7 +35,22 @@ function MarketMyPage() {
     return () => { ignore = true }
   }, [navigate])
 
-  const list = data?.[tab] ?? []
+  const [word, setWord] = useState('')
+  const [kwError, setKwError] = useState('')
+
+  const changeKeyword = async (url, keyword) => {
+    const j = await postJson(url, { keyword })
+    if (!j.success) return setKwError(j.message)
+    setKwError('')
+    setWord('')
+    setData((prev) => ({ ...prev, keywords: j.keywords }))
+  }
+  const addKeyword = (e) => {
+    e.preventDefault()
+    if (word.trim().length >= 2) changeKeyword('/api/market/keywords', word.trim())
+  }
+
+  const list = tab === 'keywords' ? [] : data?.[tab] ?? []
 
   return (
     <main className="mk-page">
@@ -50,12 +67,35 @@ function MarketMyPage() {
         <button type="button" role="tab" aria-selected={tab === 'likes'} className={tab === 'likes' ? 'mk-tab-on' : ''} onClick={() => setParams({ tab: 'likes' }, { replace: true })}>
           찜한 상품 {data && <b>{data.likes.length}</b>}
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'keywords'} className={tab === 'keywords' ? 'mk-tab-on' : ''} onClick={() => setParams({ tab: 'keywords' }, { replace: true })}>
+          🔔 키워드 {data && <b>{data.keywords?.length ?? 0}</b>}
+        </button>
       </div>
 
       {error && <p className="mk-error" role="alert">{error}</p>}
       {!error && !data && <p className="mk-muted">불러오는 중...</p>}
 
-      {data && list.length === 0 && (
+      {data && tab === 'keywords' && (
+        <section className="mk-kw">
+          <p className="mk-muted">찾는 물건의 낱말을 등록해 두면, 제목에 그 낱말이 들어간 새 상품이 올라올 때 🔔 알림으로 알려드려요. ({data.keywords?.length ?? 0}/{data.maxKeywords ?? 10})</p>
+          <form className="mk-report-form" onSubmit={addKeyword}>
+            <input value={word} onChange={(e) => setWord(e.target.value)} placeholder="예: 아이폰, 자전거, 에어팟" maxLength={20} aria-label="알림 받을 키워드" enterKeyHint="done" />
+            <button type="submit" className="mk-btn" disabled={word.trim().length < 2}>등록</button>
+          </form>
+          {kwError && <p className="mk-error" role="alert">{kwError}</p>}
+          <ul className="mk-kw-list">
+            {(data.keywords ?? []).map((k) => (
+              <li key={k}>
+                <Link to={`/?q=${encodeURIComponent(k)}`}>{k}</Link>
+                <button type="button" onClick={() => changeKeyword('/api/market/keywords/delete', k)} aria-label={`${k} 키워드 지우기`}>✕</button>
+              </li>
+            ))}
+          </ul>
+          {(data.keywords ?? []).length === 0 && <p className="mk-muted">아직 등록한 키워드가 없어요.</p>}
+        </section>
+      )}
+
+      {data && tab !== 'keywords' && list.length === 0 && (
         <div className="mk-empty">
           <span aria-hidden="true">{tab === 'likes' ? '♡' : '🧺'}</span>
           <strong>{tab === 'likes' ? '찜한 상품이 없어요' : '아직 올린 상품이 없어요'}</strong>

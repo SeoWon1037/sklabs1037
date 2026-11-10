@@ -52,6 +52,8 @@ import MarketPage from './pages/market/MarketPage'
 import MarketItemPage from './pages/market/MarketItemPage'
 import MarketWritePage from './pages/market/MarketWritePage'
 import MarketMyPage from './pages/market/MarketMyPage'
+import MarketUserPage from './pages/market/MarketUserPage'
+import AdminMarketPage from './pages/admin/AdminMarketPage'
 
 function App() {
 
@@ -70,6 +72,7 @@ function App() {
         <Route path="/market" element={<MarketPage />} />                {/* 🛍️ 장터 (같은 화면) */}
         <Route path="/market/new" element={<MarketWritePage />} />       {/* 🛍️ 상품 올리기 */}
         <Route path="/market/my" element={<MarketMyPage />} />           {/* 🛍️ 내 판매 목록 · 찜 */}
+        <Route path="/market/user/:id" element={<MarketUserPage />} />   {/* 🛍️ 판매자 프로필: 매너 온도 · 받은 후기 · 판매 상품 */}
         <Route path="/market/:id" element={<MarketItemPage />} />        {/* 🛍️ 상품 상세 → 채팅하기 */}
         <Route path="/market/:id/edit" element={<MarketWritePage />} />  {/* 🛍️ 상품 고치기 */}
         <Route path="/invest" element={<MainPage />} />                  {/* 📈 투자 홈 (뉴스 · 시세 · 날씨 — 예전 첫 화면) */}
@@ -97,6 +100,7 @@ function App() {
         <Route path="/admin/server" element={<AdminServerPage />} />     {/* 관리자: 🖥 서버 상태 (운영 서버 + DB, 5초마다) */}
         <Route path="/status" element={<StatusPage />} />              {/* 🟢 서비스 상태 (누구나) */}
         <Route path="/calendar" element={<MarketCalendarPage />} />     {/* 📅 증시 일정 (휴장 · FOMC · 금통위 · 만기일) */}
+        <Route path="/admin/market" element={<AdminMarketPage />} />    {/* 관리자: 🛍️ 장터 관리 (신고된 · 숨겨진 상품) */}
         <Route path="/admin/stats" element={<AdminStatsPage />} />      {/* 관리자: 📊 사용 통계 */}
         <Route path="/admin/ai-cost" element={<AdminAiCostPage />} />   {/* 관리자: 💸 AI 비용 (하루 한도 · 긴급 정지) */}
         <Route path="/admin/api" element={<AdminApiPage />} />           {/* 관리자: 🔌 외부 연동 (토스·Claude·메일… 호출 기록) */}

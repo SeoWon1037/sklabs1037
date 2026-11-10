@@ -4,12 +4,14 @@
 // - 사는 사람: [채팅하기] → 판매자와 1:1 메시지 (/messages?room=) · ♥ 찜 · 신고
 // - 판매자: 판매중/예약중/판매완료 · 끌어올리기(24시간에 한 번) · 수정 · 삭제
 // - 관리자: 어떤 상품이든 삭제
-// - 백엔드: GET /api/market/items/{id}, POST …/like | chat | status | bump | delete | report
+// - ⭐ 판매완료를 누르면 "누구와 거래했나요?"(채팅한 사람 중에서) → 두 사람이 서로 후기 → 매너 온도
+// - 📉 가격을 내렸으면 전 가격 표시 · 🔗 공유(휴대폰은 공유 시트, PC는 주소 복사) · 🕘 최근 본 상품에 기록
+// - 백엔드: GET /api/market/items/{id} | …/buyers, POST …/like | chat | status | sold | review | bump | delete | report
 // ============================================
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import MarketCard from './MarketCard'
-import { CATEGORY_ICON, getJson, postJson, priceText, timeAgo } from './marketUtil'
+import { BAD_TAGS, CATEGORY_ICON, GOOD_TAGS, RATINGS, getJson, postJson, priceText, pushRecent, tempLook, timeAgo } from './marketUtil'
 import './Market.css'
 
 const STATUS_BUTTONS = [['SALE', '판매중'], ['RESERVED', '예약중'], ['SOLD', '판매완료']]
@@ -50,6 +52,82 @@ function Gallery({ photos, title, category }) {
   )
 }
 
+// 판매자 카드 속 매너 온도 (숫자 + 막대)
+export function Temp({ temp }) {
+
+  const { color, face } = tempLook(temp)
+  return (
+    <span className="mk-temp" style={{ '--temp': color }} title="매너 온도: 받은 거래 후기로 계산해요 (36.5도에서 시작)">
+      <b>{Number(temp).toFixed(1)}℃ <i aria-hidden="true">{face}</i></b>
+      <span className="mk-temp-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, Number(temp))}%` }} /></span>
+    </span>
+  )
+}
+
+// ⭐ 거래 후기 쓰기 (판매자 ↔ 거래한 사람)
+function ReviewForm({ who, busy, onSubmit }) {
+
+  const [rating, setRating] = useState(0)
+  const [tags, setTags] = useState([])
+  const [comment, setComment] = useState('')
+  const options = rating === 1 ? BAD_TAGS : GOOD_TAGS
+
+  const pick = (r) => {
+    setRating(r)
+    setTags([])
+  }
+  const toggle = (t) => setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : prev.length < 3 ? [...prev, t] : prev))
+
+  return (
+    <div className="mk-review-form">
+      <strong>⭐ {who}님과의 거래는 어떠셨나요?</strong>
+      <div className="mk-rating" role="group" aria-label="거래 평가">
+        {RATINGS.map(([value, face, label]) => (
+          <button key={value} type="button" className={rating === value ? 'mk-rating-on' : ''} aria-pressed={rating === value} onClick={() => pick(value)}>
+            <i aria-hidden="true">{face}</i>{label}
+          </button>
+        ))}
+      </div>
+      {rating > 0 && (
+        <>
+          <div className="mk-chips">
+            {options.map((t) => (
+              <button key={t} type="button" className={tags.includes(t) ? 'mk-chip-on' : ''} aria-pressed={tags.includes(t)} onClick={() => toggle(t)}>{t}</button>
+            ))}
+          </div>
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} maxLength={300}
+            placeholder={rating === 1 ? '어떤 점이 아쉬웠나요? (선택 · 상대에게 알림은 가지 않아요)' : '한마디 남기기 (선택)'} aria-label="후기 한마디" />
+          <button type="button" className="mk-chat" disabled={busy} onClick={() => onSubmit({ rating, tags, comment })}>후기 남기기</button>
+        </>
+      )}
+    </div>
+  )
+}
+
+// 판매완료: 누구와 거래했는지 고르기
+function SoldPicker({ buyers, busy, onPick, onCancel }) {
+
+  return (
+    <div className="mk-sold" role="group" aria-label="거래한 사람 고르기">
+      <strong>🤝 누구와 거래했나요?</strong>
+      <p className="mk-muted">고르면 두 분이 서로 후기를 남길 수 있어요.</p>
+      {buyers === null && <p className="mk-muted">불러오는 중...</p>}
+      {buyers?.length === 0 && <p className="mk-muted">이 상품으로 채팅한 사람이 아직 없어요.</p>}
+      <div className="mk-sold-list">
+        {buyers?.map((b) => (
+          <button key={b.userId} type="button" className="mk-btn" disabled={busy} onClick={() => onPick(b.userId)}>
+            <span className="mk-avatar mk-avatar-sm" aria-hidden="true">{String(b.nickname).slice(0, 1)}</span>{b.nickname}
+          </button>
+        ))}
+      </div>
+      <div className="mk-owner-row">
+        <button type="button" className="mk-btn" disabled={busy} onClick={() => onPick(null)}>고르지 않고 판매완료</button>
+        <button type="button" className="mk-btn" disabled={busy} onClick={onCancel}>취소</button>
+      </div>
+    </div>
+  )
+}
+
 function MarketItemPage() {
 
   const { id } = useParams()
@@ -61,6 +139,7 @@ function MarketItemPage() {
   const [now, setNow] = useState(0)
   const [reporting, setReporting] = useState(false)
   const [reason, setReason] = useState('')
+  const [buyers, setBuyers] = useState(undefined)   // undefined: 닫힘 / null: 불러오는 중 / []: 후보
 
   const load = useCallback(() => {
     return getJson(`/api/market/items/${id}`).then((j) => {
@@ -79,6 +158,8 @@ function MarketItemPage() {
       setError('')
       setItem(j)
       setNow(Date.now())
+      setBuyers(undefined)
+      pushRecent(j)
       window.scrollTo(0, 0)
     })
     return () => { ignore = true }
@@ -109,6 +190,34 @@ function MarketItemPage() {
     setNotice(j.hidden ? '신고가 접수돼 상품이 숨겨졌어요.' : '신고가 접수됐어요. 관리자가 확인할게요.')
   })
 
+  // 판매완료: 채팅한 사람이 있으면 누구와 거래했는지 먼저 물어봄
+  const openSold = async () => {
+    setBuyers(null)
+    const j = await getJson(`/api/market/items/${id}/buyers`)
+    setBuyers(j.success ? j.buyers : [])
+  }
+  const sold = (buyerId) => act('sold', '/sold', { buyerId }, () => {
+    setBuyers(undefined)
+    setNotice(buyerId ? '판매완료! 거래한 분께 후기 요청을 보냈어요.' : '판매완료로 바꿨어요.')
+    return load()
+  })
+  const review = (body) => act('review', '/review', body, () => {
+    setNotice('후기를 남겼어요. 고마워요!')
+    return load()
+  })
+
+  // 🔗 공유: 휴대폰은 공유 시트, 아니면 주소 복사
+  const share = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.share) await navigator.share({ title: item.title, text: `${item.title} · ${priceText(item.price)}`, url })
+      else {
+        await navigator.clipboard.writeText(url)
+        setNotice('주소를 복사했어요.')
+      }
+    } catch { /* 공유를 취소했거나 복사를 못 함 */ }
+  }
+
   if (error) {
     return (
       <main className="mk-page">
@@ -134,7 +243,11 @@ function MarketItemPage() {
         <section className="mk-info">
           {closed && <span className={`mk-badge mk-badge-inline mk-badge-${item.status}`}>{item.statusName}</span>}
           <h1>{item.title}</h1>
-          <p className="mk-price">{priceText(item.price)}</p>
+          <p className="mk-price">
+            {priceText(item.price)}
+            {item.prevPrice > item.price && <span className="mk-drop mk-drop-lg"><s>{priceText(item.prevPrice)}</s> ↓ 가격 내림</span>}
+            <button type="button" className="mk-share" onClick={share} aria-label="이 상품 공유하기">🔗 공유</button>
+          </p>
           <p className="mk-muted">{item.categoryName} · {timeAgo(item.bumpAt, now)} · 조회 {item.views} · 찜 {item.likes} · 채팅 {item.chats}</p>
 
           <ul className="mk-tags">
@@ -153,13 +266,14 @@ function MarketItemPage() {
             </div>
           )}
 
-          <div className="mk-seller">
+          <Link to={`/market/user/${item.seller?.id}`} className="mk-seller" aria-label={`${item.seller?.nickname}님 프로필 보기`}>
             <span className="mk-avatar" aria-hidden="true">{String(item.seller?.nickname ?? '?').slice(0, 1)}</span>
-            <span>
+            <span className="mk-seller-name">
               <b>{item.seller?.nickname}</b>
-              <small>판매중 {item.seller?.itemCount ?? 0} · 거래완료 {item.seller?.soldCount ?? 0}</small>
+              <small>판매중 {item.seller?.itemCount ?? 0} · 거래완료 {item.seller?.soldCount ?? 0} · 후기 {item.seller?.reviewCount ?? 0}</small>
             </span>
-          </div>
+            {item.seller?.temp != null && <Temp temp={item.seller.temp} />}
+          </Link>
 
           {notice && <p className="mk-notice" role="status">{notice}</p>}
 
@@ -168,11 +282,18 @@ function MarketItemPage() {
               <div className="mk-seg" role="group" aria-label="판매 상태">
                 {STATUS_BUTTONS.map(([value, label]) => (
                   <button key={value} type="button" className={item.status === value ? 'mk-seg-on' : ''} disabled={!!busy || item.status === 'HIDDEN' || item.status === value}
-                    onClick={() => act('status', '/status', { status: value })}>
+                    onClick={() => (value === 'SOLD' ? openSold() : act('status', '/status', { status: value }))}>
                     {label}
                   </button>
                 ))}
               </div>
+              {buyers !== undefined && <SoldPicker buyers={buyers} busy={!!busy} onPick={sold} onCancel={() => setBuyers(undefined)} />}
+              {item.status === 'SOLD' && buyers === undefined && (
+                <p className="mk-muted">
+                  {item.buyerName ? `🤝 ${item.buyerName}님과 거래했어요.` : '거래한 사람을 고르면 서로 후기를 남길 수 있어요.'}
+                  {!item.reviewed && <button type="button" className="mk-link-btn" onClick={openSold}> {item.buyerName ? '바꾸기' : '고르기'} ›</button>}
+                </p>
+              )}
               {item.status === 'HIDDEN' && <p className="mk-muted">신고가 여러 번 들어와 숨겨진 상태예요. 관리자가 확인하고 있어요.</p>}
               <div className="mk-owner-row">
                 <button type="button" className="mk-btn" disabled={!!busy || !item.canBump} onClick={() => act('bump', '/bump', null, () => { setNotice('목록 맨 위로 끌어올렸어요.'); return load() })}
@@ -194,6 +315,10 @@ function MarketItemPage() {
               </button>
             </div>
           )}
+
+          {item.canReview && <ReviewForm who={item.mine ? item.buyerName : item.seller?.nickname} busy={busy === 'review'} onSubmit={review} />}
+          {item.reviewed && <p className="mk-muted">⭐ 이 거래에 후기를 남겼어요.</p>}
+          {item.iAmBuyer && !item.canReview && !item.reviewed && <p className="mk-muted">🤝 내가 거래한 상품이에요.</p>}
 
           {!item.mine && (
             <div className="mk-report">

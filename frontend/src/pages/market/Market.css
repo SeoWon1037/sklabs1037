@@ -154,6 +154,74 @@
 .mk-tabs button.mk-tab-on { border-bottom-color: var(--text); color: var(--text); }
 .mk-tabs b { margin-left: 4px; color: var(--primary); }
 
+/* ===== 📉 가격 내림 · 🔗 공유 ===== */
+.mk-drop { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, #3b82f6 16%, transparent); color: #3b82f6; font-size: 11px; font-weight: 700; letter-spacing: 0; vertical-align: 2px; white-space: nowrap; }
+.mk-drop-lg { margin-left: 10px; font-size: 13px; vertical-align: 5px; }
+.mk-drop-lg s { margin-right: 4px; color: var(--text-muted); font-weight: 500; }
+.mk-share { float: right; height: 34px; margin-top: 4px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; letter-spacing: 0; }
+.mk-share:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+
+/* ===== ⭐ 매너 온도 · 후기 ===== */
+a.mk-seller { color: inherit; }
+a.mk-seller:hover b { text-decoration: underline; }
+.mk-seller-name { flex: 1; min-width: 0; }
+.mk-temp { display: flex; flex: none; flex-direction: column; align-items: flex-end; gap: 5px; width: 92px; }
+.mk-temp b { display: block; color: var(--temp); font-size: 16px; font-weight: 800; white-space: nowrap; }
+.mk-temp i { font-style: normal; }
+.mk-temp-bar { display: block; width: 100%; height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--text) 12%, transparent); overflow: hidden; }
+.mk-temp-bar span { display: block; height: 100%; border-radius: 999px; background: var(--temp); }
+.mk-avatar-sm { width: 26px; height: 26px; margin-right: 8px; font-size: 13px; }
+.mk-avatar-lg { width: 64px; height: 64px; font-size: 26px; }
+
+.mk-review-form, .mk-sold { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; padding: 14px; border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.mk-sold p { margin: 0; }
+.mk-sold-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.mk-rating { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mk-rating button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text-muted); font-size: 13px; font-weight: 600; }
+.mk-rating button i { font-size: 26px; font-style: normal; }
+.mk-rating button.mk-rating-on { border-color: var(--primary); color: var(--text); box-shadow: inset 0 0 0 1px var(--primary); }
+.mk-review-form textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; resize: vertical; }
+.mk-review-form .mk-chat { flex: none; height: 46px; font-size: 15px; }
+
+.mk-profile { display: flex; align-items: center; gap: 14px; margin: 6px 0 16px; }
+.mk-profile-name { flex: 1; min-width: 0; }
+.mk-profile h1 { margin: 0; font-size: 22px; overflow-wrap: anywhere; }
+.mk-profile p { margin: 2px 0 0; }
+.mk-profile .mk-temp { width: 120px; }
+.mk-profile .mk-temp b { font-size: 20px; }
+.mk-review-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; padding: 0; list-style: none; }
+.mk-review-stats li { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 4px; border: 1px solid var(--border); border-radius: 12px; color: var(--text-muted); font-size: 12px; }
+.mk-review-stats i { font-size: 22px; font-style: normal; }
+.mk-review-stats b { color: var(--text); font-size: 18px; }
+.mk-others h2 small { margin-left: 6px; font-weight: 500; }
+.mk-reviews { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.mk-reviews > li { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
+.mk-reviews p { margin: 6px 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mk-reviews .mk-tags { margin: 8px 0 4px; }
+.mk-reviews .mk-tags li { font-size: 12px; }
+.mk-review-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; }
+.mk-review-head i { font-style: normal; }
+
+/* ===== 🔔 키워드 알림 ===== */
+.mk-kw { max-width: 560px; }
+.mk-kw-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 8px; padding: 0; list-style: none; }
+.mk-kw-list li { display: inline-flex; align-items: center; height: 36px; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.mk-kw-list a { padding: 0 4px 0 14px; color: var(--text); font-size: 14px; font-weight: 600; }
+.mk-kw-list button { width: 34px; height: 100%; border: 0; background: transparent; color: var(--text-muted); font-size: 12px; }
+.mk-kw-list button:hover { color: #e5484d; }
+
+/* ===== 🕘 최근 본 상품 ===== */
+.mk-recent { margin-top: 32px; }
+.mk-recent-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.mk-recent-head h2 { margin: 0; font-size: 16px; }
+.mk-recent-row { display: flex; gap: 12px; margin: 0 -16px; padding: 0 16px 6px; overflow-x: auto; scrollbar-width: none; }
+.mk-recent-row::-webkit-scrollbar { display: none; }
+.mk-recent-item { display: flex; flex: none; flex-direction: column; gap: 4px; width: 104px; color: var(--text); font-size: 12px; }
+.mk-recent-item .mk-thumb { display: block; border-radius: 12px; }
+.mk-recent-item .mk-thumb-empty { font-size: 30px; }
+.mk-recent-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mk-recent-item b { font-size: 13px; }
+
 /* ===== 휴대폰 ===== */
 @media (max-width: 760px) {
   .mk-page { padding: 14px 16px 104px; }
@@ -173,4 +241,8 @@
   .mk-two { grid-template-columns: 1fr; }
   .mk-submit { flex-direction: column; align-items: stretch; }
   .mk-submit .mk-chat { width: 100%; }
+  .mk-tabs { overflow-x: auto; scrollbar-width: none; }
+  .mk-tabs button { flex: none; padding: 10px 12px; white-space: nowrap; }
+  .mk-drop-lg { display: block; width: fit-content; margin: 4px 0 0; }
+  .mk-temp { width: 78px; }
 }

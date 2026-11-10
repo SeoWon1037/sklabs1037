@@ -86,6 +86,34 @@ public class TossApiClient {
 
     }
 
+    /**
+     * 일봉 한 쪽 (옛날 시세를 이어 받을 때) → { candles: [...], nextBefore: "..." 또는 없음 }
+     * - 토스 일봉은 한 번에 최대 200개 (count), 수정주가가 기본 (adjusted=true: 액면분할 등을 반영한 가격)
+     * - before: 이 시각 이하의 봉만 (ISO 8601). null이면 최신부터
+     * - 응답의 nextBefore를 다음 요청의 before로 넘기면 그 앞 구간을 이어서 받음 (더 없으면 nextBefore가 없음)
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getDailyCandlePage(String symbol, int count, String before) {
+
+        Map<String, Object> body;
+        if (before == null) {
+            body = withRetry(() -> restClient.get()
+                    .uri(baseUrl + "/api/v1/candles?symbol={symbol}&interval=1d&count={count}", symbol, count)
+                    .header("Authorization", "Bearer " + getAccessToken())
+                    .retrieve()
+                    .body(MAP_TYPE));
+        } else {
+            body = withRetry(() -> restClient.get()
+                    .uri(baseUrl + "/api/v1/candles?symbol={symbol}&interval=1d&count={count}&before={before}", symbol, count, before)
+                    .header("Authorization", "Bearer " + getAccessToken())
+                    .retrieve()
+                    .body(MAP_TYPE));
+        }
+
+        return (Map<String, Object>) body.get("result");
+
+    }
+
     // 현재가 조회 → 목록 (각 항목: symbol, timestamp, lastPrice, currency)
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getPrices(String symbols) {

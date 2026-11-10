@@ -18,3 +18,5 @@
     font-size: 16px !important;
   }
 }
+/* 화면 코드를 받아오는 동안 */
+.page-loading { display: flex; align-items: center; justify-content: center; min-height: 70vh; color: var(--text-muted); font-size: 14px; }

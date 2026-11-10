@@ -24,10 +24,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * ⏳ "그때 샀더라면" — 종목 · 날짜 · 금액을 넣으면 지금 얼마가 됐을지 (로그인 없이 누구나)
  *
  * 시세는 어디서
- * - 우리 DB(T_STOCK_PRICE)에는 최근 200거래일쯤만 있음 → 더 옛날은 토스증권 일봉을 길게(최대 약 5년) 한 번 받아 씀
+ * - 우리 DB(T_STOCK_PRICE)에는 최근 200거래일쯤만 있음 → 더 옛날은 토스증권 일봉을 200개씩 이어 받아 씀 (최대 8쪽 ≈ 6년 반)
+ *   토스 일봉은 한 번에 최대 200개, 응답의 nextBefore를 before로 넘겨 그 앞 구간을 받음. 수정주가(액면분할 반영)가 기본
  * - 받은 긴 시세는 DB에 넣지 않고 메모리에만 6시간 둠 (종목 화면 차트 · 다른 계산에 영향을 주지 않게)
  *   최근 값은 요청마다 DB에서 새로 읽어 합침 (WhatIfService.merge)
- * - 토스 호출은 하루 300번까지, 실패하거나 한도를 넘으면 DB에 있는 만큼만으로 계산하고 "가장 이른 날"을 알려줌
+ * - 필요한 날짜까지만 받고(1년 전이면 2쪽), 더 옛날을 물으면 이어서 더 받음. 토스 호출은 하루 600번까지, 실패하거나 한도를 넘으면 DB에 있는 만큼만으로 계산하고 "가장 이른 날"을 알려줌
  *
  * 계산과 검증은 WhatIfCalc (순수 계산) — 가격 기준이 바뀐 날이 끼면 답을 내지 않음
  * 비교: 같은 날 같은 돈을 KODEX 200에 넣었다면 (계산이 안 되면 비교만 생략)
@@ -37,8 +38,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class WhatIfService {
 
     static final String BENCH_SYMBOL = "069500";       // KODEX 200
-    static final int[] HISTORY_COUNTS = {1300, 600};    // 약 5년 → 안 되면 약 2년 반
-    static final int DAILY_FETCH_LIMIT = 300;
+    static final int PAGE_SIZE = 200;                   // 토스 일봉 한 번에 최대
+    static final int MAX_PAGES = 8;                     // 한 종목에 200 × 8 = 1,600거래일 ≈ 6년 반
+    static final int DAILY_FETCH_LIMIT = 600;           // 하루에 토스를 부르는 횟수 (쪽 단위)
     static final long CACHE_MS = 6 * 3600_000L;
     static final long RETRY_MS = 30 * 60_000L;
     static final int CACHE_MAX = 300;
@@ -55,8 +57,20 @@ public class WhatIfService {
     @Autowired
     private UsageStatService usageStatService;
 
-    // 토스에서 받은 긴 시세 (until: 이 시각까지 다시 받지 않음)
-    private record Cached(List<Point> points, long until) {
+    // 토스에서 받은 긴 시세 (next: 더 옛날을 받을 때 넘길 before, 더 없으면 null / pages: 지금까지 받은 쪽 수 / until: 이 시각까지 씀)
+    private record Cached(List<Point> points, String next, int pages, long until) {
+    }
+
+    // 한 쪽 받기: before(null이면 최신부터) → 쪽
+    interface PageFetcher {
+        Page fetch(String before);
+    }
+
+    record Page(List<Map<String, Object>> candles, String nextBefore) {
+    }
+
+    // 이어 받은 결과 (next: 더 받을 게 있으면 그 before)
+    record Collected(List<Point> points, String next, int pages) {
     }
 
     private final Map<String, Cached> cache = new ConcurrentHashMap<>();
@@ -125,15 +139,109 @@ public class WhatIfService {
 
         long now = System.currentTimeMillis();
         Cached hit = cache.get(symbol);
-        if (hit != null && now < hit.until()) return merge(hit.points(), db);
+        if (hit != null && now >= hit.until()) hit = null;
 
-        boolean covered = !db.isEmpty() && !db.get(0).date().isAfter(from);
-        if (covered) return db;   // DB만으로 되는 기간은 토스를 부르지 않음
+        boolean dbCovers = !db.isEmpty() && !db.get(0).date().isAfter(from);
+        if (hit == null && dbCovers) return db;   // DB만으로 되는 기간은 토스를 부르지 않음
 
-        List<Point> api = fromApi(symbol);
+        // 이미 받은 것으로 충분한가 (그 날짜까지 있거나, 더 받을 게 없거나, 받을 만큼 받았거나)
+        if (hit != null && (covers(hit.points(), from) || hit.next() == null || hit.pages() >= MAX_PAGES)) return merge(hit.points(), db);
+        if (!tossApiClient.isConfigured()) return hit == null ? db : merge(hit.points(), db);
+
+        // 처음이면 최신부터, 받던 게 있으면 그 앞 구간부터 이어서
+        List<Point> have = hit == null ? List.of() : hit.points();
+        Collected got = collect((before) -> page(symbol, before), from, hit == null ? null : hit.next(), MAX_PAGES - (hit == null ? 0 : hit.pages()));
+
+        List<Point> all = new ArrayList<>(have);
+        all.addAll(got.points());
+        List<Point> api = WhatIfCalc.clean(all);
+        int pages = (hit == null ? 0 : hit.pages()) + got.pages();
+
         if (cache.size() >= CACHE_MAX) cache.clear();
-        cache.put(symbol, new Cached(api, now + (api.isEmpty() ? RETRY_MS : CACHE_MS)));   // 못 받았으면 30분 뒤에 다시
+        // 하나도 못 받았으면 30분 뒤에 다시, 받았으면 6시간 (받던 게 있으면 그 기한 그대로)
+        long until = hit != null ? hit.until() : now + (api.isEmpty() ? RETRY_MS : CACHE_MS);
+        cache.put(symbol, new Cached(api, got.pages() == 0 && hit != null ? hit.next() : got.next(), pages, until));
         return merge(api, db);
+
+    }
+
+    private static boolean covers(List<Point> points, LocalDate from) {
+
+        return !points.isEmpty() && !points.get(0).date().isAfter(from);
+
+    }
+
+    // 토스에서 한 쪽 (하루 한도를 넘었으면 null → 거기서 멈춤)
+    @SuppressWarnings("unchecked")
+    private Page page(String symbol, String before) {
+
+        if (!takeFetch()) return null;
+        Map<String, Object> result = tossApiClient.getDailyCandlePage(symbol, PAGE_SIZE, before);
+        if (result == null) return null;
+        Object next = result.get("nextBefore");
+        return new Page((List<Map<String, Object>>) result.get("candles"), next == null ? null : String.valueOf(next));
+
+    }
+
+    /**
+     * 쪽을 이어 받기 (순수 로직 — 테스트는 가짜 fetcher로)
+     * - from 날짜가 들어올 때까지, 최대 maxPages쪽
+     * - 다음 before는 응답의 nextBefore. 없는데 200개를 꽉 채워 왔다면 가장 이른 봉의 시각으로 이어 받음 (그 봉 하나는 겹치지만 날짜로 합쳐짐)
+     * - 새 날짜가 하나도 안 늘면 멈춤 (같은 쪽을 계속 받는 일 방지), 중간에 실패하면 거기까지만
+     */
+    static Collected collect(PageFetcher fetcher, LocalDate from, String startBefore, int maxPages) {
+
+        List<Point> all = new ArrayList<>();
+        String before = startBefore;
+        int pages = 0;
+
+        while (pages < maxPages) {
+            Page page;
+            try {
+                page = fetcher.fetch(before);
+            } catch (RuntimeException e) {
+                log.info("긴 시세 받기 실패 (before={}): {}", before, e.getMessage());
+                break;
+            }
+            if (page == null) break;
+            pages++;
+
+            List<Point> points = toPoints(page.candles());
+            int had = WhatIfCalc.clean(all).size();
+            all.addAll(points);
+            List<Point> merged = WhatIfCalc.clean(all);
+
+            String next = page.nextBefore();
+            if (next == null && page.candles() != null && page.candles().size() >= PAGE_SIZE) next = earliestTimestamp(page.candles());
+
+            if (merged.size() == had || next == null || next.equals(before)) {   // 더 없음 (또는 제자리)
+                return new Collected(merged, merged.size() == had ? null : next, pages);
+            }
+            before = next;
+            if (covers(merged, from)) return new Collected(merged, before, pages);
+        }
+        return new Collected(WhatIfCalc.clean(all), before, pages);
+
+    }
+
+    // 한 쪽에서 가장 이른 봉의 timestamp 글자 (못 찾으면 null)
+    static String earliestTimestamp(List<Map<String, Object>> candles) {
+
+        String best = null;
+        OffsetDateTime bestAt = null;
+        for (Map<String, Object> c : candles) {
+            try {
+                String ts = String.valueOf(c.get("timestamp"));
+                OffsetDateTime at = OffsetDateTime.parse(ts);
+                if (bestAt == null || at.isBefore(bestAt)) {
+                    bestAt = at;
+                    best = ts;
+                }
+            } catch (RuntimeException e) {
+                // 날짜가 이상한 줄
+            }
+        }
+        return best;
 
     }
 
@@ -144,23 +252,6 @@ public class WhatIfService {
             out.add(new Point(LocalDate.parse(String.valueOf(r.get("day"))), new BigDecimal(String.valueOf(r.get("close")))));
         }
         return WhatIfCalc.clean(out);
-
-    }
-
-    // 토스 일봉을 길게 (실패 · 한도 초과 · 키 없음이면 빈 목록)
-    private List<Point> fromApi(String symbol) {
-
-        if (!tossApiClient.isConfigured() || !takeFetch()) return List.of();
-
-        for (int count : HISTORY_COUNTS) {
-            try {
-                List<Point> out = toPoints(tossApiClient.getDailyCandles(symbol, count));
-                if (!out.isEmpty()) return out;
-            } catch (RuntimeException e) {
-                log.info("긴 시세 받기 실패 ({} · {}개): {}", symbol, count, e.getMessage());
-            }
-        }
-        return List.of();
 
     }
 

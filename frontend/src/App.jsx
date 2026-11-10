@@ -8,58 +8,61 @@ import './App.css'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import InstallBanner from './components/layout/InstallBanner'
-import AppInstallPage from './pages/app/AppInstallPage'
-import MessagesPage from './pages/messages/MessagesPage'
 import MainPage from './pages/main/MainPage'
-import StockPage from './pages/stock/StockPage'
-import UserSignUpPage from './pages/user/UserSignUpPage'
-import UserLoginPage from './pages/user/UserLoginPage'
-import UserOAuthResultPage from './pages/user/UserOAuthResultPage'
-import UserFindPage from './pages/user/UserFindPage'
-import UserMyPage from './pages/user/UserMyPage'
-import AiChatPage from './pages/ai/AiChatPage'
-import MockTradePage from './pages/mock/MockTradePage'
-import AdminFeedbackPage from './pages/admin/AdminFeedbackPage'
-import AdminOpsPage from './pages/admin/AdminOpsPage'
-import AdminReportsPage from './pages/admin/AdminReportsPage'
-import AdminImprovePage from './pages/admin/AdminImprovePage'
-import AdminQaPage from './pages/admin/AdminQaPage'
-import AdminResetsPage from './pages/admin/AdminResetsPage'
-import AdminInquiriesPage from './pages/admin/AdminInquiriesPage'
-import AdminAutofixPage from './pages/admin/AdminAutofixPage'
-import AdminServerPage from './pages/admin/AdminServerPage'
-import AdminApiPage from './pages/admin/AdminApiPage'
-import AdminAiCostPage from './pages/admin/AdminAiCostPage'
-import MarketCalendarPage from './pages/calendar/MarketCalendarPage'
-import StatusPage from './pages/status/StatusPage'
-import SupportPage from './pages/support/SupportPage'
-import LeaguePage from './pages/league/LeaguePage'
-import PredictPage from './pages/predict/PredictPage'
-import PersonaPage from './pages/persona/PersonaPage'
-import QuizPage from './pages/quiz/QuizPage'
-import ActivityPage from './pages/me/ActivityPage'
-import DuelPage from './pages/duel/DuelPage'
-import SharePage from './pages/share/SharePage'
-import IdeasPage from './pages/ideas/IdeasPage'
-import CouplePage from './pages/couple/CouplePage'
-import AboutPage from './pages/about/AboutPage'
-import LottoPage from './pages/lotto/LottoPage'
-import BeautyLabPage from './pages/beauty/BeautyLabPage'
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { trackPage } from './track'
-import AdminStatsPage from './pages/admin/AdminStatsPage'
-import MarketPage from './pages/market/MarketPage'
-import MarketItemPage from './pages/market/MarketItemPage'
-import MarketWritePage from './pages/market/MarketWritePage'
-import MarketMyPage from './pages/market/MarketMyPage'
-import MarketUserPage from './pages/market/MarketUserPage'
-import AdminMarketPage from './pages/admin/AdminMarketPage'
 import { rememberRef } from './invite'
-import WhatIfPage from './pages/whatif/WhatIfPage'
+import { lazyPage, preloadWhenIdle } from './lazyPage'
+
+// 첫 화면(MainPage)만 처음에 같이 받고, 나머지 화면은 들어갈 때 받아옴 (lazyPage.js)
+const AppInstallPage = lazyPage(() => import('./pages/app/AppInstallPage'))
+const MessagesPage = lazyPage(() => import('./pages/messages/MessagesPage'))
+const StockPage = lazyPage(() => import('./pages/stock/StockPage'))
+const UserSignUpPage = lazyPage(() => import('./pages/user/UserSignUpPage'))
+const UserLoginPage = lazyPage(() => import('./pages/user/UserLoginPage'))
+const UserOAuthResultPage = lazyPage(() => import('./pages/user/UserOAuthResultPage'))
+const UserFindPage = lazyPage(() => import('./pages/user/UserFindPage'))
+const UserMyPage = lazyPage(() => import('./pages/user/UserMyPage'))
+const AiChatPage = lazyPage(() => import('./pages/ai/AiChatPage'))
+const MockTradePage = lazyPage(() => import('./pages/mock/MockTradePage'))
+const AdminFeedbackPage = lazyPage(() => import('./pages/admin/AdminFeedbackPage'))
+const AdminOpsPage = lazyPage(() => import('./pages/admin/AdminOpsPage'))
+const AdminReportsPage = lazyPage(() => import('./pages/admin/AdminReportsPage'))
+const AdminImprovePage = lazyPage(() => import('./pages/admin/AdminImprovePage'))
+const AdminQaPage = lazyPage(() => import('./pages/admin/AdminQaPage'))
+const AdminResetsPage = lazyPage(() => import('./pages/admin/AdminResetsPage'))
+const AdminInquiriesPage = lazyPage(() => import('./pages/admin/AdminInquiriesPage'))
+const AdminAutofixPage = lazyPage(() => import('./pages/admin/AdminAutofixPage'))
+const AdminServerPage = lazyPage(() => import('./pages/admin/AdminServerPage'))
+const AdminApiPage = lazyPage(() => import('./pages/admin/AdminApiPage'))
+const AdminAiCostPage = lazyPage(() => import('./pages/admin/AdminAiCostPage'))
+const MarketCalendarPage = lazyPage(() => import('./pages/calendar/MarketCalendarPage'))
+const StatusPage = lazyPage(() => import('./pages/status/StatusPage'))
+const SupportPage = lazyPage(() => import('./pages/support/SupportPage'))
+const LeaguePage = lazyPage(() => import('./pages/league/LeaguePage'))
+const PredictPage = lazyPage(() => import('./pages/predict/PredictPage'))
+const PersonaPage = lazyPage(() => import('./pages/persona/PersonaPage'))
+const QuizPage = lazyPage(() => import('./pages/quiz/QuizPage'))
+const ActivityPage = lazyPage(() => import('./pages/me/ActivityPage'))
+const DuelPage = lazyPage(() => import('./pages/duel/DuelPage'))
+const SharePage = lazyPage(() => import('./pages/share/SharePage'))
+const IdeasPage = lazyPage(() => import('./pages/ideas/IdeasPage'))
+const CouplePage = lazyPage(() => import('./pages/couple/CouplePage'))
+const AboutPage = lazyPage(() => import('./pages/about/AboutPage'))
+const LottoPage = lazyPage(() => import('./pages/lotto/LottoPage'))
+const BeautyLabPage = lazyPage(() => import('./pages/beauty/BeautyLabPage'))
+const AdminStatsPage = lazyPage(() => import('./pages/admin/AdminStatsPage'))
+const MarketPage = lazyPage(() => import('./pages/market/MarketPage'))
+const MarketItemPage = lazyPage(() => import('./pages/market/MarketItemPage'))
+const MarketWritePage = lazyPage(() => import('./pages/market/MarketWritePage'))
+const MarketMyPage = lazyPage(() => import('./pages/market/MarketMyPage'))
+const MarketUserPage = lazyPage(() => import('./pages/market/MarketUserPage'))
+const AdminMarketPage = lazyPage(() => import('./pages/admin/AdminMarketPage'))
+const WhatIfPage = lazyPage(() => import('./pages/whatif/WhatIfPage'))
 
 // 주소 → 탭 제목 (앞부분이 맞는 것 중 가장 긴 것, 없으면 SKLabs)
 const TITLES = {
-  '/': 'SKLabs - AI 주식 비서 · 모의투자 · 중고거래',
+  '/': 'SKLabs - AI 주식 비서 · 모의투자 · 중고거래', '/invest': 'SKLabs - AI 주식 비서 · 모의투자 · 중고거래',
   '/stock': '주식 종목 · SKLabs', '/mock': '모의투자 · SKLabs', '/ai': 'AI 비서 · SKLabs', '/whatif': '그때 샀더라면 · SKLabs',
   '/calendar': '증시 일정 · SKLabs', '/league': 'AI 리그 · SKLabs', '/predict': '예측 게임 · SKLabs', '/quiz': '뉴스 퀴즈 · SKLabs',
   '/persona': '투자 성향 테스트 · SKLabs', '/market': '중고거래 · SKLabs', '/market/new': '판매하기 · SKLabs', '/market/my': '내 장터 · SKLabs',
@@ -77,6 +80,11 @@ function App() {
   const location = useLocation()
   useEffect(() => { trackPage(location.pathname) }, [location.pathname])
 
+  // 자주 가는 화면은 한가할 때 미리 받아둠
+  useEffect(() => {
+    preloadWhenIdle([() => import('./pages/stock/StockPage'), () => import('./pages/mock/MockTradePage'), () => import('./pages/market/MarketPage'), () => import('./pages/whatif/WhatIfPage')])
+  }, [])
+
   // 🤝 초대 링크(/?ref=코드)로 들어왔으면 코드를 기억 (로그인하면 Header가 서버로 보냄)
   useEffect(() => { rememberRef() }, [])
 
@@ -89,6 +97,8 @@ function App() {
       <Header />
 
       {/* 주소에 따라 아래 화면만 바뀜 */}
+      {/* 화면 코드를 받아오는 잠깐 동안 보이는 자리 (높이를 잡아둬서 아래 영역이 튀지 않게) */}
+      <Suspense fallback={<main className="page-loading" aria-busy="true">불러오는 중...</main>}>
       <Routes>
         <Route path="/" element={<MainPage />} />                        {/* 📈 투자 홈 (사이트 첫 화면: 뉴스 · 시세 · 날씨) */}
         <Route path="/whatif" element={<WhatIfPage />} />                {/* ⏳ 그때 샀더라면 (공유용 계산기) */}
@@ -140,6 +150,7 @@ function App() {
         <Route path="/lotto" element={<LottoPage />} />                  {/* 오늘의 숫자 (로또 / 연금복권) */}
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
       </Routes>
+      </Suspense>
 
       {/* 하단 정보: 모든 화면 공통 (AI 비서·소셜 로그인 팝업 제외) */}
       <Footer />

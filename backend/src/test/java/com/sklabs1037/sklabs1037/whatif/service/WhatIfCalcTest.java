@@ -243,4 +243,118 @@ class WhatIfCalcTest {
         assertThrows(IllegalArgumentException.class, () -> WhatIfService.date(null, today));
 
     }
+
+    // ===== 긴 시세 이어 받기 (가짜 토스) =====
+    // 2026-11-06부터 거꾸로 하루에 한 봉씩 total개가 있는 가짜 서버: before(포함) 이하에서 최신 200개를 줌
+    private static WhatIfService.PageFetcher fakeToss(int total, boolean giveNext, int[] calls) {
+        LocalDate lastDay = LocalDate.parse("2026-11-06");
+        return (before) -> {
+            calls[0]++;
+            int start = before == null ? 0 : (int) java.time.temporal.ChronoUnit.DAYS.between(java.time.OffsetDateTime.parse(before).toLocalDate(), lastDay);
+            List<Map<String, Object>> candles = new ArrayList<>();
+            for (int i = start; i < Math.min(total, start + WhatIfService.PAGE_SIZE); i++) {
+                candles.add(new HashMap<>(Map.of("timestamp", lastDay.minusDays(i) + "T00:00:00+09:00", "closePrice", String.valueOf(10_000 + i))));
+            }
+            int nextIndex = start + WhatIfService.PAGE_SIZE;
+            String next = giveNext && nextIndex < total ? lastDay.minusDays(nextIndex) + "T00:00:00+09:00" : null;
+            return new WhatIfService.Page(candles, next);
+        };
+    }
+
+    @Test
+    void 필요한_날짜가_들어올_때까지만_이어_받는다() {
+
+        int[] calls = {0};
+        // 300일 전이 필요 → 2쪽이면 됨 (1,000개가 있어도)
+        WhatIfService.Collected got = WhatIfService.collect(fakeToss(1000, true, calls), LocalDate.parse("2026-11-06").minusDays(300), null, 8);
+        assertEquals(2, calls[0]);
+        assertEquals(2, got.pages());
+        assertEquals(400, got.points().size());
+        assertEquals("2025-10-03", got.points().get(0).date().toString());
+        assertNotNull(got.next());
+
+    }
+
+    @Test
+    void 더_없으면_멈춘다() {
+
+        int[] calls = {0};
+        WhatIfService.Collected got = WhatIfService.collect(fakeToss(350, true, calls), LocalDate.parse("2015-01-01"), null, 8);
+        assertEquals(2, calls[0]);
+        assertEquals(350, got.points().size());
+        assertNull(got.next());
+
+    }
+
+    @Test
+    void 쪽_수_한도에서_멈춘다() {
+
+        int[] calls = {0};
+        WhatIfService.Collected got = WhatIfService.collect(fakeToss(5000, true, calls), LocalDate.parse("2010-01-01"), null, 8);
+        assertEquals(8, calls[0]);
+        assertEquals(1600, got.points().size());
+        assertNotNull(got.next());
+
+    }
+
+    @Test
+    void nextBefore가_없어도_가장_이른_봉으로_이어_받는다() {
+
+        int[] calls = {0};
+        // 한 봉씩 겹치며 받음: 200 + 199 + 199 = 598 → 450개를 다 받으려면 3쪽
+        WhatIfService.Collected got = WhatIfService.collect(fakeToss(450, false, calls), LocalDate.parse("2015-01-01"), null, 8);
+        assertEquals(450, got.points().size());
+        assertEquals(3, calls[0]);
+        assertNull(got.next());
+
+    }
+
+    @Test
+    void 받던_곳부터_이어서_받는다() {
+
+        int[] calls = {0};
+        String resume = LocalDate.parse("2026-11-06").minusDays(400) + "T00:00:00+09:00";
+        WhatIfService.Collected got = WhatIfService.collect(fakeToss(1000, true, calls), LocalDate.parse("2026-11-06").minusDays(450), resume, 6);
+        assertEquals(1, calls[0]);
+        assertEquals(200, got.points().size());
+        assertEquals(LocalDate.parse("2026-11-06").minusDays(599).toString(), got.points().get(0).date().toString());
+
+    }
+
+    @Test
+    void 중간에_실패하면_거기까지만_쓴다() {
+
+        int[] calls = {0};
+        WhatIfService.PageFetcher ok = fakeToss(1000, true, calls);
+        WhatIfService.PageFetcher flaky = (before) -> {
+            if (calls[0] >= 1) throw new IllegalStateException("토스 응답 없음");
+            return ok.fetch(before);
+        };
+        WhatIfService.Collected got = WhatIfService.collect(flaky, LocalDate.parse("2015-01-01"), null, 8);
+        assertEquals(200, got.points().size());
+        assertEquals(1, got.pages());
+        assertNotNull(got.next());   // 다음에 이어서 받을 수 있게
+
+        // 한도 초과(null)여도 마찬가지로 멈춤
+        WhatIfService.Collected none = WhatIfService.collect((before) -> null, LocalDate.parse("2015-01-01"), null, 8);
+        assertTrue(none.points().isEmpty());
+        assertEquals(0, none.pages());
+
+    }
+
+    @Test
+    void 같은_쪽만_계속_오면_멈춘다() {
+
+        int[] calls = {0};
+        WhatIfService.PageFetcher stuck = (before) -> {
+            calls[0]++;
+            List<Map<String, Object>> candles = new ArrayList<>();
+            for (int i = 0; i < 200; i++) candles.add(new HashMap<>(Map.of("timestamp", LocalDate.parse("2026-11-06").minusDays(i) + "T00:00:00+09:00", "closePrice", "100")));
+            return new WhatIfService.Page(candles, "2026-01-01T00:00:00+09:00");
+        };
+        WhatIfService.Collected got = WhatIfService.collect(stuck, LocalDate.parse("2015-01-01"), null, 8);
+        assertEquals(2, calls[0]);
+        assertEquals(200, got.points().size());
+
+    }
 }

@@ -1,5 +1,6 @@
 package com.sklabs1037.sklabs1037.autofix.service;
 
+import com.sklabs1037.sklabs1037.ops.dao.ClientErrorDao;
 import com.sklabs1037.sklabs1037.autofix.dao.AutofixDao;
 import com.sklabs1037.sklabs1037.client.ClaudeApiClient;
 import com.sklabs1037.sklabs1037.me.service.NotificationService;
@@ -17,7 +18,7 @@ import java.util.*;
  * 🔁 매일 스스로 개선 (작업 DAILY_IMPROVE, 매일 09:20 — 아침 QA 봇(08:30) 결과까지 보고)
  *
  * 문의가 없어도 서버가 자기 운영 기록에서 고칠 거리를 찾아 AI 자동 수정으로 보냄
- *   1. 후보 모으기 (최근 이틀): 🤖 QA 봇 지적 · 🔌 외부 연동 실패 · 🛠 작업 실패
+ *   1. 후보 모으기 (최근 이틀): 🤖 QA 봇 지적 · 🐞 사용자 화면 오류(2번 이상) · 🔌 외부 연동 실패 · 🛠 작업 실패
  *      - 최근 14일 안에 이미 고른 문제(SIGNATURE)는 빼고
  *   2. Claude(pick_improvement 강제 도구)가 "이 저장소 코드를 조금 고쳐서 해결될" 것 하나만 고름
  *      - 외부 서비스 장애·키·서버 설정·권한·돈·DB 구조 변경이 필요한 건 고르지 않음 (없으면 -1)
@@ -83,6 +84,9 @@ public class DailyImproveService {
     @Autowired
     private JsonMapper jsonMapper;
 
+    @Autowired
+    private ClientErrorDao clientErrorDao;
+
     public record Candidate(String signature, String kind, String title, String evidence) {
     }
 
@@ -96,7 +100,7 @@ public class DailyImproveService {
         if (autofixDao.countAnyActive() > 0) return JobOutcome.of("이미 진행 중인 AI 수정이 있어 오늘은 건너뜀");
         if (autofixDao.countToday() >= autofixService.dailyLimit()) return JobOutcome.of("오늘 AI 수정 횟수를 다 써서 건너뜀");
 
-        List<Candidate> list = candidates(qaFindings(), autofixDao.selectApiFailures(), autofixDao.selectJobFailures(),
+        List<Candidate> list = candidates(qaFindings(), autofixDao.selectApiFailures(), autofixDao.selectJobFailures(), clientErrors(),
                 new HashSet<>(autofixDao.selectRecentSignatures()));
         if (list.isEmpty()) return JobOutcome.of(0, 0, "고칠 거리 후보 없음 (최근 이틀 QA·연동·작업 모두 깨끗하거나 이미 고른 것)");
 
@@ -139,10 +143,29 @@ public class DailyImproveService {
 
     }
 
+    // 🐞 화면 오류 후보 (표가 아직 없으면 — SQL을 안 돌렸으면 — 빈 목록)
+    private List<Map<String, Object>> clientErrors() {
+
+        try {
+            return clientErrorDao.selectCandidates();
+        } catch (Exception e) {
+            return List.of();
+        }
+
+    }
+
     // ============================================
     // 후보 모으기 (순수 계산, 테스트 가능)
     // ============================================
     static List<Candidate> candidates(List<Map<String, Object>> qa, List<Map<String, Object>> api, List<Map<String, Object>> jobs, Set<String> recent) {
+
+        return candidates(qa, api, jobs, List.of(), recent);
+
+    }
+
+    // client: 🐞 사용자 화면에서 최근 이틀 안에 2번 이상 난 오류 (사용자에게 보이는 문제라 QA 다음으로 앞에 둠)
+    static List<Candidate> candidates(List<Map<String, Object>> qa, List<Map<String, Object>> api, List<Map<String, Object>> jobs,
+                                      List<Map<String, Object>> client, Set<String> recent) {
 
         List<Candidate> out = new ArrayList<>();
 
@@ -153,6 +176,14 @@ public class DailyImproveService {
             String sig = "QA:" + key + ":" + norm(title);
             out.add(new Candidate(sig, "QA 봇", key + " · " + title,
                     "심각도 " + str(f.get("severity"), "-") + " · " + str(f.get("detail"), "") + " (판정: " + str(f.get("by"), "AI") + ")"));
+        }
+
+        for (Map<String, Object> e : client) {
+            String message = str(e.get("message"), "");
+            if (message.isEmpty()) continue;
+            out.add(new Candidate("CLIENT:" + str(e.get("sig"), norm(message)), "화면 오류",
+                    str(e.get("path"), "/") + " 화면 · " + cut(message, 120) + " (" + str(e.get("cnt"), "?") + "번)",
+                    "종류 " + str(e.get("kind"), "ERROR") + " · 스택: " + cut(str(e.get("stack"), "-").replace("\n", " ← "), 240)));
         }
 
         for (Map<String, Object> a : api) {

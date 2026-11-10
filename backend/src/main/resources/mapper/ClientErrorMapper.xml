@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🐞 화면 오류 -->
+<mapper namespace="com.sklabs1037.sklabs1037.ops.dao.ClientErrorDao">
+
+    <update id="bump" parameterType="java.util.Map">
+        UPDATE T_CLIENT_ERROR
+           SET  CNT      = CNT + 1
+               ,LAST_DAY = NOW()
+               ,PATH     = COALESCE(#{path,jdbcType=VARCHAR}, PATH)
+               ,UA       = COALESCE(#{ua,jdbcType=VARCHAR}, UA)
+               ,STATUS   = CASE WHEN STATUS = 'DONE' THEN 'OPEN' ELSE STATUS END
+         WHERE SIG = #{sig}
+    </update>
+
+    <insert id="insert" parameterType="java.util.Map">
+        INSERT INTO T_CLIENT_ERROR (SIG, KIND, MESSAGE, STACK, PATH, UA)
+        VALUES (#{sig}, #{kind}, #{message}, #{stack,jdbcType=VARCHAR}, #{path,jdbcType=VARCHAR}, #{ua,jdbcType=VARCHAR})
+        ON CONFLICT (SIG) DO NOTHING
+    </insert>
+
+    <select id="countNewToday" resultType="int">
+        SELECT COUNT(*) FROM T_CLIENT_ERROR WHERE FIRST_DAY &gt;= NOW() - INTERVAL '1 day'
+    </select>
+
+    <select id="selectList" resultType="java.util.LinkedHashMap">
+        SELECT  E.ID                                                AS "id"
+               ,E.KIND                                              AS "kind"
+               ,E.MESSAGE                                           AS "message"
+               ,E.STACK                                             AS "stack"
+               ,E.PATH                                              AS "path"
+               ,E.UA                                                AS "ua"
+               ,E.CNT                                               AS "cnt"
+               ,E.STATUS                                            AS "status"
+               ,(EXTRACT(EPOCH FROM E.FIRST_DAY) * 1000)::BIGINT    AS "firstAt"
+               ,(EXTRACT(EPOCH FROM E.LAST_DAY) * 1000)::BIGINT     AS "lastAt"
+          FROM T_CLIENT_ERROR E
+         WHERE 1=1
+        <if test="status != null">
+           AND E.STATUS = #{status}
+        </if>
+         ORDER BY E.LAST_DAY DESC
+         LIMIT 100
+    </select>
+
+    <select id="selectCounts" resultType="java.util.LinkedHashMap">
+        SELECT  COUNT(*) FILTER (WHERE STATUS = 'OPEN')::INT       AS "open"
+               ,COUNT(*) FILTER (WHERE STATUS = 'DONE')::INT       AS "done"
+               ,COUNT(*) FILTER (WHERE STATUS = 'IGNORED')::INT    AS "ignored"
+          FROM T_CLIENT_ERROR
+    </select>
+
+    <update id="updateStatus">
+        UPDATE T_CLIENT_ERROR SET STATUS = #{status} WHERE ID = #{id}
+    </update>
+
+    <select id="selectCandidates" resultType="java.util.LinkedHashMap">
+        SELECT  E.SIG       AS "sig"
+               ,E.KIND      AS "kind"
+               ,E.MESSAGE   AS "message"
+               ,E.STACK     AS "stack"
+               ,E.PATH      AS "path"
+               ,E.CNT       AS "cnt"
+          FROM T_CLIENT_ERROR E
+         WHERE 1=1
+           AND E.STATUS = 'OPEN'
+           AND E.KIND &lt;&gt; 'CHUNK'
+           AND E.CNT &gt;= 2
+           AND E.LAST_DAY &gt;= NOW() - INTERVAL '2 days'
+         ORDER BY E.CNT DESC
+         LIMIT 5
+    </select>
+
+    <delete id="deleteOld">
+        DELETE FROM T_CLIENT_ERROR WHERE LAST_DAY &lt; NOW() - INTERVAL '30 days'
+    </delete>
+</mapper>

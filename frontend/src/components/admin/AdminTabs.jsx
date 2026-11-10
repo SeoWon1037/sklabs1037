@@ -18,6 +18,7 @@ const TABS = [
   { to: '/admin/autofix', label: '🤖 AI 수정', badge: 'autofix' },
   { to: '/admin/reports', label: '🚩 신고 관리', badge: 'reports' },
   { to: '/admin/market', label: '🛍️ 장터 관리' },
+  { to: '/admin/errors', label: '🐞 화면 오류' },
   { to: '/admin/resets', label: '♻️ 초기화 신청', badge: 'resets' },
   { to: '/admin/ai-improve', label: '🔁 AI 자기 개선' },
   { to: '/admin/qa', label: '🤖 QA 봇' },

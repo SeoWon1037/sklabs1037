@@ -20,3 +20,12 @@
 }
 /* 화면 코드를 받아오는 동안 */
 .page-loading { display: flex; align-items: center; justify-content: center; min-height: 70vh; color: var(--text-muted); font-size: 14px; }
+
+/* 화면 그리기 실패 안내 (ErrorBoundary) */
+.page-error { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 70vh; padding: 24px 20px; text-align: center; }
+.page-error > span { font-size: 44px; }
+.page-error h1 { margin: 0; font-size: 20px; }
+.page-error p { max-width: 360px; margin: 0; word-break: keep-all; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.page-error div { display: flex; gap: 8px; margin-top: 8px; }
+.page-error button, .page-error a { display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--text); font-size: 14px; font-weight: 700; }
+.page-error button { border-color: var(--primary); background: var(--primary); color: var(--primary-text); }

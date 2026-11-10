@@ -7,9 +7,12 @@ import { ThemeProvider } from './theme/ThemeProvider'
 import App from './App.jsx'
 import { registerPwa } from './pwa'
 import { applyTextSize, getTextSize } from './textSize'
+import { installErrorReport } from './errorReport'
 
 // 🔠 저장된 글자 크기 먼저 적용 (화면 그리기 전, 깜빡임 방지)
 applyTextSize(getTextSize())
+
+installErrorReport()   // 🐞 어디서도 잡지 못한 화면 오류를 서버로 보고
 
 registerPwa()   // 📲 서비스 워커(푸시) + 앱 설치 버튼
 

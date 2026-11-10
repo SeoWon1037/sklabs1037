@@ -7,6 +7,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import './App.css'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
+import ErrorBoundary from './components/layout/ErrorBoundary'
 import InstallBanner from './components/layout/InstallBanner'
 import MainPage from './pages/main/MainPage'
 import { Suspense, useEffect } from 'react'
@@ -58,6 +59,7 @@ const MarketWritePage = lazyPage(() => import('./pages/market/MarketWritePage'))
 const MarketMyPage = lazyPage(() => import('./pages/market/MarketMyPage'))
 const MarketUserPage = lazyPage(() => import('./pages/market/MarketUserPage'))
 const AdminMarketPage = lazyPage(() => import('./pages/admin/AdminMarketPage'))
+const AdminErrorsPage = lazyPage(() => import('./pages/admin/AdminErrorsPage'))
 const WhatIfPage = lazyPage(() => import('./pages/whatif/WhatIfPage'))
 
 // 주소 → 탭 제목 (앞부분이 맞는 것 중 가장 긴 것, 없으면 SKLabs)
@@ -98,6 +100,8 @@ function App() {
 
       {/* 주소에 따라 아래 화면만 바뀜 */}
       {/* 화면 코드를 받아오는 잠깐 동안 보이는 자리 (높이를 잡아둬서 아래 영역이 튀지 않게) */}
+      {/* 화면 하나가 깨져도 사이트 전체가 흰 화면이 되지 않게 (다른 화면으로 가면 자동으로 풀림) */}
+      <ErrorBoundary resetKey={location.pathname}>
       <Suspense fallback={<main className="page-loading" aria-busy="true">불러오는 중...</main>}>
       <Routes>
         <Route path="/" element={<MainPage />} />                        {/* 📈 투자 홈 (사이트 첫 화면: 뉴스 · 시세 · 날씨) */}
@@ -133,6 +137,7 @@ function App() {
         <Route path="/admin/server" element={<AdminServerPage />} />     {/* 관리자: 🖥 서버 상태 (운영 서버 + DB, 5초마다) */}
         <Route path="/status" element={<StatusPage />} />              {/* 🟢 서비스 상태 (누구나) */}
         <Route path="/calendar" element={<MarketCalendarPage />} />     {/* 📅 증시 일정 (휴장 · FOMC · 금통위 · 만기일) */}
+        <Route path="/admin/errors" element={<AdminErrorsPage />} />    {/* 관리자: 🐞 화면 오류 (사용자 브라우저에서 난 오류 모음) */}
         <Route path="/admin/market" element={<AdminMarketPage />} />    {/* 관리자: 🛍️ 장터 관리 (신고된 · 숨겨진 상품) */}
         <Route path="/admin/stats" element={<AdminStatsPage />} />      {/* 관리자: 📊 사용 통계 */}
         <Route path="/admin/ai-cost" element={<AdminAiCostPage />} />   {/* 관리자: 💸 AI 비용 (하루 한도 · 긴급 정지) */}
@@ -151,6 +156,7 @@ function App() {
         <Route path="/oauth/result" element={<UserOAuthResultPage />} /> {/* 소셜 로그인 결과 (팝업 안에서 열림) */}
       </Routes>
       </Suspense>
+      </ErrorBoundary>
 
       {/* 하단 정보: 모든 화면 공통 (AI 비서·소셜 로그인 팝업 제외) */}
       <Footer />

@@ -35,6 +35,7 @@ public class RateLimitGuard implements WebMvcConfigurer, HandlerInterceptor {
             new Rule("/api/ai/chat", 30, 600),
             new Rule("/api/market/ai-write", 10, 600),
             new Rule("/api/market", 60, 600),   // 상품 올리기·찜·채팅·신고
+            new Rule("/api/track/error", 20, 600),   // 🐞 화면 오류 보고 (/api/track 보다 먼저 와야 함)
             new Rule("/api/track", 120, 60));
 
     private static final byte[] BODY = "{\"success\":false,\"message\":\"요청이 너무 많아요. 잠시 후 다시 시도해주세요.\"}".getBytes(StandardCharsets.UTF_8);

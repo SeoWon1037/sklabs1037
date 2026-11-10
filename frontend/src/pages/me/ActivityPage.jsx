@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import CoachCard from '../../components/me/CoachCard'
 import ShareModal from '../../components/me/ShareModal'
+import InviteCard from '../../components/me/InviteCard'
 import './ActivityPage.css'
 
 const GROUPS = ['출석', '모의투자', '예측', '퀴즈', '커뮤니티', '탐험', '도전']
@@ -113,6 +114,7 @@ function ActivityPage() {
       </header>
 
       <CoachCard />
+      <InviteCard />
       {sharing && <ShareModal onClose={closeShare} />}
 
       {showNew && fresh.length > 0 && (

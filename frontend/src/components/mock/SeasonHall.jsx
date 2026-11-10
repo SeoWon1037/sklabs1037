@@ -1,9 +1,11 @@
 // ============================================
 // 🏆 모의투자 주간 시즌 명예의 전당 (수익률 랭킹 > [🏆 지난 시즌])
 // - 매주 토요일 09:00 그 주(월~금) 수익률 TOP 3 (사람만), 최근 8주
+// - [🖼️ 이미지]: 그 주 TOP 3를 세로 카드로 저장 · 공유
 // - 백엔드: GET /api/mock/seasons?weeks=8
 // ============================================
 import { useEffect, useMemo, useState } from 'react'
+import { drawSeasonCard, saveCanvas } from '../me/shareImage'
 
 const MEDAL = { 1: '🥇', 2: '🥈', 3: '🥉' }
 const signed = (v) => `${Number(v) > 0 ? '+' : ''}${Number(v).toFixed(2)}%`
@@ -39,7 +41,10 @@ function SeasonHall() {
     <div className="season-hall">
       {weeks.map(([start, list]) => (
         <div key={start} className="season-week">
-          <p className="season-week-title">{range(start)}</p>
+          <p className="season-week-title">
+            {range(start)}
+            <button type="button" className="season-save" onClick={() => saveCanvas(drawSeasonCard(range(start), list), `sklabs-season-${start}.png`, `SKLabs 모의투자 주간 시즌 TOP 3 (${range(start)}) ${window.location.origin}/mock`)}>🖼️ 이미지</button>
+          </p>
           <ol>
             {list.map((r) => (
               <li key={`${start}-${r.nickname}`}>

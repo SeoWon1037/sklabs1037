@@ -62,7 +62,11 @@ public class BadgeService {
             new Badge("COACH_CLEAR", "🎖️", "미션 클리어", "AI 코치 주간 미션 3개 모두 달성", "도전", s -> false),
             new Badge("DUEL_WIN", "⚔️", "대결 승리", "친구와 1:1 대결에서 승리", "도전", s -> false),
             new Badge("SEASON_TOP3", "🏅", "주간 TOP 3", "모의투자 주간 시즌 3등 안에", "도전", s -> false),
-            new Badge("SEASON_WIN", "👑", "주간 챔피언", "모의투자 주간 시즌 1등", "도전", s -> false)
+            new Badge("SEASON_WIN", "👑", "주간 챔피언", "모의투자 주간 시즌 1등", "도전", s -> false),
+            // 🤝 친구 초대 (InviteService)
+            new Badge("INVITE_1", "🤝", "첫 초대", "내 초대 링크로 친구가 가입", "도전", s -> false),
+            new Badge("INVITE_5", "📣", "소문내는 사람", "친구 5명 초대", "도전", s -> false),
+            new Badge("INVITED", "🎈", "초대받고 왔어요", "친구의 초대 링크로 가입", "도전", s -> false)
     );
 
     @Autowired

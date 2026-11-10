@@ -1149,6 +1149,8 @@
 /* 🏆 지난 시즌 */
 .season-hall { display: flex; flex-direction: column; gap: 10px; }
 .season-week { padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+.season-save { float: right; margin: -4px -4px 0 0; padding: 4px 8px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text-muted); font-size: 11px; font-weight: 600; }
+.season-save:hover { color: var(--text); }
 .season-week-title { margin: 0 0 6px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
 .season-week ol { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .season-week li { display: flex; align-items: center; gap: 8px; font-size: 14px; }

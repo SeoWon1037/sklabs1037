@@ -117,6 +117,13 @@ const timeAgo = (dateText) => {
   return `${Math.floor(minutes / (60 * 24))}일 전`
 }
 
+// 1년 전 오늘 (YYYY-MM-DD)
+const yearAgo = () => {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function StockPage() {
 
   // 주소에 담겨 온 종목 / 탭 (없으면 첫 종목 / 차트)
@@ -627,6 +634,10 @@ function StockPage() {
                     className="btn btn-primary info-ask"
                   >
                     ✨ {detail.stock.name}에 대해 AI에게 묻기
+                  </Link>
+                  {/* ⏳ 1년 전 오늘 100만 원어치 샀다면? (그때 샀더라면 화면에서 바로 계산) */}
+                  <Link to={`/whatif?s=${detail.stock.symbol}&d=${yearAgo()}&a=1000000`} className="btn btn-ghost info-ask">
+                    ⏳ 1년 전에 100만 원어치 샀더라면?
                   </Link>
                 </div>
               )}

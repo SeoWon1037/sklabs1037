@@ -11,6 +11,7 @@ import { useTheme } from '../../theme/useTheme'
 import NotificationBell from './NotificationBell'
 import MessageButton from './MessageButton'
 import AllMenu from './AllMenu'
+import { acceptRef } from '../../invite'
 import './Header.css'
 import './HeaderUser.css'
 import CommandPalette from './CommandPalette'
@@ -73,6 +74,7 @@ function Header() {
           setIsAdmin(false)
           return
         }
+        acceptRef()   // 🤝 초대 링크로 들어와 가입했으면 초대 처리 (기억해 둔 코드가 있을 때만)
 
         return fetch('/api/admin/check')
           .then((res) => res.json())

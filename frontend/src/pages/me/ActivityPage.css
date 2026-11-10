@@ -161,3 +161,20 @@
   font-size: 13px;
   transform: translateX(-50%);
 }
+
+/* ===== 🤝 친구 초대 ===== */
+.act-invite { margin-top: 14px; }
+.act-invite h2 small { margin-left: 6px; color: var(--act-muted); font-size: 12px; font-weight: 500; }
+.act-invite-desc { margin: 0 0 12px; color: var(--act-muted); font-size: 13px; line-height: 1.6; }
+.act-invite-desc b { color: var(--text); }
+.act-invite-row { display: flex; gap: 8px; }
+.act-invite-row input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--text) 4%, transparent); color: var(--text); font-size: 13px; }
+.act-invite-btn { flex: none; height: 44px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.act-invite-btn:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.act-invite-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.act-invite-list li { padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--text) 7%, transparent); font-size: 12px; }
+@media (max-width: 640px) {
+  .act-invite-row { flex-wrap: wrap; }
+  .act-invite-row input { flex: 1 1 100%; }
+  .act-invite-btn { flex: 1; }
+}

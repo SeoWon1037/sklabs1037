@@ -261,3 +261,48 @@ export function drawPersonaCard(code) {
 
   return canvas
 }
+
+// 🏆 모의투자 주간 시즌 결과 카드 (label: "11/2 ~ 11/6", list: [{ rank, nickname, returnRate }])
+export function drawSeasonCard(label, list) {
+
+  const { canvas, ctx } = newCard(['#422006', '#a16207', '#ea580c'])
+
+  ctx.font = `500 34px ${FONT}`
+  ctx.globalAlpha = 0.8
+  ctx.textAlign = 'right'
+  ctx.fillText('모의투자 주간 시즌', W - 80, 128)
+  ctx.textAlign = 'left'
+  ctx.globalAlpha = 1
+
+  ctx.font = `800 84px ${FONT}`
+  ctx.fillText('🏆 주간 TOP 3', 80, 300)
+  ctx.font = `600 44px ${FONT}`
+  ctx.globalAlpha = 0.9
+  ctx.fillText(`${label} · 가상 3,000만 원 수익률`, 80, 380)
+  ctx.globalAlpha = 1
+
+  const medal = { 1: '🥇', 2: '🥈', 3: '🥉' }
+  list.slice(0, 3).forEach((r, i) => {
+    const y = 470 + i * 210
+    ctx.fillStyle = 'rgba(255,255,255,0.14)'
+    roundRect(ctx, 80, y, W - 160, 180, 36)
+    ctx.fill()
+    ctx.fillStyle = '#fff'
+    ctx.font = `80px ${FONT}`
+    ctx.fillText(medal[r.rank] ?? String(r.rank), 120, y + 118)
+    const rate = `${Number(r.returnRate) > 0 ? '+' : ''}${Number(r.returnRate).toFixed(2)}%`
+    ctx.font = `800 60px ${FONT}`
+    ctx.textAlign = 'right'
+    ctx.fillText(rate, W - 120, y + 112)
+    const rateWidth = ctx.measureText(rate).width
+    ctx.textAlign = 'left'
+    fitText(ctx, r.nickname, 240, y + 112, W - 240 - 120 - rateWidth - 30, 700, 56)
+  })
+
+  ctx.font = `600 32px ${FONT}`
+  ctx.globalAlpha = 0.85
+  ctx.fillText('sklabs1037.com/mock · 다음 주 1등에 도전하기', 80, 1270)
+  ctx.globalAlpha = 1
+
+  return canvas
+}

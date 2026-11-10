@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🤝 친구 초대 -->
+<mapper namespace="com.sklabs1037.sklabs1037.invite.dao.InviteDao">
+
+    <select id="selectUser" resultType="java.util.LinkedHashMap">
+        SELECT  U.ID                                            AS "id"
+               ,U.NICKNAME                                      AS "nickname"
+               ,U.PROVIDER                                      AS "provider"
+               ,(EXTRACT(EPOCH FROM U.INS_DAY) * 1000)::BIGINT  AS "joinedAt"
+          FROM T_USER U
+         WHERE 1=1
+           AND U.ID = #{userId}
+           AND U.DEL_DAY IS NULL
+    </select>
+
+    <insert id="insertInvite">
+        INSERT INTO T_INVITE (INVITEE_ID, INVITER_ID)
+        VALUES (#{inviteeId}, #{inviterId})
+        ON CONFLICT (INVITEE_ID) DO NOTHING
+    </insert>
+
+    <select id="countInvited" resultType="int">
+        SELECT COUNT(*) FROM T_INVITE WHERE INVITER_ID = #{inviterId}
+    </select>
+
+    <select id="selectInvited" resultType="java.util.LinkedHashMap">
+        SELECT  U.NICKNAME                                      AS "nickname"
+               ,(EXTRACT(EPOCH FROM I.INS_DAY) * 1000)::BIGINT  AS "at"
+          FROM T_INVITE I
+          JOIN T_USER U ON U.ID = I.INVITEE_ID
+         WHERE 1=1
+           AND I.INVITER_ID = #{inviterId}
+           AND U.DEL_DAY IS NULL
+         ORDER BY I.INS_DAY DESC
+         LIMIT 30
+    </select>
+
+    <select id="selectInviterName" resultType="java.lang.String">
+        SELECT U.NICKNAME
+          FROM T_INVITE I
+          JOIN T_USER U ON U.ID = I.INVITER_ID
+         WHERE I.INVITEE_ID = #{inviteeId}
+    </select>
+</mapper>

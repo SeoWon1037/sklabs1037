@@ -54,6 +54,7 @@ import MarketWritePage from './pages/market/MarketWritePage'
 import MarketMyPage from './pages/market/MarketMyPage'
 import MarketUserPage from './pages/market/MarketUserPage'
 import AdminMarketPage from './pages/admin/AdminMarketPage'
+import { rememberRef } from './invite'
 import WhatIfPage from './pages/whatif/WhatIfPage'
 
 // 주소 → 탭 제목 (앞부분이 맞는 것 중 가장 긴 것, 없으면 SKLabs)
@@ -75,6 +76,9 @@ function App() {
   // 📊 화면 열기 통계 (track.js)
   const location = useLocation()
   useEffect(() => { trackPage(location.pathname) }, [location.pathname])
+
+  // 🤝 초대 링크(/?ref=코드)로 들어왔으면 코드를 기억 (로그인하면 Header가 서버로 보냄)
+  useEffect(() => { rememberRef() }, [])
 
   // 브라우저 탭 · 검색 결과에 보이는 제목 (화면마다)
   useEffect(() => { document.title = titleOf(location.pathname) }, [location.pathname])

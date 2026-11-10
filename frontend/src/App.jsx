@@ -54,6 +54,7 @@ import MarketWritePage from './pages/market/MarketWritePage'
 import MarketMyPage from './pages/market/MarketMyPage'
 import MarketUserPage from './pages/market/MarketUserPage'
 import AdminMarketPage from './pages/admin/AdminMarketPage'
+import WhatIfPage from './pages/whatif/WhatIfPage'
 
 function App() {
 
@@ -69,6 +70,7 @@ function App() {
       {/* 주소에 따라 아래 화면만 바뀜 */}
       <Routes>
         <Route path="/" element={<MainPage />} />                        {/* 📈 투자 홈 (사이트 첫 화면: 뉴스 · 시세 · 날씨) */}
+        <Route path="/whatif" element={<WhatIfPage />} />                {/* ⏳ 그때 샀더라면 (공유용 계산기) */}
         <Route path="/market" element={<MarketPage />} />                {/* 🛍️ 중고거래 장터 */}
         <Route path="/market/new" element={<MarketWritePage />} />       {/* 🛍️ 상품 올리기 */}
         <Route path="/market/my" element={<MarketMyPage />} />           {/* 🛍️ 내 판매 목록 · 찜 */}

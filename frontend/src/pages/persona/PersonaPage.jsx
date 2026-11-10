@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { AXES, AXIS_MAX, QUESTIONS, TYPES, typeOf } from './personaData'
+import { drawPersonaCard, saveCanvas } from '../../components/me/shareImage'
 import './PersonaPage.css'
 
 const emptyScores = () => ({ risk: 0, horizon: 0, basis: 0, discipline: 0 })
@@ -172,6 +173,7 @@ function PersonaPage() {
 
         <div className="ps-actions">
           {scores && <button type="button" className="ps-btn ps-btn-primary" onClick={share}>{copied ? '링크를 복사했어요' : '📤 결과 공유하기'}</button>}
+          <button type="button" className="ps-btn" onClick={() => saveCanvas(drawPersonaCard(code), `sklabs-persona-${code}.png`, `나의 투자 성향은 ${type.icon} ${type.name}! ${window.location.origin}/persona?type=${code}`)}>🖼️ 이미지 저장</button>
           <button type="button" className={`ps-btn ${scores ? '' : 'ps-btn-primary'}`} onClick={restart}>{scores ? '다시 하기' : '나도 테스트하기'}</button>
         </div>
         <p className="ps-note">재미로 보는 성향 테스트예요. 투자 권유가 아니고, 실제 판단은 본인 책임이에요.</p>

@@ -39,6 +39,21 @@ const PAGES = [
     },
   },
   { key: 'home', name: '투자 홈 (첫 화면)', path: '/' },
+  {
+    key: 'whatif',
+    name: '그때 샀더라면',
+    path: '/whatif',
+    // 기능 흐름: 기본값(삼성전자 · 1년 전 · 100만 원)에서 1달 전으로 바꿔 계산 → 결과가 나오는지
+    flow: {
+      name: '그때 샀더라면 계산',
+      run: async (page) => {
+        await page.getByRole('button', { name: '1달 전' }).click()
+        await page.getByRole('button', { name: /계산하기/ }).click()
+        await page.locator('.wi-result').waitFor({ timeout: 15000 })
+        return '계산 결과가 나왔어요'
+      },
+    },
+  },
   { key: 'stock', name: '주식 종목', path: '/stock?symbol=005930' },
   { key: 'mock', name: '모의투자', path: '/mock' },
   { key: 'league', name: 'AI 리그', path: '/league' },

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- ⏳ "그때 샀더라면" (읽기만 함) -->
+<mapper namespace="com.sklabs1037.sklabs1037.whatif.dao.WhatIfDao">
+
+    <select id="selectStock" resultType="java.util.LinkedHashMap">
+        SELECT  S.ID                AS "id"
+               ,S.SYMBOL            AS "symbol"
+               ,S.NAME              AS "name"
+               ,S.MARKET            AS "market"
+               ,S.SECURITY_TYPE     AS "securityType"
+          FROM T_STOCK S
+         WHERE 1=1
+           AND S.SYMBOL = #{symbol}
+           AND S.USE_YN = 'Y'
+           AND S.DEL_DAY IS NULL
+    </select>
+
+    <select id="selectCloses" resultType="java.util.LinkedHashMap">
+        SELECT  TO_CHAR(P.TRADE_DATE, 'YYYY-MM-DD')     AS "day"
+               ,P.CLOSE_PRICE                           AS "close"
+          FROM T_STOCK_PRICE P
+         WHERE 1=1
+           AND P.STOCK_ID = #{stockId}
+           AND P.CLOSE_PRICE &gt; 0
+         ORDER BY P.TRADE_DATE
+    </select>
+</mapper>

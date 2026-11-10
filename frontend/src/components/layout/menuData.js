@@ -9,6 +9,7 @@ export const SERVICES = {
   invest: { icon: '📰', label: '투자 홈', to: '/', color: '#3b82f6', desc: '뉴스 · 시세 · 날씨' },
   stock: { icon: '📈', label: '주식 종목', to: '/stock', color: '#22c55e', desc: '시세 · 차트 · 토론' },
   mock: { icon: '💰', label: '모의투자', to: '/mock', color: '#f59e0b', desc: '가상 3,000만 원' },
+  whatif: { icon: '⏳', label: '그때 샀더라면', to: '/whatif', color: '#ef4444', desc: '지금 얼마가 됐을까' },
   league: { icon: '🏆', label: 'AI 리그', to: '/league', color: '#eab308', desc: 'AI vs 사람 수익률' },
   predict: { icon: '🎯', label: '예측 게임', to: '/predict', color: '#ef4444', desc: '오를까 내릴까' },
   ai: { icon: '🤖', label: 'AI 비서', to: '/ai', color: '#3b82f6', desc: '종목 · 시장 질문' },
@@ -30,11 +31,11 @@ export const SERVICES = {
 }
 
 // 검색창 아래 한 줄 (위 메뉴와 같은 순서: 예측 게임 → AI 리그 → AI 비서) + 마지막 칸은 "⋯ 전체"
-export const SHORTCUT_KEYS = ['market', 'stock', 'mock', 'predict', 'league', 'ai', 'lotto', 'quiz', 'duel']
+export const SHORTCUT_KEYS = ['market', 'stock', 'mock', 'whatif', 'predict', 'league', 'ai', 'lotto', 'quiz']
 
 // ☰ 전체 메뉴: 카테고리별
 export const CATEGORIES = [
-  { title: '투자', icon: '📈', keys: ['invest', 'stock', 'mock', 'calendar', 'league', 'company'] },
+  { title: '투자', icon: '📈', keys: ['invest', 'stock', 'mock', 'whatif', 'calendar', 'league', 'company'] },
   { title: '중고거래', icon: '🛍️', keys: ['market', 'sell', 'mymarket', 'messages'] },
   { title: '게임 · 도전', icon: '🎮', keys: ['predict', 'quiz', 'duel', 'lotto'] },
   { title: 'AI 도구', icon: '✨', keys: ['ai', 'persona'] },

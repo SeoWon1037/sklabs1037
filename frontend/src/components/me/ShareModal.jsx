@@ -5,7 +5,7 @@
 // ============================================
 import { useEffect, useState } from 'react'
 import ShareCard from './ShareCard'
-import { drawShareCard } from './shareImage'
+import { drawShareCard, saveCanvas } from './shareImage'
 
 function ShareModal({ onClose }) {
 
@@ -52,24 +52,8 @@ function ShareModal({ onClose }) {
     try { await navigator.share({ title: 'SKLabs', text, url }) } catch { /* 닫으면 그대로 */ }
   }
 
-  const save = () => {
-    drawShareCard(data.card).toBlob(async (blob) => {
-      if (!blob) return
-      const file = new File([blob], `sklabs-${data.code}.png`, { type: 'image/png' })
-      // 휴대폰: 공유 창으로 바로 (인스타·카톡), 안 되면 내려받기
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], text: `${text} ${url}` })
-          return
-        } catch { /* 취소하면 내려받기로 */ }
-      }
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = file.name
-      a.click()
-      URL.revokeObjectURL(a.href)
-    }, 'image/png')
-  }
+  // 휴대폰: 공유 창으로 바로 (인스타·카톡), 안 되면 내려받기
+  const save = () => saveCanvas(drawShareCard(data.card), `sklabs-${data.code}.png`, `${text} ${url}`)
 
   return (
     <div className="act-modal" role="dialog" aria-modal="true" aria-label="내 성적 카드" onClick={onClose}>

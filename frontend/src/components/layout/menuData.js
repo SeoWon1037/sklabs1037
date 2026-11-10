@@ -30,15 +30,16 @@ export const SERVICES = {
   ideas: { icon: '💡', label: '기능 제안', to: '/ideas', color: '#facc15', desc: '원하는 기능 투표' },
 }
 
-// 검색창 아래 한 줄 (위 메뉴와 같은 순서: 예측 게임 → AI 리그 → AI 비서) + 마지막 칸은 "⋯ 전체"
-export const SHORTCUT_KEYS = ['market', 'stock', 'mock', 'whatif', 'predict', 'league', 'ai', 'lotto', 'quiz']
+// 첫 화면 검색창 아래 한 줄: 꼭 필요한 4개만 + 마지막 칸은 "⋯ 전체" (AI 비서는 바로 위 검색창이 입구)
+// - 여기서 빠진 기능도 없어진 게 아님 → ☰ 전체 메뉴에 모두 있음
+export const SHORTCUT_KEYS = ['stock', 'mock', 'whatif', 'market']
 
-// ☰ 전체 메뉴: 카테고리별
+// ☰ 전체 메뉴: 묶음별 (모든 기능이 여기에 있음)
 export const CATEGORIES = [
-  { title: '투자', icon: '📈', keys: ['invest', 'stock', 'mock', 'whatif', 'calendar', 'league', 'company'] },
+  { title: '시세', icon: '📈', keys: ['invest', 'stock', 'calendar', 'ai', 'company'] },
+  { title: '모의투자', icon: '💰', keys: ['mock', 'league', 'duel'] },
+  { title: '놀이터', icon: '🎮', keys: ['whatif', 'predict', 'quiz', 'persona', 'lotto'] },
   { title: '중고거래', icon: '🛍️', keys: ['market', 'sell', 'mymarket', 'messages'] },
-  { title: '게임 · 도전', icon: '🎮', keys: ['predict', 'quiz', 'duel', 'lotto'] },
-  { title: 'AI 도구', icon: '✨', keys: ['ai', 'persona'] },
   { title: '내 공간', icon: '🙋', keys: ['messages', 'activity', 'couple', 'mypage'] },
   { title: 'SKLabs', icon: '🧪', keys: ['support', 'ideas', 'status', 'app', 'about'] },
 ]

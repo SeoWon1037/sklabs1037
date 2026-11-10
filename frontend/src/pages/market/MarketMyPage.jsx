@@ -60,7 +60,7 @@ function MarketMyPage() {
 
   return (
     <main className="mk-page">
-      <Link to="/" className="mk-back">‹ 장터로</Link>
+      <Link to="/market" className="mk-back">‹ 장터로</Link>
       <div className="mk-my-head">
         <h1>내 장터</h1>
         <Link to="/market/new" className="mk-sell">+ 판매하기</Link>
@@ -95,7 +95,7 @@ function MarketMyPage() {
           <ul className="mk-kw-list">
             {(data.keywords ?? []).map((k) => (
               <li key={k}>
-                <Link to={`/?q=${encodeURIComponent(k)}`}>{k}</Link>
+                <Link to={`/market?q=${encodeURIComponent(k)}`}>{k}</Link>
                 <button type="button" onClick={() => changeKeyword('/api/market/keywords/delete', k)} aria-label={`${k} 키워드 지우기`}>✕</button>
               </li>
             ))}

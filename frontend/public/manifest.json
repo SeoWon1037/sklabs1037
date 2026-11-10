@@ -1,5 +1,5 @@
 {
-  "name": "SKLabs - AI 주식 비서 · 모의투자 · 뷰티 랩",
+  "name": "SKLabs - AI 주식 비서 · 모의투자 · 중고거래",
   "short_name": "SKLabs",
   "description": "실제 시세로 답하는 AI 주식 비서, 모의투자, 실시간 토론, 화장품 성분 분석",
   "lang": "ko",
@@ -16,6 +16,6 @@
   "shortcuts": [
     { "name": "주식 종목", "url": "/stock", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
     { "name": "모의투자", "url": "/mock", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
-    { "name": "뷰티 랩", "url": "/beauty", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+    { "name": "중고거래", "url": "/market", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ]
 }

@@ -1,6 +1,6 @@
 // ============================================
 // 상단바 (모든 화면 맨 위에 공통으로 표시)
-// 왼쪽: ☰ + 로고 + 메뉴 탭(주식 종목 / 모의투자 / AI 비서 / 뷰티 랩 / 관리자는 "관리자" 추가 / 만든이 정보)
+// 왼쪽: ☰ + 로고 + 큰 목록(투자 · 중고거래) + 지금 있는 쪽의 작은 메뉴 (관리자는 "관리자" 추가 / 만든이 정보)
 // 오른쪽: 테마 전환 + (로그아웃 상태) 로그인·회원가입 / (로그인 상태) 닉네임(→ 마이페이지)·로그아웃
 // - 주식 종목 화면(/stock)은 넓은 화면이라 상단바 안쪽 폭도 같이 넓힘
 // - 마이페이지에서 닉네임을 바꾸거나 탈퇴하면 "sklabs:user-updated" 이벤트 → 로그인 정보를 다시 불러옴
@@ -15,16 +15,21 @@ import './Header.css'
 import './HeaderUser.css'
 import CommandPalette from './CommandPalette'
 
-// 상단 메뉴 탭: 진짜 메인 기능만 (나머지는 ☰ 전체 메뉴 · 메인 바로가기에서)
-// - 뉴스(메인)는 SKLabs 로고로
-const MENUS = [
-  { to: '/', label: '중고거래', end: true },
-  { to: '/invest', label: '투자 홈' },
-  { to: '/stock', label: '주식 종목' },
-  { to: '/mock', label: '모의투자' },
-  { to: '/ai', label: 'AI 비서' },
-  { to: '/beauty', label: '뷰티 랩' },
+// 상단 메뉴: 큰 목록은 둘뿐 — 투자(첫 화면) · 중고거래
+// - 지금 있는 쪽의 작은 메뉴가 그 옆에 이어서 나옴 (나머지는 ☰ 전체 메뉴에서)
+const SECTIONS = [
+  {
+    key: 'invest', to: '/', label: '투자',
+    subs: [{ to: '/stock', label: '주식 종목' }, { to: '/mock', label: '모의투자' }, { to: '/ai', label: 'AI 비서' }],
+  },
+  {
+    key: 'market', to: '/market', label: '중고거래',
+    subs: [{ to: '/market/new', label: '판매하기' }, { to: '/market/my', label: '내 장터' }, { to: '/messages', label: '메시지' }],
+  },
 ]
+
+// 지금 주소가 어느 쪽인지 (장터 주소가 아니면 투자 쪽)
+const sectionOf = (pathname) => (pathname.startsWith('/market') ? 'market' : 'invest')
 
 // 관리자에게만 보이는 탭
 const ADMIN_MENU = { to: '/admin', label: '관리자' }
@@ -93,7 +98,9 @@ function Header() {
     }
   }
 
-  const menus = isAdmin ? [...MENUS, ADMIN_MENU, ABOUT_MENU] : [...MENUS, ABOUT_MENU]
+  const section = sectionOf(location.pathname)
+  const subs = SECTIONS.find((s) => s.key === section).subs
+  const extras = isAdmin ? [ADMIN_MENU, ABOUT_MENU] : [ABOUT_MENU]
   const wide = WIDE_PATHS.some((p) => location.pathname.startsWith(p))
 
   return (
@@ -111,13 +118,14 @@ function Header() {
           </div>
 
           <nav className="header-menu">
-            {menus.map((m) => (
-              <NavLink
-                key={m.to}
-                to={m.to}
-                end={m.end}
-                className={({ isActive }) => `header-menu-link ${isActive || (m.to === '/' && location.pathname.startsWith('/market')) ? 'header-menu-active' : ''}`}
-              >
+            {SECTIONS.map((m) => (
+              <Link key={m.key} to={m.to} className={`header-menu-link header-menu-big ${section === m.key ? 'header-menu-active' : ''}`} aria-current={section === m.key ? 'true' : undefined}>
+                {m.label}
+              </Link>
+            ))}
+            <span className="header-menu-sep" aria-hidden="true" />
+            {[...subs, ...extras].map((m) => (
+              <NavLink key={m.to} to={m.to} end={m.to === '/market/new'} className={({ isActive }) => `header-menu-link header-menu-sub ${isActive ? 'header-menu-sub-on' : ''}`}>
                 {m.label}
               </NavLink>
             ))}

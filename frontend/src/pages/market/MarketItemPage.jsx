@@ -249,7 +249,7 @@ function MarketItemPage() {
   const like = () => act('like', '/like', { on: !item.liked }, (j) => setItem((prev) => ({ ...prev, liked: j.liked, likes: j.likes })))
   const remove = () => {
     if (!window.confirm('이 상품을 지울까요? 되돌릴 수 없어요.')) return
-    act('delete', '/delete', null, () => navigate('/', { replace: true }))
+    act('delete', '/delete', null, () => navigate('/market', { replace: true }))
   }
   const report = () => act('report', '/report', { reason }, (j) => {
     setReporting(false)
@@ -309,7 +309,7 @@ function MarketItemPage() {
         <div className="mk-empty">
           <span aria-hidden="true">🫥</span>
           <strong>{error}</strong>
-          <Link to="/" className="mk-sell">장터로 돌아가기</Link>
+          <Link to="/market" className="mk-sell">장터로 돌아가기</Link>
         </div>
       </main>
     )
@@ -320,7 +320,7 @@ function MarketItemPage() {
 
   return (
     <main className="mk-page mk-detail-page">
-      <Link to={`/?c=${item.category}`} className="mk-back">‹ {item.categoryName}</Link>
+      <Link to={`/market?c=${item.category}`} className="mk-back">‹ {item.categoryName}</Link>
 
       <div className="mk-detail">
         <Gallery photos={item.photos} title={item.title} category={item.category} />

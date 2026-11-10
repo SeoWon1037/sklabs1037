@@ -25,9 +25,9 @@ const VIEWPORTS = [
 // 점검할 화면 (key는 서버 보고서·캡처 이름)
 const PAGES = [
   {
-    key: 'home',
-    name: '중고거래 (첫 화면)',
-    path: '/',
+    key: 'market',
+    name: '중고거래',
+    path: '/market',
     // 기능 흐름: 카테고리를 누르면 목록(또는 "상품이 없어요")이 다시 나오는지
     flow: {
       name: '장터 카테고리',
@@ -38,7 +38,7 @@ const PAGES = [
       },
     },
   },
-  { key: 'invest', name: '투자 홈', path: '/invest' },
+  { key: 'home', name: '투자 홈 (첫 화면)', path: '/' },
   { key: 'stock', name: '주식 종목', path: '/stock?symbol=005930' },
   { key: 'mock', name: '모의투자', path: '/mock' },
   { key: 'league', name: 'AI 리그', path: '/league' },

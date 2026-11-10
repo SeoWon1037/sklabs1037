@@ -68,14 +68,14 @@ function App() {
 
       {/* 주소에 따라 아래 화면만 바뀜 */}
       <Routes>
-        <Route path="/" element={<MarketPage />} />                      {/* 🛍️ 중고거래 장터 (사이트 첫 화면) */}
-        <Route path="/market" element={<MarketPage />} />                {/* 🛍️ 장터 (같은 화면) */}
+        <Route path="/" element={<MainPage />} />                        {/* 📈 투자 홈 (사이트 첫 화면: 뉴스 · 시세 · 날씨) */}
+        <Route path="/market" element={<MarketPage />} />                {/* 🛍️ 중고거래 장터 */}
         <Route path="/market/new" element={<MarketWritePage />} />       {/* 🛍️ 상품 올리기 */}
         <Route path="/market/my" element={<MarketMyPage />} />           {/* 🛍️ 내 판매 목록 · 찜 */}
         <Route path="/market/user/:id" element={<MarketUserPage />} />   {/* 🛍️ 판매자 프로필: 매너 온도 · 받은 후기 · 판매 상품 */}
         <Route path="/market/:id" element={<MarketItemPage />} />        {/* 🛍️ 상품 상세 → 채팅하기 */}
         <Route path="/market/:id/edit" element={<MarketWritePage />} />  {/* 🛍️ 상품 고치기 */}
-        <Route path="/invest" element={<MainPage />} />                  {/* 📈 투자 홈 (뉴스 · 시세 · 날씨 — 예전 첫 화면) */}
+        <Route path="/invest" element={<MainPage />} />                  {/* 📈 투자 홈 (예전 주소도 그대로 열리게) */}
         <Route path="/stock" element={<StockPage />} />                  {/* 주식 종목 */}
         <Route path="/mock" element={<MockTradePage />} />              {/* 모의투자 */}
         <Route path="/league" element={<LeaguePage />} />                {/* 🤖 AI vs 사람 투자 리그 */}

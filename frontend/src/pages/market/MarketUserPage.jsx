@@ -37,7 +37,7 @@ function MarketUserPage() {
         <div className="mk-empty">
           <span aria-hidden="true">🫥</span>
           <strong>{error}</strong>
-          <Link to="/" className="mk-sell">장터로 돌아가기</Link>
+          <Link to="/market" className="mk-sell">장터로 돌아가기</Link>
         </div>
       </main>
     )
@@ -49,7 +49,7 @@ function MarketUserPage() {
 
   return (
     <main className="mk-page">
-      <Link to="/" className="mk-back">‹ 장터로</Link>
+      <Link to="/market" className="mk-back">‹ 장터로</Link>
 
       <section className="mk-profile">
         <span className="mk-avatar mk-avatar-lg" aria-hidden="true">{String(seller.nickname ?? '?').slice(0, 1)}</span>

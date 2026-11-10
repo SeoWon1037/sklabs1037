@@ -301,3 +301,14 @@
   text-align: center;
 }
 .header-demo a { color: var(--primary, #3b82f6); font-weight: 700; text-decoration: none; white-space: nowrap; }
+
+/* 큰 목록(투자 · 중고거래)은 크게, 그 옆 작은 메뉴는 가볍게 */
+.header-menu-big { font-size: 16px; font-weight: 800; }
+.header-menu-sep { flex: none; width: 1px; height: 16px; margin: 0 8px; background: var(--border); }
+.header-menu-sub { font-size: 14px; font-weight: 500; }
+.header-menu-sub-on { color: var(--text); font-weight: 700; }
+@media (max-width: 640px) {
+  .header-menu-big { font-size: 15px; }
+  .header-menu-sub { font-size: 13px; }
+  .header-menu-sep { margin: 0 4px; }
+}

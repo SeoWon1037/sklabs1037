@@ -60,6 +60,7 @@ const MarketMyPage = lazyPage(() => import('./pages/market/MarketMyPage'))
 const MarketUserPage = lazyPage(() => import('./pages/market/MarketUserPage'))
 const AdminMarketPage = lazyPage(() => import('./pages/admin/AdminMarketPage'))
 const AdminErrorsPage = lazyPage(() => import('./pages/admin/AdminErrorsPage'))
+const AdminSelfCheckPage = lazyPage(() => import('./pages/admin/AdminSelfCheckPage'))
 const WhatIfPage = lazyPage(() => import('./pages/whatif/WhatIfPage'))
 
 // 주소 → 탭 제목 (앞부분이 맞는 것 중 가장 긴 것, 없으면 SKLabs)
@@ -137,6 +138,7 @@ function App() {
         <Route path="/admin/server" element={<AdminServerPage />} />     {/* 관리자: 🖥 서버 상태 (운영 서버 + DB, 5초마다) */}
         <Route path="/status" element={<StatusPage />} />              {/* 🟢 서비스 상태 (누구나) */}
         <Route path="/calendar" element={<MarketCalendarPage />} />     {/* 📅 증시 일정 (휴장 · FOMC · 금통위 · 만기일) */}
+        <Route path="/admin/selfcheck" element={<AdminSelfCheckPage />} /> {/* 관리자: 🧪 자가 점검 (빠진 SQL · 서버 키 · 옛날 시세 · 계산) */}
         <Route path="/admin/errors" element={<AdminErrorsPage />} />    {/* 관리자: 🐞 화면 오류 (사용자 브라우저에서 난 오류 모음) */}
         <Route path="/admin/market" element={<AdminMarketPage />} />    {/* 관리자: 🛍️ 장터 관리 (신고된 · 숨겨진 상품) */}
         <Route path="/admin/stats" element={<AdminStatsPage />} />      {/* 관리자: 📊 사용 통계 */}

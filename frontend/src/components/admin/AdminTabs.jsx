@@ -19,6 +19,7 @@ const TABS = [
   { to: '/admin/reports', label: '🚩 신고 관리', badge: 'reports' },
   { to: '/admin/market', label: '🛍️ 장터 관리' },
   { to: '/admin/errors', label: '🐞 화면 오류' },
+  { to: '/admin/selfcheck', label: '🧪 자가 점검' },
   { to: '/admin/resets', label: '♻️ 초기화 신청', badge: 'resets' },
   { to: '/admin/ai-improve', label: '🔁 AI 자기 개선' },
   { to: '/admin/qa', label: '🤖 QA 봇' },

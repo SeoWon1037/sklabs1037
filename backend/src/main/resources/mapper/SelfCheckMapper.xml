@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🧪 자가 점검: DB에 실제로 있는 표 · 칸 -->
+<mapper namespace="com.sklabs1037.sklabs1037.ops.dao.SelfCheckDao">
+
+    <select id="selectTables" resultType="java.lang.String">
+        SELECT UPPER(TABLE_NAME)
+          FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+    </select>
+
+    <select id="selectColumns" resultType="java.lang.String">
+        SELECT UPPER(TABLE_NAME) || '.' || UPPER(COLUMN_NAME)
+          FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+    </select>
+</mapper>

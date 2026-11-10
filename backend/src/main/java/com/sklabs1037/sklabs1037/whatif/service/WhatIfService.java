@@ -109,6 +109,25 @@ public class WhatIfService {
 
     }
 
+    // 🧪 자가 점검용: 이 종목의 시세를 from까지 받아보고 { points, firstDate, lastDate, pages } (계산은 하지 않음)
+    public Map<String, Object> probe(String rawSymbol, LocalDate from) {
+
+        String symbol = symbol(rawSymbol);
+        Map<String, Object> stock = whatIfDao.selectStock(symbol);
+        if (stock == null) throw new NoSuchElementException("점검용 종목(" + symbol + ")이 종목 표에 없어요.");
+
+        List<Point> points = history(symbol, num(stock.get("id")), from);
+        Cached hit = cache.get(symbol);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("points", points.size());
+        out.put("firstDate", points.isEmpty() ? null : points.get(0).date().toString());
+        out.put("lastDate", points.isEmpty() ? null : points.get(points.size() - 1).date().toString());
+        out.put("pages", hit == null ? 0 : hit.pages());
+        return out;
+
+    }
+
     // 같은 날 같은 돈을 KODEX 200에 넣었다면 { name, value, rate, buyDate } (계산할 수 없으면 null)
     private Map<String, Object> bench(LocalDate buyDate, long amount) {
 

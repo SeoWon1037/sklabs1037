@@ -187,6 +187,22 @@ public class MarketService {
 
     }
 
+    // 🔗 공유 링크 미리보기에 쓸 것 { title, price, desc, image } (없거나 숨겨진 상품이면 null)
+    public Map<String, Object> ogItem(Long id) {
+
+        Map<String, Object> item = marketDao.selectItem(id, null);
+        if (item == null || "HIDDEN".equals(item.get("status"))) return null;
+
+        String region = item.get("region") == null ? "" : item.get("region") + " · ";
+        Map<String, Object> out = new HashMap<>();
+        out.put("title", ("SOLD".equals(item.get("status")) ? "[판매완료] " : "") + item.get("title"));
+        out.put("price", priceText(num(item.get("price"))));
+        out.put("desc", region + item.get("description"));
+        out.put("image", item.get("photoId") == null ? null : "/api/market/photos/" + item.get("photoId"));
+        return out;
+
+    }
+
     // 판매자 카드: 닉네임 · 판매 수 + 매너 온도 · 받은 후기 수
     private Map<String, Object> seller(Long userId) {
 

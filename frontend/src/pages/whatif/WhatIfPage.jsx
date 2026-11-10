@@ -4,6 +4,7 @@
 // - 주소에 조건을 남김 (/whatif?s=005930&d=2024-11-08&a=1000000) → 공유받은 사람도 같은 결과
 // - 계산은 서버가 종가로 함 (산 날 = 고른 날 또는 그 뒤 첫 거래일). 배당 · 세금 · 수수료 제외
 //   액면분할처럼 가격 기준이 바뀐 날이 끼면 답 대신 "이 날부터 다시" 안내
+// - 공유 주소는 /api/og/whatif?… (카톡 미리보기에 결과가 보이게 서버가 만든 작은 페이지 → 열면 이 화면으로)
 // - 백엔드: GET /api/whatif?symbol=&from=&amount= , 종목 검색 GET /api/stock/search?q=
 // ============================================
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -117,9 +118,7 @@ function WhatIfPage() {
 
   // 공유받은 주소로 들어오면 바로 계산 (처음 한 번)
   useEffect(() => {
-    document.title = '그때 샀더라면 · SKLabs'
     if (initial.s && initial.d) load(initial.s, initial.d, initial.a)
-    return () => { document.title = 'SKLabs' }
   }, [initial, load])
 
   // 종목 검색 (0.25초 쉬었다가)
@@ -154,19 +153,21 @@ function WhatIfPage() {
     setToast(msg)
     setTimeout(() => setToast(''), 1800)
   }
+  // 공유용 주소: 카톡에 붙이면 결과가 담긴 미리보기 카드가 뜨고, 누르면 이 화면으로 옴 (서버 OgController)
+  const shareUrl = result ? `${window.location.origin}/api/og/whatif?s=${result.stock.symbol}&d=${params.get('d') || result.buyDate}&a=${result.amount}` : ''
   const shareText = result ? `${dayText(result.buyDate)}에 ${result.stock.name}${eul(result.stock.name)} ${won(result.amount)}어치 샀더라면 지금 ${won(result.value)} (${signed(result.rate)})` : ''
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${shareText} ${window.location.href}`)
+      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
       flash('링크를 복사했어요')
     } catch {
       flash('복사하지 못했어요. 주소창의 주소를 복사해주세요.')
     }
   }
   const share = async () => {
-    try { await navigator.share({ title: '그때 샀더라면 · SKLabs', text: shareText, url: window.location.href }) } catch { /* 닫으면 그대로 */ }
+    try { await navigator.share({ title: '그때 샀더라면 · SKLabs', text: shareText, url: shareUrl }) } catch { /* 닫으면 그대로 */ }
   }
-  const saveImage = () => saveCanvas(drawWhatIfCard(result), `sklabs-whatif-${result.stock.symbol}.png`, `${shareText} ${window.location.href}`)
+  const saveImage = () => saveCanvas(drawWhatIfCard(result), `sklabs-whatif-${result.stock.symbol}.png`, `${shareText} ${shareUrl}`)
 
   const up = result ? Number(result.profit) >= 0 : true
 

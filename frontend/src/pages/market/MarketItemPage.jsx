@@ -292,8 +292,9 @@ function MarketItemPage() {
   }
 
   // 🔗 공유: 휴대폰은 공유 시트, 아니면 주소 복사
+  // 공유용 주소(/api/og/market/번호): 카톡에 붙이면 상품 제목 · 가격 · 사진이 담긴 카드가 뜨고, 누르면 이 화면으로 옴
   const share = async () => {
-    const url = window.location.href
+    const url = `${window.location.origin}/api/og/market/${id}`
     try {
       if (navigator.share) await navigator.share({ title: item.title, text: `${item.title} · ${priceText(item.price)}`, url })
       else {

@@ -65,6 +65,13 @@ public class WhatIfService {
 
     public Map<String, Object> calc(String rawSymbol, String rawFrom, long amount) {
 
+        return calc(rawSymbol, rawFrom, amount, true);
+
+    }
+
+    // count: 이용 통계에 셀지 (링크 미리보기를 만들 때는 세지 않음)
+    public Map<String, Object> calc(String rawSymbol, String rawFrom, long amount, boolean count) {
+
         WhatIfCalc.checkAmount(amount);
         String symbol = symbol(rawSymbol);
         LocalDate today = LocalDate.now(KST);
@@ -83,7 +90,7 @@ public class WhatIfService {
         out.put("stock", s);
         out.put("bench", symbol.equals(BENCH_SYMBOL) ? null : bench(LocalDate.parse(String.valueOf(out.get("buyDate"))), amount));
 
-        usageStatService.event("whatif");
+        if (count) usageStatService.event("whatif");
         return out;
 
     }

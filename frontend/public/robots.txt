@@ -1,0 +1,9 @@
+# 검색 로봇 안내
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /mypage
+Disallow: /messages
+
+Sitemap: https://sklabs1037.com/sitemap.xml

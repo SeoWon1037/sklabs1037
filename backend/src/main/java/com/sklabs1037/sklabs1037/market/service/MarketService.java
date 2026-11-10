@@ -29,6 +29,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * - ⭐ 거래 후기: 판매완료 때 "누구와 거래했는지"를 채팅한 사람 중에서 고르면, 두 사람이 서로 한 번씩 후기를 남김
  *         → 받은 후기로 매너 온도 계산 (MarketRules.temperature), 판매자 프로필에서 누구나 볼 수 있음
  * - 🔔 키워드 알림: 등록한 낱말이 제목에 들어간 새 상품이 올라오면 알림 (한 사람 10개)
+ * - 💰 가격 제안: 사는 사람이 판매가보다 낮은 가격을 제안(상품당 3번) → 판매자가 수락/거절
+ *         수락해도 가격·상태는 그대로, 두 사람 채팅방에 수락 메시지를 보내고 거래는 대화로
+ * - 📍 지역 필터 · 📊 비슷한 상품 시세(같은 카테고리 + 제목 첫 낱말, 최근 90일, 3개 이상일 때만)
  * - 📉 가격 내림: 판매자가 가격을 내리면 찜한 사람들에게 알림, 상세·목록에 전 가격 표시
  * - ✨ AI 글쓰기 도우미: 상품 이름·메모 → 제목·설명·카테고리 초안 (하루 10번, 결과는 서버 규칙으로 다시 검사)
  */
@@ -97,6 +100,12 @@ public class MarketService {
 
     public Map<String, Object> list(String category, String q, String sort, boolean onlySale, boolean free, int page) {
 
+        return list(category, q, sort, onlySale, free, false, null, page);
+
+    }
+
+    public Map<String, Object> list(String category, String q, String sort, boolean onlySale, boolean free, boolean drop, String region, int page) {
+
         Map<String, Object> cond = new HashMap<>();
         String cat = category == null ? "" : category.toUpperCase(Locale.ROOT);
         if (MarketRules.CATEGORIES.containsKey(cat)) cond.put("category", cat);
@@ -104,6 +113,9 @@ public class MarketService {
         if (!kw.isEmpty()) cond.put("q", kw);
         if (onlySale) cond.put("onlySale", true);
         if (free) cond.put("free", true);
+        if (drop) cond.put("drop", true);
+        String rg = MarketRules.region(region);
+        if (rg != null) cond.put("region", rg);
         cond.put("sort", MarketRules.sortOf(sort));
 
         int p = Math.max(0, Math.min(page, 200));
@@ -153,6 +165,14 @@ public class MarketService {
         out.put("reviewed", reviewed);
         out.remove("buyerId");
         if (!mine) out.remove("buyerName");   // 누구와 거래했는지는 판매자만
+
+        // 💰 가격 제안: 판매자는 기다리는 제안들, 사는 사람은 내가 보낸 최근 제안
+        if (mine) out.put("offers", marketDao.selectPendingOffers(id));
+        else if (me != null) {
+            out.put("myOffer", marketDao.selectMyOffer(id, me));
+            out.put("offersLeft", Math.max(0, MarketRules.MAX_OFFERS - marketDao.countOffers(id, me)));
+        }
+        out.put("priceGuide", priceGuide(String.valueOf(item.get("category")), String.valueOf(item.get("title")), id));
 
         out.put("seller", seller(sellerId));
 
@@ -225,6 +245,12 @@ public class MarketService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("selling", decorate(marketDao.selectItems(mineCond)));
         out.put("likes", decorate(marketDao.selectItems(likeCond)));
+        Map<String, Object> boughtCond = new HashMap<>();
+        boughtCond.put("boughtBy", me);
+        boughtCond.put("sort", "RECENT");
+        boughtCond.put("limit", 100);
+        boughtCond.put("offset", 0);
+        out.put("purchases", decorate(marketDao.selectItems(boughtCond)));
         out.put("keywords", marketDao.selectKeywords(me));
         out.put("maxKeywords", MarketRules.MAX_KEYWORDS);
         return out;
@@ -414,6 +440,95 @@ public class MarketService {
             notificationService.notify(target, "MARKET", "⭐ 거래 후기가 도착했어요",
                     item.get("title") + " · " + (rating == 3 ? "좋아요" : "보통이에요"), "/market/user/" + target, "MARKET_REVIEW:" + id + ":" + me);
         }
+
+    }
+
+    // ============================================
+    // 📍 지역 · 📊 시세
+    // ============================================
+    public Map<String, Object> regions() {
+
+        return Map.of("regions", marketDao.selectRegions());
+
+    }
+
+    // 비슷한 상품 시세 { word, count, low, median, high } (비슷한 상품이 3개 미만이면 빈 Map)
+    public Map<String, Object> priceGuide(String category, String title, Long exceptId) {
+
+        String cat = category == null ? "" : category.toUpperCase(Locale.ROOT);
+        String word = MarketRules.guideWord(title);
+        if (word == null || !MarketRules.CATEGORIES.containsKey(cat)) return Map.of();
+
+        Map<String, Object> row = marketDao.selectPriceGuide(cat, word, exceptId);
+        if (intOf(row, "count") < MarketRules.GUIDE_MIN) return Map.of();
+
+        Map<String, Object> out = new LinkedHashMap<>(row);
+        out.put("word", word);
+        return out;
+
+    }
+
+    // ============================================
+    // 💰 가격 제안
+    // ============================================
+    @Transactional
+    public Map<String, Object> offer(Long me, Long id, Object rawPrice) {
+
+        Map<String, Object> item = marketDao.selectItem(id, me);
+        if (item == null || "HIDDEN".equals(item.get("status"))) throw new NoSuchElementException("없거나 지워진 상품이에요.");
+        Long sellerId = num(item.get("sellerId"));
+        if (sellerId.equals(me)) throw new IllegalArgumentException("내 상품에는 제안할 수 없어요.");
+        if (!"SALE".equals(item.get("status"))) throw new IllegalArgumentException("판매 중인 상품에만 가격을 제안할 수 있어요.");
+
+        long price = MarketRules.offerPrice(num(item.get("price")), rawPrice);
+        if (marketDao.countOffers(id, me) >= MarketRules.MAX_OFFERS) throw new IllegalArgumentException("한 상품에는 " + MarketRules.MAX_OFFERS + "번까지 제안할 수 있어요.");
+
+        marketDao.cancelPendingOffer(id, me);
+        marketDao.insertOffer(id, me, price);
+
+        notificationService.notify(sellerId, "MARKET", "💰 가격 제안이 왔어요",
+                item.get("title") + " · " + priceText(price) + " (판매가 " + priceText(num(item.get("price"))) + ")", "/market/" + id, "MARKET_OFFER:" + id + ":" + me + ":" + price);
+
+        return Map.of("myOffer", marketDao.selectMyOffer(id, me), "offersLeft", Math.max(0, MarketRules.MAX_OFFERS - marketDao.countOffers(id, me)));
+
+    }
+
+    // 내 제안 취소
+    public void cancelOffer(Long me, Long id) {
+
+        if (marketDao.cancelPendingOffer(id, me) == 0) throw new IllegalArgumentException("기다리는 제안이 없어요.");
+
+    }
+
+    // 판매자의 답: 수락 → 두 사람 채팅방에 수락 메시지 + 알림 / 거절 → 알림 → { roomId? }
+    public Map<String, Object> answerOffer(Long me, Long offerId, boolean accept) {
+
+        Map<String, Object> offer = marketDao.selectOffer(offerId);
+        if (offer == null || !me.equals(num(offer.get("sellerId")))) throw new IllegalArgumentException("내 상품에 온 제안만 답할 수 있어요.");
+        if (marketDao.updateOfferStatus(offerId, accept ? "ACCEPTED" : "DECLINED") == 0) throw new IllegalArgumentException("이미 답했거나 취소된 제안이에요.");
+
+        Long itemId = num(offer.get("itemId"));
+        Long buyerId = num(offer.get("buyerId"));
+        String text = offer.get("title") + " · " + priceText(num(offer.get("price")));
+
+        if (!accept) {
+            notificationService.notify(buyerId, "MARKET", "가격 제안이 거절됐어요", text, "/market/" + itemId, "MARKET_OFFER_NO:" + offerId);
+            return Map.of();
+        }
+
+        notificationService.notify(buyerId, "MARKET", "🤝 가격 제안이 수락됐어요", text + " · 채팅으로 거래를 이어가세요", "/market/" + itemId, "MARKET_OFFER_OK:" + offerId);
+
+        Map<String, Object> out = new HashMap<>();
+        try {
+            Long roomId = num(dmService.open(me, buyerId).get("roomId"));
+            out.put("roomId", roomId);
+            if (marketDao.insertChat(itemId, buyerId, roomId) > 0) marketDao.addChatCnt(itemId);   // 판매완료 때 "거래한 사람" 후보에 들어가게
+            dmService.send(me, roomId, "🤝 가격 제안을 수락했어요: " + text + "\n/market/" + itemId);
+        } catch (RuntimeException e) {
+            // 차단 등으로 방을 못 열어도 수락은 그대로 (알림은 이미 감)
+            log.info("제안 수락 메시지 생략: {}", e.getMessage());
+        }
+        return out;
 
     }
 

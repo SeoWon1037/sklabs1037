@@ -148,6 +148,55 @@ public final class MarketRules {
 
     }
 
+    // ============================================
+    // 💰 가격 제안 · 📊 시세 · 📍 지역
+    // ============================================
+    public static final int MAX_OFFERS = 3;        // 한 상품에 한 사람이
+    public static final int GUIDE_MIN = 3;         // 비슷한 상품이 이만큼은 있어야 시세를 보여줌
+
+    // 제안 가격 검사: 판매가보다 싸고, 판매가의 절반 이상, 100원 단위로 내림
+    public static long offerPrice(Long itemPrice, Object raw) {
+
+        if (itemPrice == null || itemPrice <= 0) throw new IllegalArgumentException("나눔 상품에는 가격을 제안할 수 없어요.");
+
+        long price;
+        try {
+            price = raw instanceof Number n ? n.longValue() : Long.parseLong(str(raw).replaceAll("[,원\\s]", ""));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("제안할 가격을 숫자로 넣어주세요.");
+        }
+        price = price / 100 * 100;
+
+        if (price <= 0) throw new IllegalArgumentException("제안할 가격을 넣어주세요.");
+        if (price >= itemPrice) throw new IllegalArgumentException("판매 가격보다 낮은 가격만 제안할 수 있어요.");
+        if (price * 2 < itemPrice) throw new IllegalArgumentException("판매 가격의 절반보다 낮은 제안은 보낼 수 없어요.");
+        return price;
+
+    }
+
+    // 상품 이름이 아닌 꾸밈말 (시세 낱말로 쓰지 않음)
+    private static final Set<String> GUIDE_SKIP = Set.of("급처", "급매", "판매", "팝니다", "팔아요", "삽니다", "새상품", "새제품", "미개봉", "정품", "나눔", "무료나눔", "가격내림", "네고", "택포");
+
+    // 시세를 찾을 낱말: 제목에서 처음 나오는 2자 이상 낱말, 꾸밈말은 건너뜀 (없으면 null)
+    public static String guideWord(String title) {
+
+        for (String w : keyword(title).split(" ")) {
+            String t = w.replaceAll("[^0-9A-Za-z가-힣]", "");
+            if (t.length() >= 2 && !GUIDE_SKIP.contains(t)) return t.length() > 15 ? t.substring(0, 15) : t;
+        }
+        return null;
+
+    }
+
+    // 지역 필터 정리 (20자, LIKE 특수문자 제거, 없으면 null)
+    public static String region(String raw) {
+
+        String r = keyword(raw);
+        if (r.length() > 20) r = r.substring(0, 20);
+        return r.isEmpty() ? null : r;
+
+    }
+
     // 금지 품목 이름 (없으면 null)
     public static String banned(String text) {
 

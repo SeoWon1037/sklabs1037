@@ -63,6 +63,10 @@ export const clearRecent = () => {
   try { localStorage.removeItem(RECENT_KEY) } catch { /* 무시 */ }
 }
 
+// 📊 "보통 3만~12만 원" (비슷한 상품 시세 한 줄)
+export const guideText = (g) =>
+  `‘${g.word}’ 상품 ${g.count}개 기준 · 보통 ${Number(g.low).toLocaleString('ko-KR')}~${Number(g.high).toLocaleString('ko-KR')}원 (가운데 ${Number(g.median).toLocaleString('ko-KR')}원)`
+
 export const getJson = (url) => fetch(url).then((r) => r.json()).catch(() => ({ success: false, message: '서버에 연결하지 못했어요.' }))
 
 export const postJson = (url, body) =>

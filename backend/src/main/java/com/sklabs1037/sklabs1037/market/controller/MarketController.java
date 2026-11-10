@@ -40,6 +40,10 @@ import java.util.function.Supplier;
  *   POST /api/market/items/{id}/review { rating, tags[], comment }   거래 후기 (판매자 ↔ 거래한 사람)
  *   POST /api/market/keywords { keyword }         🔔 키워드 알림 등록 (10개까지)
  *   POST /api/market/keywords/delete { keyword }  키워드 지우기
+ *   GET  /api/market/regions                      📍 상품이 많은 지역 (누구나)
+ *   GET  /api/market/price-guide?category=&title= 📊 비슷한 상품 시세 (누구나, 3개 이상일 때만 값이 있음)
+ *   POST /api/market/items/{id}/offer { price }   💰 가격 제안 (상품당 3번) · …/offer/cancel 취소
+ *   POST /api/market/offers/{offerId}/answer { accept }   판매자의 수락/거절 → 수락이면 { roomId }
  *   GET  /api/market/admin/reported               🛠 신고된 · 숨겨진 상품 (관리자)
  *   POST /api/market/admin/{id}/restore           🛠 숨김 풀기 + 신고 기록 지움 (관리자)
  */
@@ -70,9 +74,11 @@ public class MarketController {
                                                     @RequestParam(required = false) String sort,
                                                     @RequestParam(defaultValue = "false") boolean sale,
                                                     @RequestParam(defaultValue = "false") boolean free,
+                                                    @RequestParam(defaultValue = "false") boolean drop,
+                                                    @RequestParam(required = false) String region,
                                                     @RequestParam(defaultValue = "0") int page) {
 
-        return run("상품 목록", () -> marketService.list(category, q, sort, sale, free, page));
+        return run("상품 목록", () -> marketService.list(category, q, sort, sale, free, drop, region, page));
 
     }
 
@@ -264,6 +270,54 @@ public class MarketController {
         Long me = userId(request);
         if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
         return run("키워드 지우기", () -> marketService.removeKeyword(me, body.get("keyword") == null ? null : String.valueOf(body.get("keyword"))));
+
+    }
+
+    // ============================================
+    // 📍 지역 · 📊 시세 · 💰 가격 제안
+    // ============================================
+    @GetMapping("/regions")
+    public ResponseEntity<Map<String, Object>> regions() {
+
+        return run("지역 목록", marketService::regions);
+
+    }
+
+    @GetMapping("/price-guide")
+    public ResponseEntity<Map<String, Object>> priceGuide(@RequestParam(required = false) String category,
+                                                          @RequestParam(required = false) String title) {
+
+        return run("시세", () -> Map.of("priceGuide", marketService.priceGuide(category, title, null)));
+
+    }
+
+    @PostMapping("/items/{id}/offer")
+    public ResponseEntity<Map<String, Object>> offer(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
+
+        Long me = userId(request);
+        if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 제안할 수 있어요.");
+        return run("가격 제안", () -> marketService.offer(me, id, body.get("price")));
+
+    }
+
+    @PostMapping("/items/{id}/offer/cancel")
+    public ResponseEntity<Map<String, Object>> cancelOffer(@PathVariable Long id, HttpServletRequest request) {
+
+        Long me = userId(request);
+        if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+        return run("제안 취소", () -> {
+            marketService.cancelOffer(me, id);
+            return Map.of();
+        });
+
+    }
+
+    @PostMapping("/offers/{offerId}/answer")
+    public ResponseEntity<Map<String, Object>> answerOffer(@PathVariable Long offerId, @RequestBody Map<String, Object> body, HttpServletRequest request) {
+
+        Long me = userId(request);
+        if (me == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+        return run("제안 답하기", () -> marketService.answerOffer(me, offerId, Boolean.TRUE.equals(body.get("accept"))));
 
     }
 

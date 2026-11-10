@@ -79,6 +79,16 @@
          WHERE 1=1
            AND I.DEL_DAY IS NULL
            AND U.DEL_DAY IS NULL
+        <if test="boughtBy != null">
+           AND I.BUYER_ID = #{boughtBy}
+           AND I.STATUS = 'SOLD'
+        </if>
+        <if test="region != null">
+           AND I.REGION ILIKE #{region} || '%'
+        </if>
+        <if test="drop != null">
+           AND I.PREV_PRICE &gt; I.PRICE
+        </if>
         <choose>
             <when test="sellerId != null">
            AND I.SELLER_ID = #{sellerId}
@@ -384,4 +394,113 @@
     <delete id="deleteReports">
         DELETE FROM T_MARKET_REPORT WHERE ITEM_ID = #{itemId}
     </delete>
+
+    <!-- ===== 📍 지역 · 📊 시세 ===== -->
+    <!-- 상품이 많은 지역 (앞 두 낱말: "서울 강남구") -->
+    <select id="selectRegions" resultType="java.util.LinkedHashMap">
+        SELECT  R.REGION            AS "region"
+               ,COUNT(*)::INT       AS "count"
+          FROM (
+                SELECT ARRAY_TO_STRING((STRING_TO_ARRAY(I.REGION, ' '))[1:2], ' ') AS REGION
+                  FROM T_MARKET_ITEM I
+                 WHERE 1=1
+                   AND I.DEL_DAY IS NULL
+                   AND I.STATUS IN ('SALE', 'RESERVED')
+                   AND I.REGION IS NOT NULL
+               ) R
+         GROUP BY R.REGION
+         ORDER BY COUNT(*) DESC, R.REGION
+         LIMIT 20
+    </select>
+
+    <!-- 같은 카테고리에서 제목에 낱말이 들어간 최근 90일 상품의 가격 분포 (나눔 · 숨김 제외) -->
+    <select id="selectPriceGuide" resultType="java.util.LinkedHashMap">
+        SELECT  COUNT(*)::INT                                                       AS "count"
+               ,(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY I.PRICE))::BIGINT     AS "low"
+               ,(PERCENTILE_CONT(0.5)  WITHIN GROUP (ORDER BY I.PRICE))::BIGINT     AS "median"
+               ,(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY I.PRICE))::BIGINT     AS "high"
+          FROM T_MARKET_ITEM I
+         WHERE 1=1
+           AND I.DEL_DAY IS NULL
+           AND I.STATUS &lt;&gt; 'HIDDEN'
+           AND I.PRICE &gt; 0
+           AND I.CATEGORY = #{category}
+           AND I.TITLE ILIKE '%' || #{word} || '%'
+           AND I.INS_DAY &gt; NOW() - INTERVAL '90 days'
+        <if test="exceptId != null">
+           AND I.ID &lt;&gt; #{exceptId}
+        </if>
+    </select>
+
+    <!-- ===== 💰 가격 제안 ===== -->
+    <update id="cancelPendingOffer">
+        UPDATE T_MARKET_OFFER
+           SET  STATUS  = 'CANCELED'
+               ,UPD_DAY = NOW()
+         WHERE 1=1
+           AND ITEM_ID = #{itemId}
+           AND BUYER_ID = #{buyerId}
+           AND STATUS = 'PENDING'
+    </update>
+
+    <insert id="insertOffer">
+        INSERT INTO T_MARKET_OFFER (ITEM_ID, BUYER_ID, PRICE) VALUES (#{itemId}, #{buyerId}, #{price})
+    </insert>
+
+    <select id="countOffers" resultType="int">
+        SELECT COUNT(*) FROM T_MARKET_OFFER WHERE ITEM_ID = #{itemId} AND BUYER_ID = #{buyerId}
+    </select>
+
+    <select id="selectPendingOffers" resultType="java.util.LinkedHashMap">
+        SELECT  O.ID                                            AS "id"
+               ,O.BUYER_ID                                      AS "buyerId"
+               ,U.NICKNAME                                      AS "buyerName"
+               ,O.PRICE                                         AS "price"
+               ,(EXTRACT(EPOCH FROM O.INS_DAY) * 1000)::BIGINT  AS "at"
+          FROM T_MARKET_OFFER O
+          JOIN T_USER U ON U.ID = O.BUYER_ID
+         WHERE 1=1
+           AND O.ITEM_ID = #{itemId}
+           AND O.STATUS = 'PENDING'
+           AND U.DEL_DAY IS NULL
+         ORDER BY O.PRICE DESC, O.ID
+         LIMIT 30
+    </select>
+
+    <!-- 내가 이 상품에 보낸 가장 최근 제안 -->
+    <select id="selectMyOffer" resultType="java.util.LinkedHashMap">
+        SELECT  O.ID        AS "id"
+               ,O.PRICE     AS "price"
+               ,O.STATUS    AS "status"
+          FROM T_MARKET_OFFER O
+         WHERE 1=1
+           AND O.ITEM_ID = #{itemId}
+           AND O.BUYER_ID = #{buyerId}
+         ORDER BY O.ID DESC
+         LIMIT 1
+    </select>
+
+    <select id="selectOffer" resultType="java.util.LinkedHashMap">
+        SELECT  O.ID            AS "id"
+               ,O.ITEM_ID       AS "itemId"
+               ,O.BUYER_ID      AS "buyerId"
+               ,O.PRICE         AS "price"
+               ,O.STATUS        AS "status"
+               ,I.SELLER_ID     AS "sellerId"
+               ,I.TITLE         AS "title"
+          FROM T_MARKET_OFFER O
+          JOIN T_MARKET_ITEM I ON I.ID = O.ITEM_ID
+         WHERE 1=1
+           AND O.ID = #{offerId}
+           AND I.DEL_DAY IS NULL
+    </select>
+
+    <update id="updateOfferStatus">
+        UPDATE T_MARKET_OFFER
+           SET  STATUS  = #{status}
+               ,UPD_DAY = NOW()
+         WHERE 1=1
+           AND ID = #{offerId}
+           AND STATUS = 'PENDING'
+    </update>
 </mapper>

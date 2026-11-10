@@ -222,6 +222,25 @@ a.mk-seller:hover b { text-decoration: underline; }
 .mk-recent-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .mk-recent-item b { font-size: 13px; }
 
+/* ===== 💰 가격 제안 · 📊 시세 · 📍 지역 ===== */
+.mk-guide { display: block; margin: 0 0 6px; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.mk-filters select.mk-region { margin-left: 0; max-width: 170px; }
+.mk-filters select.mk-region + select { margin-left: auto; }
+.mk-offer { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.mk-offer p { margin: 0; }
+.mk-offer-state { padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--text) 6%, transparent); font-size: 13px; }
+.mk-offer-ACCEPTED { background: color-mix(in srgb, #22a06b 16%, transparent); }
+.mk-offer-open { width: fit-content; gap: 8px; }
+.mk-offer-open small { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+.mk-offer-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.mk-offer-list li { display: flex; align-items: center; gap: 8px; }
+.mk-offer-list li > span { flex: 1; min-width: 0; }
+.mk-offer-list b { font-size: 16px; }
+.mk-offer-list span small:last-child { display: block; }
+.mk-btn-primary { border-color: var(--primary); background: var(--primary); color: var(--primary-text); }
+.mk-btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.mk-tab-note { margin: -6px 0 14px; }
+
 /* ===== 휴대폰 ===== */
 @media (max-width: 760px) {
   .mk-page { padding: 14px 16px 104px; }

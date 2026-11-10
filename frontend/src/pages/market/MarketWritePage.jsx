@@ -8,7 +8,7 @@
 // ============================================
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CATEGORIES, CONDITIONS, MAX_PHOTOS, TRADE_TYPES, getJson, postJson, shrinkPhoto } from './marketUtil'
+import { CATEGORIES, CONDITIONS, MAX_PHOTOS, TRADE_TYPES, getJson, guideText, postJson, shrinkPhoto } from './marketUtil'
 import './Market.css'
 
 const EMPTY = { category: '', title: '', price: '', description: '', cond: 'USED', tradeType: 'BOTH', region: '' }
@@ -26,6 +26,7 @@ function MarketWritePage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
   const [aiNote, setAiNote] = useState('')
+  const [guide, setGuide] = useState(null)        // 📊 비슷한 상품 시세 (3개 이상 있을 때만)
 
   // 로그인 확인 + (고치기면) 지금 내용 불러오기
   useEffect(() => {
@@ -48,6 +49,21 @@ function MarketWritePage() {
     })
     return () => { ignore = true }
   }, [id, editing, navigate])
+
+  // 📊 카테고리와 제목이 정해지면 잠깐 기다렸다가 비슷한 상품 시세를 물어봄
+  const guideTitle = form.title.trim()
+  useEffect(() => {
+    if (!form.category || guideTitle.length < 2) return undefined
+    let ignore = false
+    const t = setTimeout(() => {
+      getJson(`/api/market/price-guide?category=${form.category}&title=${encodeURIComponent(guideTitle)}`)
+        .then((j) => { if (!ignore) setGuide(j.success && j.priceGuide?.count ? { ...j.priceGuide, key: `${form.category}:${guideTitle}` } : null) })
+    }, 600)
+    return () => {
+      ignore = true
+      clearTimeout(t)
+    }
+  }, [form.category, guideTitle])
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -155,6 +171,7 @@ function MarketWritePage() {
               원
             </span>
             {form.price !== '' && <small className="mk-muted">{priceNum === 0 ? '나눔 🎁으로 올라가요' : `${priceNum.toLocaleString('ko-KR')}원`}</small>}
+            {guide && form.category && guideTitle.length >= 2 && <small className="mk-guide">📊 {guideText(guide)}</small>}
           </label>
           <label className="mk-field">
             <span className="mk-label">거래 희망 지역 <small>선택</small></span>

@@ -1,11 +1,11 @@
 // ============================================
 // 🛍️ 중고거래 장터 (주소: / — 사이트 첫 화면, 로그인 없이 누구나 구경)
-// - 검색 · 카테고리 · 정렬 · 판매중만/나눔만 → 상품 카드 목록 (24개씩 더 보기)
+// - 검색 · 카테고리 · 📍 지역 · 정렬 · 판매중만/나눔만/📉 가격 내림만 → 상품 카드 목록 (24개씩 더 보기)
 // - 상품을 누르면 상세 → [채팅하기]로 판매자와 1:1 메시지
 // - [판매하기] → /market/new (로그인 필요)
 // - 검색 조건은 주소에 남김 (?c=DIGITAL&q=아이폰&sort=LOW) → 뒤로 가기·공유해도 그대로
 // - 🕘 최근 본 상품: 이 브라우저에 남긴 12개를 목록 아래에 한 줄로 (조건 없이 볼 때만)
-// - 백엔드: GET /api/market/items
+// - 백엔드: GET /api/market/items | regions
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -14,12 +14,14 @@ import { CATEGORIES, CATEGORY_ICON, SORTS, clearRecent, getJson, priceText, read
 import './Market.css'
 
 // 목록 요청 주소
-const listUrl = ({ category, q, sort, sale, free }, page) => {
+const listUrl = ({ category, q, sort, sale, free, drop, region }, page) => {
   const sp = new URLSearchParams({ page: String(page), sort })
   if (category) sp.set('category', category)
   if (q) sp.set('q', q)
   if (sale) sp.set('sale', 'true')
   if (free) sp.set('free', 'true')
+  if (drop) sp.set('drop', 'true')
+  if (region) sp.set('region', region)
   return `/api/market/items?${sp}`
 }
 
@@ -31,6 +33,9 @@ function MarketPage() {
   const sort = params.get('sort') ?? 'RECENT'
   const sale = params.get('sale') === '1'
   const free = params.get('free') === '1'
+  const drop = params.get('drop') === '1'
+  const region = params.get('r') ?? ''
+  const [regions, setRegions] = useState([])
 
   const [items, setItems] = useState(null)
   const [hasMore, setHasMore] = useState(false)
@@ -44,7 +49,7 @@ function MarketPage() {
   // 조건이 바뀌면 처음부터
   useEffect(() => {
     let ignore = false
-    getJson(listUrl({ category, q, sort, sale, free }, 0)).then((j) => {
+    getJson(listUrl({ category, q, sort, sale, free, drop, region }, 0)).then((j) => {
       if (ignore) return
       if (!j.success) return setError(j.message || '상품을 불러오지 못했어요.')
       setError('')
@@ -54,11 +59,18 @@ function MarketPage() {
       setNow(Date.now())
     })
     return () => { ignore = true }
-  }, [category, q, sort, sale, free])
+  }, [category, q, sort, sale, free, drop, region])
+
+  // 📍 상품이 있는 지역 목록 (한 번만)
+  useEffect(() => {
+    let ignore = false
+    getJson('/api/market/regions').then((j) => { if (!ignore && j.success) setRegions(j.regions) })
+    return () => { ignore = true }
+  }, [])
 
   const more = async () => {
     setLoadingMore(true)
-    const j = await getJson(listUrl({ category, q, sort, sale, free }, page + 1))
+    const j = await getJson(listUrl({ category, q, sort, sale, free, drop, region }, page + 1))
     setLoadingMore(false)
     if (!j.success) return
     setItems((prev) => [...(prev ?? []), ...j.items.filter((it) => !(prev ?? []).some((x) => x.id === it.id))])
@@ -78,7 +90,7 @@ function MarketPage() {
     change({ q: keyword.trim() })
   }
 
-  const filtered = category || q || sale || free
+  const filtered = category || q || sale || free || drop || region
 
   return (
     <main className="mk-page">
@@ -115,7 +127,15 @@ function MarketPage() {
       <div className="mk-filters">
         <label className="mk-check"><input type="checkbox" checked={sale} onChange={(e) => change({ sale: e.target.checked ? '1' : '' })} />판매중만</label>
         <label className="mk-check"><input type="checkbox" checked={free} onChange={(e) => change({ free: e.target.checked ? '1' : '' })} />나눔만</label>
+        <label className="mk-check"><input type="checkbox" checked={drop} onChange={(e) => change({ drop: e.target.checked ? '1' : '' })} />📉 가격 내림만</label>
         {q && <button type="button" className="mk-chip-x" onClick={() => { setKeyword(''); change({ q: '' }) }}>“{q}” ✕</button>}
+        {(regions.length > 0 || region) && (
+          <select className="mk-region" value={region} onChange={(e) => change({ r: e.target.value })} aria-label="지역">
+            <option value="">📍 전체 지역</option>
+            {region && !regions.some((r) => r.region === region) && <option value={region}>{region}</option>}
+            {regions.map((r) => <option key={r.region} value={r.region}>{r.region} ({r.count})</option>)}
+          </select>
+        )}
         <select value={sort} onChange={(e) => change({ sort: e.target.value === 'RECENT' ? '' : e.target.value })} aria-label="정렬">
           {SORTS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
         </select>

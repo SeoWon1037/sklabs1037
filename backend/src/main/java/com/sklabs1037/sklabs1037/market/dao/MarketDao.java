@@ -115,4 +115,30 @@ public interface MarketDao {
     int restore(Long id);
 
     int deleteReports(Long itemId);
+
+    // ===== 📍 지역 · 📊 시세 =====
+    // 상품이 많은 지역 { region, count }
+    List<Map<String, Object>> selectRegions();
+
+    // 비슷한 상품 가격 분포 { count, low, median, high }
+    Map<String, Object> selectPriceGuide(@Param("category") String category, @Param("word") String word, @Param("exceptId") Long exceptId);
+
+    // ===== 💰 가격 제안 =====
+    int cancelPendingOffer(@Param("itemId") Long itemId, @Param("buyerId") Long buyerId);
+
+    int insertOffer(@Param("itemId") Long itemId, @Param("buyerId") Long buyerId, @Param("price") long price);
+
+    // 이 상품에 이 사람이 지금까지 보낸 제안 수 (취소·거절 포함)
+    int countOffers(@Param("itemId") Long itemId, @Param("buyerId") Long buyerId);
+
+    // 기다리는 제안들 (높은 가격부터) { id, buyerId, buyerName, price, at }
+    List<Map<String, Object>> selectPendingOffers(Long itemId);
+
+    Map<String, Object> selectMyOffer(@Param("itemId") Long itemId, @Param("buyerId") Long buyerId);
+
+    // { id, itemId, buyerId, price, status, sellerId, title }
+    Map<String, Object> selectOffer(Long offerId);
+
+    // 기다리는 제안만 바뀜 (이미 답했으면 0)
+    int updateOfferStatus(@Param("offerId") Long offerId, @Param("status") String status);
 }

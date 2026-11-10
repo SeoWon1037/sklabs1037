@@ -6,12 +6,14 @@
 // - 관리자: 어떤 상품이든 삭제
 // - ⭐ 판매완료를 누르면 "누구와 거래했나요?"(채팅한 사람 중에서) → 두 사람이 서로 후기 → 매너 온도
 // - 📉 가격을 내렸으면 전 가격 표시 · 🔗 공유(휴대폰은 공유 시트, PC는 주소 복사) · 🕘 최근 본 상품에 기록
+// - 💰 가격 제안: 사는 사람이 낮은 가격을 제안(상품당 3번) → 판매자가 수락(채팅방으로)/거절 · 📊 비슷한 상품 시세
+// - 백엔드: POST …/offer | offer/cancel, POST /api/market/offers/{id}/answer
 // - 백엔드: GET /api/market/items/{id} | …/buyers, POST …/like | chat | status | sold | review | bump | delete | report
 // ============================================
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import MarketCard from './MarketCard'
-import { BAD_TAGS, CATEGORY_ICON, GOOD_TAGS, RATINGS, getJson, postJson, priceText, pushRecent, tempLook, timeAgo } from './marketUtil'
+import { BAD_TAGS, CATEGORY_ICON, GOOD_TAGS, RATINGS, getJson, guideText, postJson, priceText, pushRecent, tempLook, timeAgo } from './marketUtil'
 import './Market.css'
 
 const STATUS_BUTTONS = [['SALE', '판매중'], ['RESERVED', '예약중'], ['SOLD', '판매완료']]
@@ -100,6 +102,71 @@ function ReviewForm({ who, busy, onSubmit }) {
           <button type="button" className="mk-chat" disabled={busy} onClick={() => onSubmit({ rating, tags, comment })}>후기 남기기</button>
         </>
       )}
+    </div>
+  )
+}
+
+// 💰 사는 사람: 가격 제안 보내기 / 보낸 제안 상태
+const OFFER_STATUS = { PENDING: '판매자의 답을 기다리고 있어요', ACCEPTED: '수락됐어요! 채팅으로 거래를 이어가세요', DECLINED: '거절됐어요', CANCELED: '취소했어요' }
+
+function OfferBox({ item, busy, onSend, onCancel }) {
+
+  const [open, setOpen] = useState(false)
+  const [price, setPrice] = useState('')
+  const mine = item.myOffer
+  const pending = mine?.status === 'PENDING'
+  const num = Number(price)
+  const valid = num > 0 && num < item.price && num * 2 >= item.price
+
+  if (item.status !== 'SALE' || Number(item.price) === 0) return null
+
+  return (
+    <div className="mk-offer">
+      {mine && (
+        <p className={`mk-offer-state mk-offer-${mine.status}`}>
+          💰 내 제안 <b>{priceText(mine.price)}</b> · {OFFER_STATUS[mine.status]}
+          {pending && <button type="button" className="mk-link-btn" disabled={busy} onClick={onCancel}> 취소</button>}
+        </p>
+      )}
+      {open ? (
+        <form className="mk-report-form" onSubmit={(e) => { e.preventDefault(); if (valid) onSend(num, () => { setOpen(false); setPrice('') }) }}>
+          <input value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))} inputMode="numeric"
+            placeholder={`${Math.ceil(item.price / 2).toLocaleString('ko-KR')}원 이상 ~ 판매가 미만`} aria-label="제안할 가격" />
+          <button type="submit" className="mk-btn" disabled={busy || !valid}>보내기</button>
+          <button type="button" className="mk-btn" onClick={() => setOpen(false)}>닫기</button>
+        </form>
+      ) : item.offersLeft > 0 ? (
+        <button type="button" className="mk-btn mk-offer-open" onClick={() => setOpen(true)}>
+          💰 가격 제안하기 <small>{pending ? '다시 보내면 앞의 제안은 취소돼요' : `${item.offersLeft}번 남음`}</small>
+        </button>
+      ) : (
+        !pending && <p className="mk-muted">이 상품에는 제안을 모두 썼어요. 채팅으로 이야기해보세요.</p>
+      )}
+      {open && price !== '' && !valid && <p className="mk-muted">판매가보다 낮고, 판매가의 절반 이상인 가격만 보낼 수 있어요.</p>}
+    </div>
+  )
+}
+
+// 💰 판매자: 받은 제안들 (높은 가격부터)
+function OfferList({ offers, price, now, busy, onAnswer }) {
+
+  if (!offers?.length) return null
+  return (
+    <div className="mk-sold" role="group" aria-label="받은 가격 제안">
+      <strong>💰 받은 가격 제안 {offers.length}개</strong>
+      <p className="mk-muted">수락하면 그분과의 채팅방에 수락 메시지가 가요. 상품 가격과 상태는 그대로예요.</p>
+      <ul className="mk-offer-list">
+        {offers.map((o) => (
+          <li key={o.id}>
+            <span>
+              <b>{priceText(o.price)}</b> <small className="mk-muted">−{Math.round((1 - o.price / price) * 100)}%</small>
+              <small className="mk-muted">{o.buyerName} · {timeAgo(o.at, now)}</small>
+            </span>
+            <button type="button" className="mk-btn" disabled={busy} onClick={() => onAnswer(o.id, false)}>거절</button>
+            <button type="button" className="mk-btn mk-btn-primary" disabled={busy} onClick={() => onAnswer(o.id, true)}>수락</button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -206,6 +273,24 @@ function MarketItemPage() {
     return load()
   })
 
+  // 💰 가격 제안
+  const sendOffer = (price, done) => act('offer', '/offer', { price }, (j) => {
+    done()
+    setNotice('가격 제안을 보냈어요. 판매자가 답하면 알림으로 알려드려요.')
+    setItem((prev) => ({ ...prev, myOffer: j.myOffer, offersLeft: j.offersLeft }))
+  })
+  const cancelOffer = () => act('offer', '/offer/cancel', null, () => load())
+  const answerOffer = async (offerId, accept) => {
+    setBusy('offer')
+    setNotice('')
+    const j = await postJson(`/api/market/offers/${offerId}/answer`, { accept })
+    setBusy('')
+    if (!j.success) return setNotice(j.message)
+    if (accept && j.roomId) return navigate(`/messages?room=${j.roomId}`)
+    setNotice(accept ? '제안을 수락했어요.' : '제안을 거절했어요.')
+    return load()
+  }
+
   // 🔗 공유: 휴대폰은 공유 시트, 아니면 주소 복사
   const share = async () => {
     const url = window.location.href
@@ -248,6 +333,7 @@ function MarketItemPage() {
             {item.prevPrice > item.price && <span className="mk-drop mk-drop-lg"><s>{priceText(item.prevPrice)}</s> ↓ 가격 내림</span>}
             <button type="button" className="mk-share" onClick={share} aria-label="이 상품 공유하기">🔗 공유</button>
           </p>
+          {item.priceGuide?.count > 0 && Number(item.price) > 0 && <p className="mk-guide">📊 {guideText(item.priceGuide)}</p>}
           <p className="mk-muted">{item.categoryName} · {timeAgo(item.bumpAt, now)} · 조회 {item.views} · 찜 {item.likes} · 채팅 {item.chats}</p>
 
           <ul className="mk-tags">
@@ -287,6 +373,7 @@ function MarketItemPage() {
                   </button>
                 ))}
               </div>
+              <OfferList offers={item.offers} price={item.price} now={now} busy={!!busy} onAnswer={answerOffer} />
               {buyers !== undefined && <SoldPicker buyers={buyers} busy={!!busy} onPick={sold} onCancel={() => setBuyers(undefined)} />}
               {item.status === 'SOLD' && buyers === undefined && (
                 <p className="mk-muted">
@@ -315,6 +402,8 @@ function MarketItemPage() {
               </button>
             </div>
           )}
+
+          {!item.mine && <OfferBox item={item} busy={busy === 'offer'} onSend={sendOffer} onCancel={cancelOffer} />}
 
           {item.canReview && <ReviewForm who={item.mine ? item.buyerName : item.seller?.nickname} busy={busy === 'review'} onSubmit={review} />}
           {item.reviewed && <p className="mk-muted">⭐ 이 거래에 후기를 남겼어요.</p>}

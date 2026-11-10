@@ -1,5 +1,5 @@
 // ============================================
-// 🛍️ 내 장터 (주소: /market/my, 로그인 필요) — 내 판매 목록 / 찜한 상품 / 🔔 키워드 알림
+// 🛍️ 내 장터 (주소: /market/my, 로그인 필요) — 내 판매 목록 / 🧾 구매 내역 / 찜한 상품 / 🔔 키워드 알림
 // - 키워드 알림: 등록한 낱말이 제목에 들어간 새 상품이 올라오면 알림 (10개까지)
 // - 백엔드: GET /api/market/my, POST /api/market/keywords | keywords/delete
 // ============================================
@@ -9,11 +9,17 @@ import MarketCard from './MarketCard'
 import { postJson } from './marketUtil'
 import './Market.css'
 
+const EMPTY = {
+  selling: ['🧺', '아직 올린 상품이 없어요', '안 쓰는 물건을 올려보세요. 사진 한 장이면 돼요.'],
+  purchases: ['🧾', '구매 내역이 없어요', '판매자가 판매완료 때 나를 거래한 사람으로 고르면 여기에 모여요. 후기도 남길 수 있어요.'],
+  likes: ['♡', '찜한 상품이 없어요', '마음에 드는 상품에서 ♡를 눌러보세요.'],
+}
+
 function MarketMyPage() {
 
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const tab = ['likes', 'keywords'].includes(params.get('tab')) ? params.get('tab') : 'selling'
+  const tab = ['likes', 'keywords', 'purchases'].includes(params.get('tab')) ? params.get('tab') : 'selling'
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [now, setNow] = useState(0)
@@ -64,6 +70,9 @@ function MarketMyPage() {
         <button type="button" role="tab" aria-selected={tab === 'selling'} className={tab === 'selling' ? 'mk-tab-on' : ''} onClick={() => setParams({}, { replace: true })}>
           판매 내역 {data && <b>{data.selling.length}</b>}
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'purchases'} className={tab === 'purchases' ? 'mk-tab-on' : ''} onClick={() => setParams({ tab: 'purchases' }, { replace: true })}>
+          구매 내역 {data && <b>{data.purchases?.length ?? 0}</b>}
+        </button>
         <button type="button" role="tab" aria-selected={tab === 'likes'} className={tab === 'likes' ? 'mk-tab-on' : ''} onClick={() => setParams({ tab: 'likes' }, { replace: true })}>
           찜한 상품 {data && <b>{data.likes.length}</b>}
         </button>
@@ -97,12 +106,13 @@ function MarketMyPage() {
 
       {data && tab !== 'keywords' && list.length === 0 && (
         <div className="mk-empty">
-          <span aria-hidden="true">{tab === 'likes' ? '♡' : '🧺'}</span>
-          <strong>{tab === 'likes' ? '찜한 상품이 없어요' : '아직 올린 상품이 없어요'}</strong>
-          <p>{tab === 'likes' ? '마음에 드는 상품에서 ♡를 눌러보세요.' : '안 쓰는 물건을 올려보세요. 사진 한 장이면 돼요.'}</p>
+          <span aria-hidden="true">{EMPTY[tab][0]}</span>
+          <strong>{EMPTY[tab][1]}</strong>
+          <p>{EMPTY[tab][2]}</p>
         </div>
       )}
 
+      {tab === 'purchases' && list.length > 0 && <p className="mk-muted mk-tab-note">상품을 누르면 판매자에게 거래 후기를 남길 수 있어요.</p>}
       {list.length > 0 && <div className="mk-grid">{list.map((it) => <MarketCard key={it.id} item={it} now={now} />)}</div>}
     </main>
   )

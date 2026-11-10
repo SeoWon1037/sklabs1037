@@ -24,7 +24,21 @@ const VIEWPORTS = [
 
 // 점검할 화면 (key는 서버 보고서·캡처 이름)
 const PAGES = [
-  { key: 'home', name: '메인', path: '/' },
+  {
+    key: 'home',
+    name: '중고거래 (첫 화면)',
+    path: '/',
+    // 기능 흐름: 카테고리를 누르면 목록(또는 "상품이 없어요")이 다시 나오는지
+    flow: {
+      name: '장터 카테고리',
+      run: async (page) => {
+        await page.getByRole('button', { name: /디지털·가전/ }).click()
+        await page.locator('.mk-grid, .mk-empty').first().waitFor({ timeout: 10000 })
+        return '카테고리 목록이 나왔어요'
+      },
+    },
+  },
+  { key: 'invest', name: '투자 홈', path: '/invest' },
   { key: 'stock', name: '주식 종목', path: '/stock?symbol=005930' },
   { key: 'mock', name: '모의투자', path: '/mock' },
   { key: 'league', name: 'AI 리그', path: '/league' },

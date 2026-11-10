@@ -11,6 +11,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './MessagesPage.css'
 
 const getJson = (url) => fetch(url).then((r) => r.json()).catch(() => ({ success: false, message: '서버에 연결하지 못했어요.' }))
+// 🛍️ 메시지 속 상품 주소(/market/12)는 누를 수 있게 (중고거래 [채팅하기]가 첫 안내로 보냄)
+const linkItems = (text) =>
+  String(text).split(/(\/market\/\d+)/).map((part, i) =>
+    /^\/market\/\d+$/.test(part) ? <Link key={i} to={part} className="dm-item-link">🛍️ 상품 보기 ›</Link> : part)
+
 const postJson = (url, body) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) })
     .then((r) => r.json())
@@ -324,7 +329,7 @@ function MessagesPage() {
                 ? <p key={`d${i}`} className="dm-day">{dayLabel(it.day)}</p>
                 : (
                   <div key={it.m.id} className={`dm-row ${it.m.mine ? 'dm-mine' : ''}`}>
-                    <p className="dm-bubble">{it.m.body}</p>
+                    <p className="dm-bubble">{linkItems(it.m.body)}</p>
                     <span className="dm-meta">
                       {it.unread && <b>1</b>}
                       {it.showTime && <small>{hhmm(it.m.at)}</small>}

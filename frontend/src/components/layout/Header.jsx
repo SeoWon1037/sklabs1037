@@ -18,6 +18,8 @@ import CommandPalette from './CommandPalette'
 // 상단 메뉴 탭: 진짜 메인 기능만 (나머지는 ☰ 전체 메뉴 · 메인 바로가기에서)
 // - 뉴스(메인)는 SKLabs 로고로
 const MENUS = [
+  { to: '/', label: '중고거래', end: true },
+  { to: '/invest', label: '투자 홈' },
   { to: '/stock', label: '주식 종목' },
   { to: '/mock', label: '모의투자' },
   { to: '/ai', label: 'AI 비서' },
@@ -114,7 +116,7 @@ function Header() {
                 key={m.to}
                 to={m.to}
                 end={m.end}
-                className={({ isActive }) => `header-menu-link ${isActive ? 'header-menu-active' : ''}`}
+                className={({ isActive }) => `header-menu-link ${isActive || (m.to === '/' && location.pathname.startsWith('/market')) ? 'header-menu-active' : ''}`}
               >
                 {m.label}
               </NavLink>

@@ -307,3 +307,6 @@
   .dm-hide-mobile { display: none; }
   .dm-row { max-width: 85%; }
 }
+
+/* 🛍️ 메시지 속 상품 링크 */
+.dm-item-link { display: inline-block; margin-top: 4px; padding: 5px 10px; border-radius: 8px; background: color-mix(in srgb, currentColor 14%, transparent); font-size: 13px; font-weight: 700; }

@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🛍️ 중고거래 장터 (T_MARKET_ITEM · PHOTO · LIKE · CHAT · REPORT) -->
+<mapper namespace="com.sklabs1037.sklabs1037.market.dao.MarketDao">
+
+    <!-- 목록·상세가 같이 쓰는 칸 -->
+    <sql id="itemCols">
+                I.ID                                            AS "id"
+               ,I.SELLER_ID                                     AS "sellerId"
+               ,U.NICKNAME                                      AS "sellerName"
+               ,I.CATEGORY                                      AS "category"
+               ,I.TITLE                                         AS "title"
+               ,I.PRICE                                         AS "price"
+               ,I.ITEM_COND                                     AS "cond"
+               ,I.TRADE_TYPE                                    AS "tradeType"
+               ,I.REGION                                        AS "region"
+               ,I.STATUS                                        AS "status"
+               ,I.VIEW_CNT                                      AS "views"
+               ,I.LIKE_CNT                                      AS "likes"
+               ,I.CHAT_CNT                                      AS "chats"
+               ,(EXTRACT(EPOCH FROM I.BUMP_DAY) * 1000)::BIGINT AS "bumpAt"
+               ,(EXTRACT(EPOCH FROM I.INS_DAY) * 1000)::BIGINT  AS "insAt"
+               ,(SELECT P.ID FROM T_MARKET_PHOTO P WHERE P.ITEM_ID = I.ID ORDER BY P.ORD, P.ID LIMIT 1) AS "photoId"
+    </sql>
+
+    <insert id="insertItem" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_MARKET_ITEM (SELLER_ID, CATEGORY, TITLE, PRICE, DESCRIPTION, ITEM_COND, TRADE_TYPE, REGION)
+        VALUES (#{sellerId}, #{category}, #{title}, #{price}, #{description}, #{cond}, #{tradeType}, #{region})
+    </insert>
+
+    <update id="updateItem" parameterType="java.util.Map">
+        UPDATE T_MARKET_ITEM
+           SET  CATEGORY    = #{category}
+               ,TITLE       = #{title}
+               ,PRICE       = #{price}
+               ,DESCRIPTION = #{description}
+               ,ITEM_COND   = #{cond}
+               ,TRADE_TYPE  = #{tradeType}
+               ,REGION      = #{region}
+               ,UPD_DAY     = NOW()
+         WHERE 1=1
+           AND ID = #{id}
+           AND SELLER_ID = #{sellerId}
+           AND DEL_DAY IS NULL
+    </update>
+
+    <select id="selectItem" resultType="java.util.LinkedHashMap">
+        SELECT
+        <include refid="itemCols"/>
+               ,I.DESCRIPTION                                   AS "description"
+               ,I.REPORT_CNT                                    AS "reports"
+        <choose>
+            <when test="me != null">
+               ,EXISTS (SELECT 1 FROM T_MARKET_LIKE L WHERE L.ITEM_ID = I.ID AND L.USER_ID = #{me}) AS "liked"
+            </when>
+            <otherwise>
+               ,FALSE                                           AS "liked"
+            </otherwise>
+        </choose>
+          FROM T_MARKET_ITEM I
+          JOIN T_USER U ON U.ID = I.SELLER_ID
+         WHERE 1=1
+           AND I.ID = #{id}
+           AND I.DEL_DAY IS NULL
+    </select>
+
+    <select id="selectItems" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+        SELECT
+        <include refid="itemCols"/>
+          FROM T_MARKET_ITEM I
+          JOIN T_USER U ON U.ID = I.SELLER_ID
+        <if test="likedBy != null">
+          JOIN T_MARKET_LIKE ML ON ML.ITEM_ID = I.ID AND ML.USER_ID = #{likedBy}
+        </if>
+         WHERE 1=1
+           AND I.DEL_DAY IS NULL
+           AND U.DEL_DAY IS NULL
+        <choose>
+            <when test="sellerId != null">
+           AND I.SELLER_ID = #{sellerId}
+                <if test="includeHidden == null">
+           AND I.STATUS &lt;&gt; 'HIDDEN'
+                </if>
+            </when>
+            <otherwise>
+           AND I.STATUS &lt;&gt; 'HIDDEN'
+            </otherwise>
+        </choose>
+        <if test="category != null">
+           AND I.CATEGORY = #{category}
+        </if>
+        <if test="onlySale != null">
+           AND I.STATUS = 'SALE'
+        </if>
+        <if test="free != null">
+           AND I.PRICE = 0
+        </if>
+        <if test="q != null">
+           AND (I.TITLE ILIKE '%' || #{q} || '%' OR I.DESCRIPTION ILIKE '%' || #{q} || '%')
+        </if>
+        <if test="exceptId != null">
+           AND I.ID &lt;&gt; #{exceptId}
+        </if>
+         ORDER BY
+        <choose>
+            <when test="sort == 'LOW'">I.PRICE ASC, I.BUMP_DAY DESC</when>
+            <when test="sort == 'HIGH'">I.PRICE DESC, I.BUMP_DAY DESC</when>
+            <when test="sort == 'POPULAR'">(I.LIKE_CNT * 3 + I.CHAT_CNT * 5 + I.VIEW_CNT) DESC, I.BUMP_DAY DESC</when>
+            <otherwise>I.BUMP_DAY DESC, I.ID DESC</otherwise>
+        </choose>
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <update id="addView">
+        UPDATE T_MARKET_ITEM SET VIEW_CNT = VIEW_CNT + 1 WHERE ID = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE T_MARKET_ITEM
+           SET  STATUS  = #{status}
+               ,UPD_DAY = NOW()
+         WHERE 1=1
+           AND ID = #{id}
+           AND SELLER_ID = #{sellerId}
+           AND DEL_DAY IS NULL
+           AND STATUS &lt;&gt; 'HIDDEN'
+    </update>
+
+    <update id="bump">
+        UPDATE T_MARKET_ITEM
+           SET BUMP_DAY = NOW()
+         WHERE 1=1
+           AND ID = #{id}
+           AND SELLER_ID = #{sellerId}
+           AND DEL_DAY IS NULL
+           AND STATUS = 'SALE'
+           AND BUMP_DAY &lt; NOW() - INTERVAL '24 hours'
+    </update>
+
+    <update id="softDelete">
+        UPDATE T_MARKET_ITEM
+           SET DEL_DAY = NOW()
+         WHERE 1=1
+           AND ID = #{id}
+           AND DEL_DAY IS NULL
+        <if test="sellerId != null">
+           AND SELLER_ID = #{sellerId}
+        </if>
+    </update>
+
+    <select id="countToday" resultType="int">
+        SELECT COUNT(*)
+          FROM T_MARKET_ITEM
+         WHERE 1=1
+           AND SELLER_ID = #{sellerId}
+           AND INS_DAY &gt;= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul')
+    </select>
+
+    <select id="countOpen" resultType="int">
+        SELECT COUNT(*)
+          FROM T_MARKET_ITEM
+         WHERE 1=1
+           AND SELLER_ID = #{sellerId}
+           AND DEL_DAY IS NULL
+           AND STATUS IN ('SALE', 'RESERVED')
+    </select>
+
+    <select id="selectSeller" resultType="java.util.LinkedHashMap">
+        SELECT  U.NICKNAME                                                                          AS "nickname"
+               ,(SELECT COUNT(*) FROM T_MARKET_ITEM I WHERE I.SELLER_ID = U.ID AND I.DEL_DAY IS NULL AND I.STATUS IN ('SALE', 'RESERVED'))::INT AS "itemCount"
+               ,(SELECT COUNT(*) FROM T_MARKET_ITEM I WHERE I.SELLER_ID = U.ID AND I.DEL_DAY IS NULL AND I.STATUS = 'SOLD')::INT AS "soldCount"
+               ,(EXTRACT(EPOCH FROM U.INS_DAY) * 1000)::BIGINT                                       AS "joinedAt"
+          FROM T_USER U
+         WHERE U.ID = #{sellerId}
+    </select>
+
+    <!-- ===== 사진 ===== -->
+    <insert id="insertPhoto" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_MARKET_PHOTO (ITEM_ID, ORD, CONTENT_TYPE, BYTES, DATA, THUMB)
+        VALUES (#{itemId}, #{ord}, #{contentType}, #{bytes}, #{data}, #{thumb,jdbcType=BINARY})
+    </insert>
+
+    <select id="selectPhotoIds" resultType="java.lang.Long">
+        SELECT ID FROM T_MARKET_PHOTO WHERE ITEM_ID = #{itemId} ORDER BY ORD, ID
+    </select>
+
+    <delete id="deletePhoto">
+        DELETE FROM T_MARKET_PHOTO WHERE ITEM_ID = #{itemId} AND ID = #{photoId}
+    </delete>
+
+    <update id="updatePhotoOrd">
+        UPDATE T_MARKET_PHOTO SET ORD = #{ord} WHERE ITEM_ID = #{itemId} AND ID = #{photoId}
+    </update>
+
+    <!-- 숨김·삭제된 상품의 사진은 안 줌 -->
+    <select id="selectPhoto" resultType="java.util.LinkedHashMap">
+        SELECT  CASE WHEN #{thumb} AND P.THUMB IS NOT NULL THEN 'image/jpeg' ELSE P.CONTENT_TYPE END AS "contentType"
+               ,CASE WHEN #{thumb} AND P.THUMB IS NOT NULL THEN P.THUMB ELSE P.DATA END             AS "data"
+          FROM T_MARKET_PHOTO P
+          JOIN T_MARKET_ITEM I ON I.ID = P.ITEM_ID
+         WHERE 1=1
+           AND P.ID = #{id}
+           AND I.DEL_DAY IS NULL
+    </select>
+
+    <!-- ===== 찜 ===== -->
+    <insert id="insertLike">
+        INSERT INTO T_MARKET_LIKE (USER_ID, ITEM_ID) VALUES (#{userId}, #{itemId})
+        ON CONFLICT (USER_ID, ITEM_ID) DO NOTHING
+    </insert>
+
+    <delete id="deleteLike">
+        DELETE FROM T_MARKET_LIKE WHERE USER_ID = #{userId} AND ITEM_ID = #{itemId}
+    </delete>
+
+    <update id="syncLikeCnt">
+        UPDATE T_MARKET_ITEM
+           SET LIKE_CNT = (SELECT COUNT(*) FROM T_MARKET_LIKE L WHERE L.ITEM_ID = #{itemId})
+         WHERE ID = #{itemId}
+    </update>
+
+    <!-- ===== 채팅 시작 ===== -->
+    <insert id="insertChat">
+        INSERT INTO T_MARKET_CHAT (ITEM_ID, BUYER_ID, ROOM_ID) VALUES (#{itemId}, #{buyerId}, #{roomId})
+        ON CONFLICT (ITEM_ID, BUYER_ID) DO NOTHING
+    </insert>
+
+    <update id="addChatCnt">
+        UPDATE T_MARKET_ITEM SET CHAT_CNT = CHAT_CNT + 1 WHERE ID = #{itemId}
+    </update>
+
+    <!-- ===== 신고 ===== -->
+    <insert id="insertReport">
+        INSERT INTO T_MARKET_REPORT (ITEM_ID, USER_ID, REASON) VALUES (#{itemId}, #{userId}, #{reason})
+        ON CONFLICT (ITEM_ID, USER_ID) DO NOTHING
+    </insert>
+
+    <select id="addReport" resultType="java.lang.Integer">
+        UPDATE T_MARKET_ITEM
+           SET  REPORT_CNT = REPORT_CNT + 1
+               ,STATUS     = CASE WHEN REPORT_CNT + 1 &gt;= #{limit} THEN 'HIDDEN' ELSE STATUS END
+         WHERE ID = #{itemId}
+        RETURNING REPORT_CNT
+    </select>
+</mapper>

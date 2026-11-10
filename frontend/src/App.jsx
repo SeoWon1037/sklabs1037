@@ -48,6 +48,10 @@ import BeautyLabPage from './pages/beauty/BeautyLabPage'
 import { useEffect } from 'react'
 import { trackPage } from './track'
 import AdminStatsPage from './pages/admin/AdminStatsPage'
+import MarketPage from './pages/market/MarketPage'
+import MarketItemPage from './pages/market/MarketItemPage'
+import MarketWritePage from './pages/market/MarketWritePage'
+import MarketMyPage from './pages/market/MarketMyPage'
 
 function App() {
 
@@ -62,7 +66,13 @@ function App() {
 
       {/* 주소에 따라 아래 화면만 바뀜 */}
       <Routes>
-        <Route path="/" element={<MainPage />} />                        {/* 메인 (오늘의 뉴스) */}
+        <Route path="/" element={<MarketPage />} />                      {/* 🛍️ 중고거래 장터 (사이트 첫 화면) */}
+        <Route path="/market" element={<MarketPage />} />                {/* 🛍️ 장터 (같은 화면) */}
+        <Route path="/market/new" element={<MarketWritePage />} />       {/* 🛍️ 상품 올리기 */}
+        <Route path="/market/my" element={<MarketMyPage />} />           {/* 🛍️ 내 판매 목록 · 찜 */}
+        <Route path="/market/:id" element={<MarketItemPage />} />        {/* 🛍️ 상품 상세 → 채팅하기 */}
+        <Route path="/market/:id/edit" element={<MarketWritePage />} />  {/* 🛍️ 상품 고치기 */}
+        <Route path="/invest" element={<MainPage />} />                  {/* 📈 투자 홈 (뉴스 · 시세 · 날씨 — 예전 첫 화면) */}
         <Route path="/stock" element={<StockPage />} />                  {/* 주식 종목 */}
         <Route path="/mock" element={<MockTradePage />} />              {/* 모의투자 */}
         <Route path="/league" element={<LeaguePage />} />                {/* 🤖 AI vs 사람 투자 리그 */}

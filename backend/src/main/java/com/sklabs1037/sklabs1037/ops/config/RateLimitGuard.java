@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🚦 요청 횟수 제한 (IP별, 서버 메모리)
- * - 로그인 비밀번호 대입 · 인증 메일 폭탄 · 체험 계정 남용 · 문의 도배 · 통계 부풀리기 · AI 비용 폭주를 앞에서 막음
+ * - 로그인 비밀번호 대입 · 인증 메일 폭탄 · 체험 계정 남용 · 문의·상품 도배 · 통계 부풀리기 · AI 비용 폭주를 앞에서 막음
  * - IP는 nginx가 넣어 주는 X-Real-IP (백엔드는 nginx 뒤에만 있어서 사용자가 바꿀 수 없음)
  * - 넘으면 429 + Retry-After (몇 초 뒤에 다시)
  * - 서버가 1대라 메모리로 충분 (여러 대가 되면 Redis로 옮길 자리)
@@ -33,6 +33,8 @@ public class RateLimitGuard implements WebMvcConfigurer, HandlerInterceptor {
             new Rule("/api/user/demo", 20, 600),
             new Rule("/api/support", 5, 600),
             new Rule("/api/ai/chat", 30, 600),
+            new Rule("/api/market/ai-write", 10, 600),
+            new Rule("/api/market", 60, 600),   // 상품 올리기·찜·채팅·신고
             new Rule("/api/track", 120, 60));
 
     private static final byte[] BODY = "{\"success\":false,\"message\":\"요청이 너무 많아요. 잠시 후 다시 시도해주세요.\"}".getBytes(StandardCharsets.UTF_8);

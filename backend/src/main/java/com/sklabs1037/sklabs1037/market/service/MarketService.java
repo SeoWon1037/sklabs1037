@@ -8,6 +8,7 @@ import com.sklabs1037.sklabs1037.me.service.NotificationService;
 import com.sklabs1037.sklabs1037.support.dao.InquiryDao;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -142,7 +143,10 @@ public class MarketService {
         boolean mine = sellerId.equals(me);
         if ("HIDDEN".equals(item.get("status")) && !mine && !admin) throw new NoSuchElementException("신고가 쌓여 숨겨진 상품이에요.");
 
-        if (!mine) marketDao.addView(id);
+        if (!mine) {
+            marketDao.addView(id);
+            countViewDay(id);
+        }
 
         Map<String, Object> out = new LinkedHashMap<>(decorateOne(item));
         List<String> photos = new ArrayList<>();
@@ -167,6 +171,7 @@ public class MarketService {
         if (!mine) out.remove("buyerName");   // 누구와 거래했는지는 판매자만
 
         // 💰 가격 제안: 판매자는 기다리는 제안들, 사는 사람은 내가 보낸 최근 제안
+        if (mine) out.put("viewDays", viewDays(id));   // 📈 최근 7일 조회 (판매자만)
         if (mine) out.put("offers", marketDao.selectPendingOffers(id));
         else if (me != null) {
             out.put("myOffer", marketDao.selectMyOffer(id, me));
@@ -200,6 +205,39 @@ public class MarketService {
         out.put("desc", region + item.get("description"));
         out.put("image", item.get("photoId") == null ? null : "/api/market/photos/" + item.get("photoId"));
         return out;
+
+    }
+
+    // 📈 하루 조회 수 +1 (표가 아직 없거나 실패해도 상품 화면은 그대로 열리게)
+    private void countViewDay(Long id) {
+
+        try {
+            marketDao.bumpViewDay(id);
+        } catch (Exception e) {
+            log.debug("하루 조회 수 기록 생략: {}", e.getMessage());
+        }
+
+    }
+
+    private List<Map<String, Object>> viewDays(Long id) {
+
+        try {
+            return marketDao.selectViewDays(id);
+        } catch (Exception e) {
+            return List.of();
+        }
+
+    }
+
+    // 매일 04:50 — 60일 지난 하루 조회 수 지우기
+    @Scheduled(cron = "0 50 4 * * *", zone = "Asia/Seoul")
+    public void cleanViewDays() {
+
+        try {
+            marketDao.deleteOldViewDays();
+        } catch (Exception e) {
+            log.debug("하루 조회 수 정리 생략: {}", e.getMessage());
+        }
 
     }
 

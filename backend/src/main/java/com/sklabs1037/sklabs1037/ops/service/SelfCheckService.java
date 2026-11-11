@@ -25,6 +25,7 @@ import java.util.function.Supplier;
  *
  * 점검 항목 (하나가 실패해도 나머지는 계속)
  *   1. DB 표 · 칸: sql 폴더가 만드는 것과 실제 DB 비교 → 아직 실행 안 한 SQL 파일 (SchemaExpect)
+ *   1-2. 자동 SQL: 서버가 켜질 때 db/auto 의 SQL을 스스로 실행한 결과 (AutoSqlRunner)
  *   2. 서버 키: 토스 · AI · GitHub 토큰이 "있는지"만 (값은 절대 보여주지 않음)
  *   3. 옛날 시세 이어 받기: 삼성전자 5년 전까지 실제로 받아보기 (⏳ 그때 샀더라면이 쓰는 길)
  *   4. 계산: 삼성전자 1년 전 100만 원 계산이 되는지
@@ -51,10 +52,14 @@ public class SelfCheckService {
     @Autowired
     private WhatIfService whatIfService;
 
+    @Autowired
+    private AutoSqlRunner autoSqlRunner;
+
     public Map<String, Object> run() {
 
         List<Map<String, Object>> checks = new ArrayList<>();
         checks.add(guard("schema", "DB 표 · 칸", this::schema));
+        checks.add(guard("autosql", "자동 SQL (서버가 스스로 실행)", () -> autoSqlLine(autoSqlRunner.status())));
         checks.add(keys());
         checks.add(guard("history", "옛날 시세 이어 받기 (삼성전자 5년)", this::history));
         checks.add(guard("whatif", "그때 샀더라면 계산 (삼성전자 1년 전)", this::whatIf));
@@ -96,7 +101,28 @@ public class SelfCheckService {
 
         StringBuilder sb = new StringBuilder("아직 실행 안 한 SQL: ");
         missing.forEach((file, names) -> sb.append(file).append(" (").append(String.join(", ", names)).append(")  "));
-        return line(null, null, "FAIL", sb.toString().strip(), "pgAdmin에서 backend/sql 폴더의 위 파일을 실행해주세요.");
+        return line(null, null, "FAIL", sb.toString().strip(),
+                "pgAdmin에서 backend/sql 폴더의 위 파일을 실행해주세요. (이름이 날짜로 시작하는 파일은 서버가 스스로 실행하는 것이니 아래 자동 SQL 줄을 봐주세요)");
+
+    }
+
+    // 1-2. 자동 SQL 결과 한 줄
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> autoSqlLine(Map<String, Object> st) {
+
+        if (!Boolean.TRUE.equals(st.get("ran"))) return line(null, null, "WARN", "서버가 켜진 뒤 아직 실행되지 않았어요. 잠시 뒤 다시 점검해주세요.", null);
+
+        List<String> applied = (List<String>) st.get("applied");
+        List<String> changed = (List<String>) st.get("changed");
+        String summary = "전에 실행한 파일 " + st.get("known") + "개 · 이번에 켜지며 실행한 파일 " + applied.size() + "개" + (applied.isEmpty() ? "" : " (" + String.join(", ", applied) + ")");
+
+        if (st.get("failedFile") != null) {
+            return line(null, null, "FAIL", st.get("failedFile") + " 실패: " + st.get("error") + " · " + summary,
+                    "이 줄을 캡처해서 알려주세요. 급하면 backend/src/main/resources/db/auto 의 그 파일을 pgAdmin에서 직접 실행해도 돼요. (다음에 켜질 때 서버가 한 번 더 실행해도 문제없게 만든 파일이에요)");
+        }
+        if (st.get("error") != null) return line(null, null, "WARN", String.valueOf(st.get("error")), null);
+        if (!changed.isEmpty()) return line(null, null, "WARN", "실행한 뒤 내용이 바뀐 파일: " + String.join(", ", changed) + " (다시 실행하지 않아요) · " + summary, "바꿀 것이 있으면 새 파일로 추가해주세요.");
+        return line(null, null, "OK", summary, null);
 
     }
 

@@ -141,4 +141,12 @@ public interface MarketDao {
 
     // 기다리는 제안만 바뀜 (이미 답했으면 0)
     int updateOfferStatus(@Param("offerId") Long offerId, @Param("status") String status);
+
+    // ===== 📈 판매자 통계: 하루 조회 수 (표: db/auto/2026-11-11-01-market-view-day.sql — 서버가 스스로 만듦) =====
+    int bumpViewDay(Long itemId);
+
+    // 최근 7일 [{ day(MM/DD), views }] (오늘 포함, 조회가 없던 날은 0)
+    List<Map<String, Object>> selectViewDays(Long itemId);
+
+    int deleteOldViewDays();
 }

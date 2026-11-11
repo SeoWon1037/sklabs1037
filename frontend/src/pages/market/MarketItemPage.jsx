@@ -6,6 +6,7 @@
 // - 관리자: 어떤 상품이든 삭제
 // - ⭐ 판매완료를 누르면 "누구와 거래했나요?"(채팅한 사람 중에서) → 두 사람이 서로 후기 → 매너 온도
 // - 📉 가격을 내렸으면 전 가격 표시 · 🔗 공유(휴대폰은 공유 시트, PC는 주소 복사) · 🕘 최근 본 상품에 기록
+// - 📈 판매자에게는 최근 7일 조회 수 막대 (상품별 하루 조회 수, 본인 조회 제외)
 // - 💰 가격 제안: 사는 사람이 낮은 가격을 제안(상품당 3번) → 판매자가 수락(채팅방으로)/거절 · 📊 비슷한 상품 시세
 // - 백엔드: POST …/offer | offer/cancel, POST /api/market/offers/{id}/answer
 // - 백엔드: GET /api/market/items/{id} | …/buyers, POST …/like | chat | status | sold | review | bump | delete | report
@@ -143,6 +144,29 @@ function OfferBox({ item, busy, onSend, onCancel }) {
         !pending && <p className="mk-muted">이 상품에는 제안을 모두 썼어요. 채팅으로 이야기해보세요.</p>
       )}
       {open && price !== '' && !valid && <p className="mk-muted">판매가보다 낮고, 판매가의 절반 이상인 가격만 보낼 수 있어요.</p>}
+    </div>
+  )
+}
+
+// 📈 판매자: 최근 7일 조회 수 막대 (내가 본 것은 세지 않음)
+function ViewDays({ days }) {
+
+  if (!days?.length) return null
+  const total = days.reduce((sum, d) => sum + d.views, 0)
+  const max = Math.max(1, ...days.map((d) => d.views))
+
+  return (
+    <div className="mk-views" role="img" aria-label={`최근 7일 조회 ${total}번. ${days.map((d) => `${d.day} ${d.views}번`).join(', ')}`}>
+      <strong>📈 최근 7일 조회 {total}번</strong>
+      <div className="mk-views-bars" aria-hidden="true">
+        {days.map((d, i) => (
+          <span key={d.day} className={i === days.length - 1 ? 'mk-views-today' : ''}>
+            <small>{d.views > 0 ? d.views : ''}</small>
+            <b><i style={{ height: `${Math.max(d.views > 0 ? 8 : 2, (d.views / max) * 100)}%` }} /></b>
+            <em>{i === days.length - 1 ? '오늘' : d.day.slice(3)}</em>
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
@@ -374,6 +398,7 @@ function MarketItemPage() {
                   </button>
                 ))}
               </div>
+              <ViewDays days={item.viewDays} />
               <OfferList offers={item.offers} price={item.price} now={now} busy={!!busy} onAnswer={answerOffer} />
               {buyers !== undefined && <SoldPicker buyers={buyers} busy={!!busy} onPick={sold} onCancel={() => setBuyers(undefined)} />}
               {item.status === 'SOLD' && buyers === undefined && (

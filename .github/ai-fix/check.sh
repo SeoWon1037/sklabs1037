@@ -14,7 +14,7 @@ files=$(git diff --cached --name-only)
 echo "바뀐 파일:"; echo "$files"
 echo "$files" > /tmp/aifix/changed.txt
 
-blocked='^\.github/|^backend/sql/|^backend/build\.gradle|^backend/settings\.gradle|^backend/gradle|^frontend/package(-lock)?\.json|^frontend/nginx\.conf|^frontend/vite\.config|^frontend/public/sw\.js|^docker-compose|^\.env|^qa/|^backend/src/main/resources/application|/sklabs1037/(user|admin|push|support|autofix|ops|client)/|(Login|OAuth|Oauth|Security|Auth)[A-Za-z]*\.(java|jsx?|xml)$'
+blocked='^\.github/|^backend/sql/|^backend/build\.gradle|^backend/settings\.gradle|^backend/gradle|^frontend/package(-lock)?\.json|^frontend/nginx\.conf|^frontend/vite\.config|^frontend/public/sw\.js|^docker-compose|^\.env|^qa/|^backend/src/main/resources/application|^backend/src/main/resources/db/|/sklabs1037/(user|admin|push|support|autofix|ops|client)/|(Login|OAuth|Oauth|Security|Auth)[A-Za-z]*\.(java|jsx?|xml)$'
 bad=$(echo "$files" | grep -E "$blocked" || true)
 if [ -n "$bad" ]; then
   echo "::error::AI가 고치면 안 되는 파일을 바꿨어요: $bad"

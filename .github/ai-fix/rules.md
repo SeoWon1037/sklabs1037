@@ -8,7 +8,7 @@
 - 아래 파일·폴더는 열어볼 수는 있어도 고치지 않는다 (고치면 워크플로가 실패시킨다):
   .github/, backend/sql/, backend/build.gradle, backend/settings.gradle, backend/gradle*, frontend/package*.json,
   frontend/nginx.conf, frontend/vite.config.*, frontend/public/sw.js, docker-compose.yml, .env*, qa/,
-  backend/src/main/resources/application*, 패키지 user/ admin/ push/ support/ autofix/ ops/ client/,
+  backend/src/main/resources/application*, backend/src/main/resources/db/, 패키지 user/ admin/ push/ support/ autofix/ ops/ client/,
   이름에 Login·OAuth·Security·Auth 가 들어간 파일
 - DB 칸·테이블을 새로 만들어야 하는 수정, 라이브러리를 추가해야 하는 수정, 권한·로그인·돈과 관련된 수정은 하지 않는다.
 - 고칠 수 없거나, 원인이 분명하지 않거나, 위 금지 영역을 고쳐야 한다면 파일을 바꾸지 말고

@@ -70,7 +70,7 @@ class SchemaExpectTest {
     @Test
     void 점검_한_줄_만들기() {
 
-        assertEquals("OK", SelfCheckService.schemaLine(Map.of(), 61, 15).get("status"));
+        assertEquals("OK", SelfCheckService.schemaLine(Map.of(), 62, 15).get("status"));
         Map<String, Object> fail = SelfCheckService.schemaLine(Map.of("invite.sql", List.of("T_INVITE")), 61, 15);
         assertEquals("FAIL", fail.get("status"));
         assertTrue(String.valueOf(fail.get("detail")).contains("invite.sql (T_INVITE)"));
@@ -90,25 +90,53 @@ class SchemaExpectTest {
 
     }
 
+    @Test
+    void 자동_SQL_점검_한_줄() {
+
+        Map<String, Object> notYet = Map.of("ran", false);
+        assertEquals("WARN", SelfCheckService.autoSqlLine(notYet).get("status"));
+
+        Map<String, Object> ok = new HashMap<>(Map.of("ran", true, "known", 3, "applied", List.of("2026-11-11-01-a.sql"), "changed", List.of()));
+        assertEquals("OK", SelfCheckService.autoSqlLine(ok).get("status"));
+        assertTrue(String.valueOf(SelfCheckService.autoSqlLine(ok).get("detail")).contains("2026-11-11-01-a.sql"));
+
+        Map<String, Object> failed = new HashMap<>(ok);
+        failed.put("failedFile", "2026-11-12-01-b.sql");
+        failed.put("error", "permission denied for schema public");
+        assertEquals("FAIL", SelfCheckService.autoSqlLine(failed).get("status"));
+        assertTrue(String.valueOf(SelfCheckService.autoSqlLine(failed).get("detail")).contains("permission denied"));
+
+        Map<String, Object> changed = new HashMap<>(Map.of("ran", true, "known", 3, "applied", List.of(), "changed", List.of("2026-11-11-01-a.sql")));
+        assertEquals("WARN", SelfCheckService.autoSqlLine(changed).get("status"));
+
+        Map<String, Object> off = new HashMap<>(Map.of("ran", true, "known", 0, "applied", List.of(), "changed", List.of(), "error", "꺼져 있어요 (APP_AUTO_SQL=false)"));
+        assertEquals("WARN", SelfCheckService.autoSqlLine(off).get("status"));
+
+    }
+
     // sql 폴더에 새 표 · 칸이 생겼는데 SchemaExpect에 안 넣었으면 여기서 알려줌
     @Test
     void 목록이_sql_폴더와_맞는다() throws IOException {
 
         Path dir = Stream.of(System.getProperty("sklabs.sql", "sql"), "sql", "backend/sql").map(Path::of).filter(Files::isDirectory).findFirst().orElse(null);
         if (dir == null) return;   // sql 폴더를 찾을 수 없는 환경에서는 건너뜀
+        // 자동 SQL 폴더 (backend/sql 옆의 src/main/resources/db/auto)
+        Path auto = dir.resolveSibling("src").resolve("main/resources/db/auto");
 
         Pattern create = Pattern.compile("CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?([A-Za-z_0-9]+)", Pattern.CASE_INSENSITIVE);
         Pattern add = Pattern.compile("ALTER\\s+TABLE\\s+([A-Za-z_0-9]+)\\s+ADD\\s+COLUMN\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?([A-Za-z_0-9]+)", Pattern.CASE_INSENSITIVE);
 
         Set<String> tables = new TreeSet<>();
         Set<String> columns = new TreeSet<>();
-        try (Stream<Path> files = Files.list(dir)) {
-            for (Path f : files.filter((p) -> p.toString().endsWith(".sql")).toList()) {
-                String sql = Files.readString(f, StandardCharsets.UTF_8).replaceAll("--[^\\n]*", "");
-                Matcher m = create.matcher(sql);
-                while (m.find()) tables.add(m.group(1).toUpperCase());
-                m = add.matcher(sql);
-                while (m.find()) columns.add(m.group(1).toUpperCase() + "." + m.group(2).toUpperCase());
+        for (Path folder : Files.isDirectory(auto) ? List.of(dir, auto) : List.of(dir)) {
+            try (Stream<Path> files = Files.list(folder)) {
+                for (Path f : files.filter((p) -> p.toString().endsWith(".sql")).toList()) {
+                    String sql = Files.readString(f, StandardCharsets.UTF_8).replaceAll("--[^\\n]*", "");
+                    Matcher m = create.matcher(sql);
+                    while (m.find()) tables.add(m.group(1).toUpperCase());
+                    m = add.matcher(sql);
+                    while (m.find()) columns.add(m.group(1).toUpperCase() + "." + m.group(2).toUpperCase());
+                }
             }
         }
 

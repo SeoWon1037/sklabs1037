@@ -503,4 +503,23 @@
            AND ID = #{offerId}
            AND STATUS = 'PENDING'
     </update>
+
+    <!-- ===== 📈 판매자 통계: 하루 조회 수 ===== -->
+    <insert id="bumpViewDay">
+        INSERT INTO T_MARKET_VIEW_DAY (ITEM_ID, DAY, VIEWS)
+        VALUES (#{itemId}, (NOW() AT TIME ZONE 'Asia/Seoul')::DATE, 1)
+        ON CONFLICT (ITEM_ID, DAY) DO UPDATE SET VIEWS = T_MARKET_VIEW_DAY.VIEWS + 1
+    </insert>
+
+    <select id="selectViewDays" resultType="java.util.LinkedHashMap">
+        SELECT  TO_CHAR(D.DAY, 'MM/DD')         AS "day"
+               ,COALESCE(V.VIEWS, 0)::INT       AS "views"
+          FROM GENERATE_SERIES((NOW() AT TIME ZONE 'Asia/Seoul')::DATE - 6, (NOW() AT TIME ZONE 'Asia/Seoul')::DATE, INTERVAL '1 day') AS D(DAY)
+          LEFT JOIN T_MARKET_VIEW_DAY V ON V.ITEM_ID = #{itemId} AND V.DAY = D.DAY::DATE
+         ORDER BY D.DAY
+    </select>
+
+    <delete id="deleteOldViewDays">
+        DELETE FROM T_MARKET_VIEW_DAY WHERE DAY &lt; (NOW() AT TIME ZONE 'Asia/Seoul')::DATE - 60
+    </delete>
 </mapper>

@@ -37,6 +37,7 @@ AI 주식 비서 · 모의투자 · 중고거래를 한 곳에서 쓰는 웹 서
 | AI 비용 한도 | 기능별 사용량을 기록하고, 하루 한도를 넘으면 AI 호출을 멈춰요. | `ops/service/AiUsageService.java` |
 | DB 백업 | 매일 백업하고, 백업이 오래됐거나 실패하면 알려요. | `ops/backup/loop.sh`, `ops/service/BackupService.java` |
 | 자가 점검 | 빠뜨린 SQL 파일, 서버 키, 외부 시세 받기, 계산을 버튼 하나로 확인해요. | `ops/service/SelfCheckService.java`, `SchemaExpect.java` |
+| 자동 SQL | 새 표가 필요한 SQL을 서버가 켜질 때 스스로 한 번만 실행해요. | `ops/service/AutoSqlRunner.java`, `AutoSql.java` |
 | 호출 제한 | 주소별로 IP당 요청 수를 제한해요. | `ops/config/RateLimitGuard.java` |
 
 ## 틀린 답을 내지 않기 위한 장치
@@ -74,7 +75,7 @@ ops/        백업 스크립트
 필요한 것: Java 17, Node 20 이상, PostgreSQL.
 
 1. `.env.example`을 복사해 `.env`를 만들고 값을 채워요. **`.env`와 키 값은 저장소 · 채팅 · 캡처 어디에도 올리지 않아요.**
-2. `backend/sql/`의 SQL 파일을 DB에서 실행해요.
+2. `backend/sql/`의 SQL 파일을 DB에서 실행해요. (`db/auto/`의 SQL은 서버가 스스로 실행해요)
 3. 백엔드와 프런트엔드를 각각 실행해요.
 
 ```
@@ -112,7 +113,12 @@ npx eslint .
 3. `/api/health`가 3분 안에 응답하지 않으면 되돌리기
 4. QA 봇 점검 → 직전 점검에 없던 심각한 문제가 있으면 되돌리기
 
-DB 표는 자동으로 바뀌지 않아요. 새 SQL 파일이 있으면 올리기 전에 직접 실행하고, 배포 뒤 **관리자 > 자가 점검**에서 빠진 게 없는지 확인해요.
+DB 표는 두 가지 방식으로 만들어요.
+
+- `backend/src/main/resources/db/auto/`의 SQL은 서버가 켜질 때 아직 안 한 것만 한 번씩 스스로 실행해요. 여러 번 실행해도 되는 문장만 받고, 지우는 문장은 거부해요. (`ops/service/AutoSqlRunner.java`)
+- `backend/sql/`의 예전 SQL은 직접 실행한 것들이에요.
+
+배포 뒤 **관리자 > 자가 점검**에서 빠진 표가 없는지, 자동 SQL이 실패하지 않았는지 확인해요.
 
 ## 만든 사람
 

@@ -241,6 +241,17 @@ a.mk-seller:hover b { text-decoration: underline; }
 .mk-btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
 .mk-tab-note { margin: -6px 0 14px; }
 
+/* ===== 📈 판매자: 최근 7일 조회 ===== */
+.mk-views { display: flex; flex-direction: column; gap: 8px; }
+.mk-views strong { font-size: 13px; }
+.mk-views-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; height: 84px; }
+.mk-views-bars span { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; min-width: 0; height: 100%; }
+.mk-views-bars small { height: 12px; color: var(--text-muted); font-size: 10px; line-height: 12px; }
+.mk-views-bars i { display: block; width: 100%; max-width: 28px; min-height: 2px; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--primary) 45%, transparent); }
+.mk-views-bars b { display: flex; flex: 1; align-items: flex-end; justify-content: center; width: 100%; min-height: 0; }
+.mk-views-bars em { height: 12px; color: var(--text-muted); font-size: 10px; font-style: normal; line-height: 12px; }
+.mk-views-today i { background: var(--primary); }
+
 /* ===== 휴대폰 ===== */
 @media (max-width: 760px) {
   .mk-page { padding: 14px 16px 104px; }

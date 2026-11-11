@@ -1,0 +1,2 @@
+# update.cmd 는 윈도우 줄바꿈(CRLF)이어야 실행돼요
+*.cmd text eol=crlf

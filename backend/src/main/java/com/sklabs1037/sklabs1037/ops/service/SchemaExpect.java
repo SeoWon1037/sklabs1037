@@ -10,7 +10,8 @@ import java.util.Set;
  * 🧪 "DB에 있어야 하는 표 · 칸" 목록 (순수 계산)
  * - backend/sql/*.sql 을 pgAdmin에서 손으로 실행하는 방식이라, 하나를 빼먹어도 그 기능을 누를 때까지 모름
  *   → 관리자 > 자가 점검이 이 목록과 실제 DB를 비교해 "아직 실행 안 한 SQL 파일"을 알려줌
- * - 목록은 sql 폴더의 CREATE TABLE / ALTER TABLE … ADD COLUMN 에서 뽑은 것 (표 이름 → 그 표를 만드는 파일)
+ * - 목록은 backend/sql 과 resources/db/auto 의 CREATE TABLE / ALTER TABLE … ADD COLUMN 에서 뽑은 것 (표 이름 → 그 표를 만드는 파일)
+ *   파일 이름이 날짜로 시작하면(2026-11-11-01-…) 서버가 스스로 실행하는 자동 SQL (AutoSqlRunner)
  *   SQL 파일을 새로 넣으면 여기에도 넣어야 함 — 안 넣으면 SchemaExpectTest가 실패해서 알려줌
  */
 public final class SchemaExpect {
@@ -80,7 +81,8 @@ public final class SchemaExpect {
             Map.entry("T_RAG_CHUNK", "regulation-qa.sql"),
             Map.entry("T_INQUIRY", "support.sql"),
             Map.entry("T_DAILY_STAT", "usage-stats.sql"),
-            Map.entry("T_DAILY_VISITOR", "usage-stats.sql"));
+            Map.entry("T_DAILY_VISITOR", "usage-stats.sql"),
+            Map.entry("T_MARKET_VIEW_DAY", "2026-11-11-01-market-view-day.sql"));
 
     // "표.칸" → 그 칸을 더하는 SQL 파일 (나중에 ALTER TABLE로 더한 칸만)
     public static final Map<String, String> COLUMNS = Map.ofEntries(

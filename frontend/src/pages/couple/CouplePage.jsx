@@ -5,6 +5,7 @@
 // - 커플 정보는 두 사람에게만 보여요
 // - 백엔드: GET /api/couple, POST /api/couple/request, /api/couple/{id}/accept|decline|cancel, /api/couple/end
 // - ⏱ 다음 기념일 · 생일까지 남은 시간은 D-day 대신 일 · 시간 · 분 · 초로 1초마다 (Countdown)
+// - 💌 한마디: POST /api/couple/note { text } → 상대에게 알림 · 푸시로 내용이 감, 최근 5개 표시 (couple.notes)
 // - 🗓️ 함께하는 약속: CouplePlans (약속 잡기 · 목록 · 남은 시간)
 // - 🎂 생일: POST /api/couple/birthday { who: me | partner, month, day } → 커플 정보 (couple.birthdays.me / partner: { month, day, dDay })
 // ============================================
@@ -77,6 +78,15 @@ function BirthdayRow({ who, name, birthday, busy, onSave }) {
   )
 }
 
+// 방금 · 5분 전 · 3시간 전 · 2일 전
+const ago = (ms) => {
+  const m = Math.floor((Date.now() - Number(ms)) / 60000)
+  if (m < 1) return '방금'
+  if (m < 60) return `${m}분 전`
+  if (m < 1440) return `${Math.floor(m / 60)}시간 전`
+  return `${Math.floor(m / 1440)}일 전`
+}
+
 function CouplePage() {
 
   const [data, setData] = useState(null)
@@ -88,6 +98,7 @@ function CouplePage() {
   const [msg, setMsg] = useState('')
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [floats, setFloats] = useState([])   // 하트 날아가는 효과
+  const [note, setNote] = useState('')        // 💌 한마디 입력칸
 
   // 💗 하트 날리기
   const sendHeart = async () => {
@@ -145,6 +156,15 @@ function CouplePage() {
     }
   }
 
+  // 💌 한마디 보내기 → 상대에게 알림 · 푸시로 내용이 감
+  const sendNote = async (e) => {
+    e.preventDefault()
+    const text = note.trim()
+    if (!text || busy) return
+    setNote('')
+    await act('/api/couple/note', { text }, '💌 보냈어요. 상대에게 알림이 갔어요.')
+  }
+
   const saveBirthday = (who, month, day) =>
     act('/api/couple/birthday', { who, month, day }, month ? '🎂 생일을 저장했어요.' : '생일을 지웠어요.')
 
@@ -193,6 +213,24 @@ function CouplePage() {
             <p className="cp-heart-count">
               보낸 하트 <b>{c.heartsSent.total.toLocaleString()}</b> (오늘 {c.heartsSent.today}) · 받은 하트 <b>{c.heartsReceived.total.toLocaleString()}</b> (오늘 {c.heartsReceived.today})
             </p>
+          </div>
+
+          {/* 💌 한마디: 쓰면 상대에게 알림으로 내용이 감 */}
+          <div className="cp-note">
+            <form onSubmit={sendNote}>
+              <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 100))} maxLength={100} placeholder={`${c.partnerName}님에게 한마디`} aria-label={`${c.partnerName}님에게 보낼 한마디`} enterKeyHint="send" />
+              <button type="submit" className="btn btn-primary" disabled={busy || !note.trim()}>보내기</button>
+            </form>
+            {c.notes && c.notes.length > 0 && (
+              <ul>
+                {c.notes.slice(0, 5).map((n) => (
+                  <li key={n.id} className={n.mine ? 'cp-note-mine' : ''}>
+                    <span>{n.content}</span>
+                    <small>{n.mine ? '나' : c.partnerName} · {ago(n.insAt)}</small>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {/* 🎂 생일: 얼마나 남았는지 (7일 전 · 하루 전 · 당일 오전 9시에 알림) */}

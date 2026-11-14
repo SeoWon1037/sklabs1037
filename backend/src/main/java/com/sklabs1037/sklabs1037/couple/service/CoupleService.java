@@ -64,6 +64,7 @@ public class CoupleService {
             Long partnerId = partnerOf(id, userId);
             c.put("heartsSent", coupleDao.selectHeartCounts(id, userId));
             c.put("heartsReceived", partnerId == null ? Map.of("total", 0, "today", 0) : coupleDao.selectHeartCounts(id, partnerId));
+            c.put("notes", notes(id, userId));
             c.put("birthdays", birthdays(id, userId, String.valueOf(active.get("myName")), String.valueOf(active.get("partnerName")), today));
             result.put("couple", c);
         } else {
@@ -172,6 +173,73 @@ public class CoupleService {
 
         Long other = userId.equals(num(c.get("requesterId"))) ? num(c.get("partnerId")) : num(c.get("requesterId"));
         notificationService.notify(other, "COUPLE", "💔 커플 연결이 끝났어요", myName(userId) + "님이 커플 연결을 끊었어요", "/couple");
+
+    }
+
+    // ============================================
+    // 💌 한마디 (커플 화면에서 짧은 메시지 → 상대에게 알림 · 푸시로 내용이 감)
+    // ============================================
+    static final int NOTE_MAX = 100;
+    static final int NOTE_DAILY = 100;
+    static final long NOTE_GAP_MS = 2000;
+
+    private final Map<Long, Long> lastNote = new java.util.concurrent.ConcurrentHashMap<>();
+
+    // 글 다듬기: 줄바꿈 · 제어 문자는 띄어쓰기로, 앞뒤 공백 제거, 1~100자 (순수 계산)
+    static String noteText(Object raw) {
+
+        String s = raw == null ? "" : String.valueOf(raw).replaceAll("[\\p{Cntrl}]", " ").replaceAll("\\s+", " ").strip();
+        if (s.isEmpty()) throw new IllegalArgumentException("보낼 말을 적어주세요.");
+        if (s.length() > NOTE_MAX) throw new IllegalArgumentException("한마디는 " + NOTE_MAX + "자까지 보낼 수 있어요.");
+        return s;
+
+    }
+
+    // 최근 10개 { id, mine, content, insAt }
+    private List<Map<String, Object>> notes(Long coupleId, Long userId) {
+
+        List<Map<String, Object>> out = new ArrayList<>();
+        try {
+            for (Map<String, Object> n : coupleDao.selectNotes(coupleId)) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", n.get("id"));
+                m.put("mine", userId.equals(num(n.get("fromId"))));
+                m.put("content", n.get("content"));
+                m.put("insAt", n.get("insAt"));
+                out.add(m);
+            }
+        } catch (Exception e) {
+            // 표가 아직 없어도 커플 화면은 보여야 함
+            log.warn("커플 한마디 읽기 실패: {}", e.getMessage());
+        }
+        return out;
+
+    }
+
+    public Map<String, Object> sendNote(Long userId, Object text) {
+
+        Map<String, Object> active = coupleDao.selectActive(userId);
+        if (active == null) throw new IllegalArgumentException("커플끼리만 한마디를 보낼 수 있어요.");
+
+        String content = noteText(text);
+        Long id = num(active.get("id"));
+
+        long now = System.currentTimeMillis();
+        Long last = lastNote.put(userId, now);
+        if (last != null && now - last < NOTE_GAP_MS) throw new IllegalArgumentException("너무 빨라요. 잠시 뒤에 다시 보내주세요.");
+        if (coupleDao.countNotesToday(id, userId) >= NOTE_DAILY) throw new IllegalArgumentException("오늘은 한마디를 " + NOTE_DAILY + "번 다 보냈어요.");
+
+        coupleDao.insertNote(id, userId, content);
+
+        Long partnerId = partnerOf(id, userId);
+        if (partnerId != null) {
+            notificationService.notify(partnerId, "COUPLE", "💌 " + active.get("myName") + "님의 한마디", content, "/couple");
+        }
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("sentTo", active.get("partnerName"));
+        m.put("content", content);
+        return m;
 
     }
 

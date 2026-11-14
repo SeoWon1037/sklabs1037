@@ -56,6 +56,7 @@ class AiChatRulesTest {
         assertTrue(AiChatRules.needsLogin("send_couple_heart", null));
         assertFalse(AiChatRules.needsLogin("send_couple_heart", 7L));
         assertTrue(AiChatRules.needsLogin("add_plan", null));
+        assertTrue(AiChatRules.needsLogin("send_couple_message", null));
         assertTrue(AiChatRules.needsLogin("list_plans", null));
         assertFalse(AiChatRules.needsLogin("get_weather", null));
         assertFalse(AiChatRules.needsLogin("find_stock", null));

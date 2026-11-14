@@ -52,4 +52,15 @@ class CoupleRulesTest {
         assertThrows(IllegalArgumentException.class, () -> CoupleService.parseStart("어제", today));
 
     }
+
+    @Test
+    void 한마디는_다듬어서_100자까지() {
+
+        assertEquals("오늘 늦어 미안", CoupleService.noteText("  오늘\n늦어   미안 "));
+        assertEquals(100, CoupleService.noteText("가".repeat(100)).length());
+        assertThrows(IllegalArgumentException.class, () -> CoupleService.noteText("가".repeat(101)));
+        assertThrows(IllegalArgumentException.class, () -> CoupleService.noteText("   "));
+        assertThrows(IllegalArgumentException.class, () -> CoupleService.noteText(null));
+
+    }
 }

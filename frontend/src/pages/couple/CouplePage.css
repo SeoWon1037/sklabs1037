@@ -223,3 +223,15 @@
 .cp-plans-foot { margin: 10px 0 0; font-size: 12px; }
 .cp-plans-foot a { color: var(--cp-pink); }
 .cp-plans .cp-msg { margin: 10px 0 0; font-size: 13px; text-align: left; }
+
+/* 💌 한마디 */
+.cp-note { margin-top: 16px; text-align: left; }
+.cp-note form { display: flex; gap: 8px; }
+.cp-note input { flex: 1; min-width: 0; height: 46px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--cp-pink) 35%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--bg, #fff) 70%, transparent); color: var(--text); font-size: 16px; }
+.cp-note input:focus { outline: none; border-color: var(--cp-pink); }
+.cp-note form .btn { flex: none; min-height: 46px; padding: 0 16px; }
+.cp-note ul { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.cp-note li { display: flex; flex-direction: column; gap: 1px; align-self: flex-start; max-width: 86%; padding: 8px 12px; border-radius: 14px; background: color-mix(in srgb, var(--text) 7%, transparent); }
+.cp-note li.cp-note-mine { align-self: flex-end; background: color-mix(in srgb, var(--cp-pink) 16%, transparent); }
+.cp-note li span { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.cp-note li small { color: var(--cp-muted); font-size: 11px; }

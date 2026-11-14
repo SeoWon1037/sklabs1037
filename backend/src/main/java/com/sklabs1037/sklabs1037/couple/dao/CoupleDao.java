@@ -67,6 +67,15 @@ public interface CoupleDao {
     // 그 월 · 일이 생일인 사람 (지금 커플인 쌍만) { coupleId, userId, name, partnerId, month, day }
     List<Map<String, Object>> selectBirthdaysOn(@Param("month") int month, @Param("day") int day);
 
+    // ===== 💌 한마디 =====
+    int insertNote(@Param("coupleId") Long coupleId, @Param("fromId") Long fromId, @Param("content") String content);
+
+    // 최근 10개 (새것이 위) { id, fromId, content, insAt(ms) }
+    List<Map<String, Object>> selectNotes(@Param("coupleId") Long coupleId);
+
+    // 오늘 내가 보낸 수
+    int countNotesToday(@Param("coupleId") Long coupleId, @Param("fromId") Long fromId);
+
     // 지금 커플인 모든 쌍 { id, requesterId, partnerId, startDate } (기념일 알림용)
     List<Map<String, Object>> selectActiveCouples();
 

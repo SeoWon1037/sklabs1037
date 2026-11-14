@@ -27,8 +27,8 @@ public final class AiChatRules {
 
     public static final int ANON_DAILY = 20;
 
-    static final Set<String> LOGIN_TOOLS = Set.of("get_my_mock_portfolio", "send_couple_heart", "get_couple_info", "add_plan", "list_plans", "delete_plan");
-    static final Set<String> ACTION_TOOLS = Set.of("send_couple_heart", "add_plan", "delete_plan");
+    static final Set<String> LOGIN_TOOLS = Set.of("get_my_mock_portfolio", "send_couple_heart", "send_couple_message", "get_couple_info", "add_plan", "list_plans", "delete_plan");
+    static final Set<String> ACTION_TOOLS = Set.of("send_couple_heart", "send_couple_message", "add_plan", "delete_plan");
 
     static final String FRAME = """
             너는 SKLabs의 AI 챗봇이야. 주식뿐 아니라 일상 · 공부 · 글쓰기 · 코딩 · 상식 등 어떤 질문이든 친절하게 답해.
@@ -50,6 +50,9 @@ public final class AiChatRules {
               커플(애인 · 여자친구 · 남자친구)과 함께하는 약속이나 데이트라고 하면 shared=true로 넣어 (상대의 약속 목록과 알림에도 나옴).
               "매주 화요일 7시 헬스"처럼 매주 반복이면 weekly=true로 넣고 date는 가장 가까운 그 요일로 해 (12주치가 만들어짐).
               저장되면 언제 · 어디서 · 무엇인지 한 줄로 확인해 주고, 하루 전과 당일 오전 9시에 알려준다고 말해.
+            - "커플한테 사랑해라고 보내줘", "민지한테 오늘 늦는다고 전해줘"처럼 커플에게 말을 전해 달라고 하면 send_couple_message를 한 번만 불러.
+              text에는 사용자가 전하려는 말만 넣어 (100자까지, 네가 내용을 지어내거나 덧붙이지 마). 전할 말이 분명하지 않으면 뭐라고 보낼지 되물어.
+              성공하면 누구에게 뭐라고 보냈는지 한 줄로 알려줘.
             - "커플 생일 얼마나 남았어?", "우리 며칠 됐어?", "다음 기념일 언제야?" 같은 커플 질문은 get_couple_info로 조회해서 답해.
               생일은 dDay(남은 날)와 날짜를 함께 말해. 생일이 아직 입력되지 않았으면(null) 커플 화면(/couple)에서 생일을 넣어 달라고 안내해.
             - "내 약속 뭐 있어?", "이번 주 일정 알려줘"는 list_plans로 조회해서 답해. 약속을 지워 달라고 하면 list_plans로 id를 찾은 뒤 delete_plan을 불러. 어느 약속인지 분명하지 않으면 되물어.
@@ -163,6 +166,7 @@ public final class AiChatRules {
             case "get_my_mock_portfolio" -> "내 모의투자 계좌는 로그인해야 볼 수 있어요.";
             case "send_couple_heart" -> "하트는 로그인해야 보낼 수 있어요.";
             case "get_couple_info" -> "커플 정보는 로그인해야 볼 수 있어요.";
+            case "send_couple_message" -> "한마디는 로그인해야 보낼 수 있어요.";
             case "add_plan", "list_plans", "delete_plan" -> "약속은 로그인해야 저장하고 볼 수 있어요.";
             default -> "로그인해야 쓸 수 있는 기능이에요.";
         });

@@ -115,6 +115,10 @@ public class AiChatServiceImpl implements IAiChatService {
                     "질문한 사용자의 커플(애인)에게 💗 하트를 한 개 보낸다. 사용자가 하트를 보내 달라고 직접 말했을 때만 쓴다. 받는 사람은 서버가 정하므로 입력이 없다. 결과: sent.today = 오늘 보낸 개수, sent.total = 지금까지 보낸 개수.",
                     Map.of(),
                     List.of()),
+            tool("send_couple_message",
+                    "질문한 사용자의 커플(애인)에게 짧은 한마디를 보낸다. 상대에게 알림과 푸시로 그 내용이 간다. 사용자가 전해 달라고 한 말만 보낸다.",
+                    Map.of("text", Map.of("type", "string", "description", "전할 말 (100자까지, 사용자가 말한 그대로)")),
+                    List.of("text")),
             tool("get_couple_info",
                     "질문한 사용자의 커플 정보를 조회한다. 상대 이름, 함께한 날 수, 다음 기념일(100일 단위 · 주년), 두 사람의 생일(월 · 일, 다가오는 날짜, 남은 날 dDay)을 준다.",
                     Map.of(),
@@ -610,6 +614,13 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "send_couple_message": {
+
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+                return coupleService.sendNote(userId, input.get("text"));
+
+            }
+
             case "get_couple_info": {
 
                 if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
@@ -748,6 +759,7 @@ public class AiChatServiceImpl implements IAiChatService {
             case "get_my_mock_portfolio" -> "내 모의투자 계좌 조회";
             case "send_couple_heart"  -> "💗 커플에게 하트 보내기";
             case "get_couple_info"    -> "💕 커플 정보 조회";
+            case "send_couple_message" -> "💌 커플에게 한마디 보내기";
             case "get_weather"        -> "날씨 조회 (" + (str(input.get("region")).isBlank() ? "서울" : str(input.get("region"))) + ")";
             case "add_plan"           -> "🗓️ 약속 저장 (" + str(input.get("title")) + ")";
             case "list_plans"         -> "내 약속 조회";

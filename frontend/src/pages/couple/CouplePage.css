@@ -235,3 +235,17 @@
 .cp-note li.cp-note-mine { align-self: flex-end; background: color-mix(in srgb, var(--cp-pink) 16%, transparent); }
 .cp-note li span { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .cp-note li small { color: var(--cp-muted); font-size: 11px; }
+
+/* 📷 약속 사진 */
+.cp-plans-photos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.cp-plans-photos:empty { display: none; }
+.cp-plans-thumb { width: 64px; height: 64px; padding: 0; border: 0; border-radius: 10px; background: color-mix(in srgb, var(--text) 8%, transparent); overflow: hidden; cursor: pointer; }
+.cp-plans-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cp-plans-addphoto { width: 64px; height: 64px; border: 1px dashed color-mix(in srgb, var(--cp-pink) 55%, var(--border)); border-radius: 10px; background: transparent; color: var(--cp-pink); font-size: 12px; font-weight: 700; cursor: pointer; }
+.cp-plans-addphoto:disabled { opacity: 0.5; }
+.cp-plans-sub { margin: 16px 0 8px; font-size: 14px; }
+.cp-plans-view { position: fixed; inset: 0; z-index: 1300; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgb(0 0 0 / 82%); }
+.cp-plans-view img { max-width: 100%; max-height: calc(100dvh - 110px); border-radius: 12px; object-fit: contain; }
+.cp-plans-view > div { display: flex; gap: 8px; }
+.cp-plans-view .btn { min-width: 96px; min-height: 44px; }
+.cp-plans-view .btn-ghost { border-color: rgb(255 255 255 / 40%); color: #fff; }

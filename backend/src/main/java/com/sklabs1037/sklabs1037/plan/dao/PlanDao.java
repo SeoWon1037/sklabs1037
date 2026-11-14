@@ -36,6 +36,28 @@ public interface PlanDao {
     // 그 기간에 약속이 있는 모든 회원의 약속 (알림용) { userId, title, place, planAt }
     List<Map<String, Object>> selectAllBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
+    // ===== 📷 약속 사진 =====
+    // 약속 한 개 { id, ownerId, title, shared } (없으면 null)
+    Map<String, Object> selectPlan(Long id);
+
+    // photo: { planId, uploaderId, contentType, bytes, data(byte[]) }
+    int insertPhoto(Map<String, Object> photo);
+
+    int countPhotos(Long planId);
+
+    // 여러 약속의 사진 목록 (그림 데이터 빼고) { id, planId, uploaderId }
+    List<Map<String, Object>> selectPhotos(@Param("planIds") List<Long> planIds);
+
+    // 그림 데이터 1장 { planId, uploaderId, contentType, data }
+    Map<String, Object> selectPhotoData(Long id);
+
+    int deletePhoto(Long id);
+
+    int deletePhotosOfPlan(Long planId);
+
+    // 약속이 없어진 사진 정리
+    int deleteOrphanPhotos();
+
     // 지난 약속 정리 (90일 넘은 것)
     int deleteOld(@Param("before") LocalDateTime before);
 

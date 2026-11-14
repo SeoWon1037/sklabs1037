@@ -7,30 +7,9 @@
 // - 백엔드: GET/POST /api/couple/photos, POST /api/couple/photos/{id}/delete, GET /api/couple/photos/{id}/image
 // ============================================
 import { useEffect, useRef, useState } from 'react'
+import { shrinkPhoto as shrink } from './shrinkPhoto'
 
-const MAX_SIDE = 1600
 const dot = (d) => d.replaceAll('-', '.')
-
-// 사진 줄이기 → data URL (JPEG)
-const shrink = (file) =>
-  new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-    img.onload = () => {
-      const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height))
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.round(img.width * scale)
-      canvas.height = Math.round(img.height * scale)
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
-      URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', 0.85))
-    }
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('이 사진은 열 수 없어요. JPG나 PNG로 다시 골라주세요.'))
-    }
-    img.src = url
-  })
 
 function CoupleAlbum() {
 

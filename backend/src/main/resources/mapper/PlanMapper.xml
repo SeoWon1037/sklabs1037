@@ -75,6 +75,56 @@
          LIMIT 1
     </select>
 
+    <!-- ===== 📷 약속 사진 ===== -->
+    <select id="selectPlan" resultType="java.util.LinkedHashMap">
+        SELECT  P.ID        AS "id"
+               ,P.USER_ID   AS "ownerId"
+               ,P.TITLE     AS "title"
+               ,P.SHARED_YN AS "shared"
+          FROM T_PLAN P
+         WHERE P.ID = #{id}
+    </select>
+
+    <insert id="insertPhoto" parameterType="map">
+        INSERT INTO T_PLAN_PHOTO (PLAN_ID, UPLOADER_ID, CONTENT_TYPE, BYTES, DATA)
+        VALUES (#{planId}, #{uploaderId}, #{contentType}, #{bytes}, #{data})
+    </insert>
+
+    <select id="countPhotos" resultType="int">
+        SELECT COUNT(*) FROM T_PLAN_PHOTO WHERE PLAN_ID = #{planId}
+    </select>
+
+    <select id="selectPhotos" resultType="java.util.LinkedHashMap">
+        SELECT  F.ID            AS "id"
+               ,F.PLAN_ID       AS "planId"
+               ,F.UPLOADER_ID   AS "uploaderId"
+          FROM T_PLAN_PHOTO F
+         WHERE F.PLAN_ID IN
+        <foreach collection="planIds" item="pid" open="(" separator="," close=")">#{pid}</foreach>
+         ORDER BY F.PLAN_ID, F.ID
+    </select>
+
+    <select id="selectPhotoData" resultType="java.util.LinkedHashMap">
+        SELECT  F.PLAN_ID       AS "planId"
+               ,F.UPLOADER_ID   AS "uploaderId"
+               ,F.CONTENT_TYPE  AS "contentType"
+               ,F.DATA          AS "data"
+          FROM T_PLAN_PHOTO F
+         WHERE F.ID = #{id}
+    </select>
+
+    <delete id="deletePhoto">
+        DELETE FROM T_PLAN_PHOTO WHERE ID = #{id}
+    </delete>
+
+    <delete id="deletePhotosOfPlan">
+        DELETE FROM T_PLAN_PHOTO WHERE PLAN_ID = #{planId}
+    </delete>
+
+    <delete id="deleteOrphanPhotos">
+        DELETE FROM T_PLAN_PHOTO F WHERE NOT EXISTS (SELECT 1 FROM T_PLAN P WHERE P.ID = F.PLAN_ID)
+    </delete>
+
     <delete id="deleteOld">
         DELETE FROM T_PLAN WHERE PLAN_AT &lt; #{before}
     </delete>

@@ -25,7 +25,7 @@ import java.util.*;
 public class CouplePhotoService {
 
     static final String FREE = "추억";
-    static final int MAX_BYTES = 3 * 1024 * 1024;
+    public static final int MAX_BYTES = 3 * 1024 * 1024;
     static final int PER_SLOT = 6;
     static final int PER_COUPLE = 200;
 
@@ -170,7 +170,7 @@ public class CouplePhotoService {
     }
 
     // 파일 맨 앞 몇 바이트로 진짜 그림인지
-    static String imageType(byte[] b) {
+    public static String imageType(byte[] b) {
 
         if (b == null || b.length < 12) return null;
         if ((b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) return "image/jpeg";
@@ -181,7 +181,7 @@ public class CouplePhotoService {
     }
 
     // "data:image/jpeg;base64,...." 또는 base64만
-    static byte[] decode(String image) {
+    public static byte[] decode(String image) {
 
         if (image == null || image.isBlank()) throw new IllegalArgumentException("사진을 골라주세요.");
         String b64 = image.contains(",") ? image.substring(image.indexOf(',') + 1) : image;

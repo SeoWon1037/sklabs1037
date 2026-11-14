@@ -16,6 +16,7 @@ export const SERVICES = {
   lotto: { icon: '🍀', label: '오늘의 숫자', to: '/lotto', color: '#10b981', desc: '로또 · 연금복권' },
   quiz: { icon: '📰', label: '뉴스 퀴즈', to: '/quiz', color: '#64748b', desc: '매일 5문제' },
   duel: { icon: '⚔️', label: '친구 대결', to: '/duel', color: '#8b5cf6', desc: '7일 1:1 승부' },
+  tree: { icon: '🎄', label: '글자 트리', to: '/tree', color: '#16a34a', desc: '자라나는 크리스마스 트리' },
   persona: { icon: '🧭', label: '투자 성향', to: '/persona', color: '#06b6d4', desc: '12문항 테스트' },
   calendar: { icon: '📅', label: '증시 일정', to: '/calendar', color: '#0ea5e9', desc: '휴장 · 금리 · 만기일' },
   company: { icon: '🏭', label: '기업 정보', to: '/ai?q=', color: '#78716c', desc: 'AI가 정리' },
@@ -38,7 +39,7 @@ export const SHORTCUT_KEYS = ['stock', 'mock', 'whatif', 'market']
 export const CATEGORIES = [
   { title: '시세', icon: '📈', keys: ['invest', 'stock', 'calendar', 'ai', 'company'] },
   { title: '모의투자', icon: '💰', keys: ['mock', 'league', 'duel'] },
-  { title: '놀이터', icon: '🎮', keys: ['whatif', 'predict', 'quiz', 'persona', 'lotto'] },
+  { title: '놀이터', icon: '🎮', keys: ['whatif', 'predict', 'quiz', 'persona', 'tree', 'lotto'] },
   { title: '중고거래', icon: '🛍️', keys: ['market', 'sell', 'mymarket', 'messages'] },
   { title: '내 공간', icon: '🙋', keys: ['messages', 'activity', 'couple', 'mypage'] },
   { title: 'SKLabs', icon: '🧪', keys: ['support', 'ideas', 'status', 'app', 'about'] },

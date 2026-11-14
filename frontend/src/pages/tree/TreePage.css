@@ -1,0 +1,44 @@
+/* ============================================
+   🎄 글자 트리 (tree-) — 밝은 테마에서도 이 화면의 무대는 늘 밤하늘색
+   ============================================ */
+.tree-page { max-width: 560px; margin: 0 auto; padding: 20px 16px 72px; }
+.tree-head h1 { margin: 0; font-size: 24px; letter-spacing: -0.03em; }
+.tree-head p { margin: 6px 0 14px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.tree-head .tree-to { color: var(--text); font-size: 17px; }
+.tree-to b { color: #f5c542; }
+
+.tree-stage { position: relative; border-radius: 16px; background: #070b14; overflow: hidden; }
+.tree-canvas { display: block; width: 100%; height: auto; }
+.tree-info { position: absolute; left: 12px; bottom: 8px; margin: 0; color: rgb(226 236 255 / 45%); font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+.tree-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tree-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--text); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.tree-btn:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.tree-btn-primary { border-color: var(--primary); background: var(--primary); color: var(--primary-text); }
+.tree-btn-primary:hover { background: var(--primary-hover); }
+.tree-actions .tree-btn { flex: 1; }
+
+.tree-code { margin: 14px 0 0; padding: 10px 14px 12px; border-radius: 12px; background: #0b1020; color: #7f8aa3; font: 12px/1.9 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; list-style: none; }
+.tree-code li { display: flex; gap: 10px; white-space: nowrap; overflow: hidden; }
+.tree-code li > span:first-child { flex: none; width: 18px; color: #48526b; }
+.tree-code code { flex: none; color: #9fb4d8; font: inherit; }
+.tree-code em { min-width: 0; overflow: hidden; color: #5c6884; font-style: normal; text-overflow: ellipsis; }
+.tree-code .tree-code-title { justify-content: space-between; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #1a2238; color: #c8d3ea; }
+.tree-code .tree-code-title > span:first-child { width: auto; color: #c8d3ea; }
+.tree-code .tree-code-title > span:last-child { color: #f5c542; }
+.tree-code .tree-code-on { margin: 0 -14px; padding: 0 14px; background: #162040; }
+.tree-code .tree-code-on code { color: #fff; }
+.tree-code .tree-code-done code { color: #5fbf7a; }
+
+.tree-send { margin-top: 18px; }
+.tree-send label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; }
+.tree-send div { display: flex; gap: 8px; }
+.tree-send input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--text) 4%, transparent); color: var(--text); font-size: 15px; }
+.tree-send input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
+.tree-toast { margin: 8px 0 0; font-size: 13px; }
+
+@media (max-width: 420px) {
+  .tree-send div { flex-wrap: wrap; }
+  .tree-send input { flex: 1 1 100%; }
+  .tree-send .tree-btn { flex: 1; }
+}

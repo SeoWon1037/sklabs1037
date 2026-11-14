@@ -54,6 +54,7 @@ const PAGES = [
       },
     },
   },
+  { key: 'tree', name: '글자 트리', path: '/tree' },
   { key: 'stock', name: '주식 종목', path: '/stock?symbol=005930' },
   { key: 'mock', name: '모의투자', path: '/mock' },
   { key: 'league', name: 'AI 리그', path: '/league' },

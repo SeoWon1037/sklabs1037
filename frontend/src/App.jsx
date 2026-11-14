@@ -60,13 +60,14 @@ const MarketMyPage = lazyPage(() => import('./pages/market/MarketMyPage'))
 const MarketUserPage = lazyPage(() => import('./pages/market/MarketUserPage'))
 const AdminMarketPage = lazyPage(() => import('./pages/admin/AdminMarketPage'))
 const AdminErrorsPage = lazyPage(() => import('./pages/admin/AdminErrorsPage'))
+const TreePage = lazyPage(() => import('./pages/tree/TreePage'))
 const AdminSelfCheckPage = lazyPage(() => import('./pages/admin/AdminSelfCheckPage'))
 const WhatIfPage = lazyPage(() => import('./pages/whatif/WhatIfPage'))
 
 // 주소 → 탭 제목 (앞부분이 맞는 것 중 가장 긴 것, 없으면 SKLabs)
 const TITLES = {
   '/': 'SKLabs - AI 주식 비서 · 모의투자 · 중고거래', '/invest': 'SKLabs - AI 주식 비서 · 모의투자 · 중고거래',
-  '/stock': '주식 종목 · SKLabs', '/mock': '모의투자 · SKLabs', '/ai': 'AI 비서 · SKLabs', '/whatif': '그때 샀더라면 · SKLabs',
+  '/stock': '주식 종목 · SKLabs', '/mock': '모의투자 · SKLabs', '/ai': 'AI 비서 · SKLabs', '/whatif': '그때 샀더라면 · SKLabs', '/tree': '글자 트리 · SKLabs',
   '/calendar': '증시 일정 · SKLabs', '/league': 'AI 리그 · SKLabs', '/predict': '예측 게임 · SKLabs', '/quiz': '뉴스 퀴즈 · SKLabs',
   '/persona': '투자 성향 테스트 · SKLabs', '/market': '중고거래 · SKLabs', '/market/new': '판매하기 · SKLabs', '/market/my': '내 장터 · SKLabs',
   '/messages': '메시지 · SKLabs', '/about': '만든 사람 · SKLabs', '/status': '서비스 상태 · SKLabs', '/login': '로그인 · SKLabs', '/admin': '관리자 · SKLabs',
@@ -106,6 +107,7 @@ function App() {
       <Suspense fallback={<main className="page-loading" aria-busy="true">불러오는 중...</main>}>
       <Routes>
         <Route path="/" element={<MainPage />} />                        {/* 📈 투자 홈 (사이트 첫 화면: 뉴스 · 시세 · 날씨) */}
+        <Route path="/tree" element={<TreePage />} />                    {/* 🎄 글자 트리 (글자로 그린 3차원 크리스마스 트리) */}
         <Route path="/whatif" element={<WhatIfPage />} />                {/* ⏳ 그때 샀더라면 (공유용 계산기) */}
         <Route path="/market" element={<MarketPage />} />                {/* 🛍️ 중고거래 장터 */}
         <Route path="/market/new" element={<MarketWritePage />} />       {/* 🛍️ 상품 올리기 */}

@@ -21,6 +21,8 @@ public class AiChatVO {
     private String toolsText;        // 도구 목록을 한 줄로 (DB 저장용)
     private List<java.util.Map<String, Object>> sources;   // 🧾 답변 근거 자료 (뉴스 기사 링크 · 종목 · 문서), 화면 표시용 (DB 저장 안 함)
     private Object history;          // 🧠 앞에 나눈 대화 [{ role: user|assistant, text }] (화면이 보냄 → AiChatRules.history가 다듬음)
+    private Object programs;         // 🖥️ 이 PC에 설치된 프로그램 이름 목록 (PC 도우미가 연결된 화면이 "실행해줘"일 때만 보냄)
+    private String launch;           // 🖥️ 챗봇이 실행하기로 한 프로그램 이름 (화면이 PC 도우미에게 실행을 시킴)
     private String navigate;         // 🧭 챗봇이 열기로 한 화면 주소 (화면이 이 주소로 이동)
     private boolean readOnly;        // 체험 계정: 무언가를 바꾸는 도구(하트 · 약속)를 쓰지 않음
     private boolean loginRequired;   // 로그인해야 답할 수 있는 질문이었는지 (화면에 [로그인] 버튼)

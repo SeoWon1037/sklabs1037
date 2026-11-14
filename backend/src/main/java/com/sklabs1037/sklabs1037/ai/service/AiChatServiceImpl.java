@@ -157,6 +157,12 @@ public class AiChatServiceImpl implements IAiChatService {
                     List.of("query"))
     );
 
+    // 🖥️ 내 PC 프로그램 실행 (PC 도우미가 연결되어 프로그램 목록이 같이 왔을 때만 도구 목록에 더함)
+    private static final Map<String, Object> LAUNCH_TOOL = tool("launch_program",
+            "사용자의 PC에 설치된 프로그램 · 게임을 실행한다. 시스템 프롬프트의 <programs> 목록에 있는 이름만 쓸 수 있다. 사용자가 실행해 달라고 했을 때만 쓴다.",
+            Map.of("name", Map.of("type", "string", "description", "<programs> 목록에 있는 이름 그대로")),
+            List.of("name"));
+
     // 채점용 재답변에서는 실제 행동(하트)을 하는 도구를 뺀 목록
     private static final List<Map<String, Object>> READ_ONLY_TOOLS = AiChatRules.withoutActions(TOOLS);
 
@@ -201,11 +207,20 @@ public class AiChatServiceImpl implements IAiChatService {
         vo.setPromptVersion(prompt.version());
 
         // 체험 계정(모두가 같이 쓰는 계정)은 하트 · 약속처럼 무언가를 바꾸는 도구를 쓰지 않음
-        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), vo.isReadOnly() ? READ_ONLY_TOOLS : TOOLS, AiChatRules.history(vo.getHistory()));
+        // 🖥️ PC 도우미가 연결된 화면이 "실행해줘" 같은 말과 함께 설치된 프로그램 목록을 보냈으면 launch_program 도구를 더함
+        List<String> programs = AiChatRules.programs(vo.getPrograms());
+        List<Map<String, Object>> tools = vo.isReadOnly() ? READ_ONLY_TOOLS : TOOLS;
+        if (!programs.isEmpty()) {
+            tools = new ArrayList<>(tools);
+            tools.add(LAUNCH_TOOL);
+        }
+
+        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), tools, AiChatRules.history(vo.getHistory()), programs);
 
         vo.setSources(r.sources());
         vo.setLoginRequired(r.loginRequired());
         vo.setNavigate(r.navigate());
+        vo.setLaunch(r.launch());
         return finish(vo, r.answer(), r.toolsUsed());
 
     }
@@ -214,7 +229,7 @@ public class AiChatServiceImpl implements IAiChatService {
     @Override
     public Map<String, Object> answerWith(String systemPrompt, String question, Long userId) {
 
-        AgentResult r = runAgent(systemPrompt, question, userId, READ_ONLY_TOOLS, List.of());   // 채점 중에 진짜 하트가 나가면 안 됨
+        AgentResult r = runAgent(systemPrompt, question, userId, READ_ONLY_TOOLS, List.of(), List.of());   // 채점 중에 진짜 하트가 나가면 안 됨
 
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("answer", r.answer());
@@ -225,16 +240,20 @@ public class AiChatServiceImpl implements IAiChatService {
     }
 
     // navigate: 🧭 open_page로 열기로 한 화면 주소 (없으면 null)
-    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources, boolean loginRequired, String navigate) {
+    // launch: 🖥️ launch_program으로 실행하기로 한 프로그램 이름 (실제 실행은 화면이 PC 도우미에게 시킴, 없으면 null)
+    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources, boolean loginRequired, String navigate, String launch) {
     }
 
     // 질문 하나를 Claude + 도구 반복으로 답하기
     @SuppressWarnings("unchecked")
     // history: 🧠 앞에 나눈 대화 (AiChatRules.history가 다듬은 것, 없으면 빈 목록)
-    private AgentResult runAgent(String stockRules, String question, Long userId, List<Map<String, Object>> tools, List<Map<String, Object>> history) {
+    // programs: 🖥️ 이 PC에 설치된 프로그램 이름 (없으면 빈 목록)
+    private AgentResult runAgent(String stockRules, String question, Long userId, List<Map<String, Object>> tools, List<Map<String, Object>> history, List<String> programs) {
 
         // 고정 틀(무엇이든 답하기 · 로그인 안내 · 하트) + 주식 규칙
-        String systemPrompt = AiChatRules.systemPrompt(stockRules, userId != null, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")));
+        String systemPrompt = AiChatRules.systemPrompt(stockRules, userId != null, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")))
+                + AiChatRules.programsPrompt(programs);
+        String launch = null;
         boolean loginRequired = false;
         String navigate = null;
 
@@ -265,7 +284,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     answer += "\n\n(답변이 길어 일부가 생략되었습니다. 궁금한 부분을 나눠서 질문해주세요.)";
                 }
 
-                return new AgentResult(answer, toolsUsed, sources, loginRequired, navigate);
+                return new AgentResult(answer, toolsUsed, sources, loginRequired, navigate, launch);
 
             }
 
@@ -291,7 +310,15 @@ public class AiChatServiceImpl implements IAiChatService {
                     // 로그인해야 하는 도구를 로그인 없이 부르면 실행하지 않고 "로그인 필요"만 알려줌 → AI가 로그인하라고 안내
                     boolean needLogin = AiChatRules.needsLogin(toolName, userId);
                     if (needLogin) loginRequired = true;
-                    Object out = needLogin ? AiChatRules.loginRequired(toolName) : runTool(toolName, input, userId);
+                    Object out;
+                    if ("launch_program".equals(toolName)) {
+                        // 🖥️ 서버는 실행하지 않음: 목록에 있는 이름인지 확인만 하고, 화면이 그 PC의 도우미에게 실행을 시킴
+                        Map<String, Object> picked = AiChatRules.launch(input.get("name"), programs);
+                        launch = String.valueOf(picked.get("launch"));
+                        out = picked;
+                    } else {
+                        out = needLogin ? AiChatRules.loginRequired(toolName) : runTool(toolName, input, userId);
+                    }
                     if ("open_page".equals(toolName) && out instanceof Map<?, ?> opened) navigate = String.valueOf(opened.get("open"));
                     collectSources(toolName, input, out, sources);
                     // 기사 주소는 화면용 (AI에게는 안 보냄 → 토큰 절약)
@@ -315,7 +342,7 @@ public class AiChatServiceImpl implements IAiChatService {
         }
 
         // 최대 횟수 안에 답을 못 끝낸 경우
-        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources, loginRequired, navigate);
+        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources, loginRequired, navigate, launch);
 
     }
 
@@ -764,6 +791,7 @@ public class AiChatServiceImpl implements IAiChatService {
             case "add_plan"           -> "🗓️ 약속 저장 (" + str(input.get("title")) + ")";
             case "list_plans"         -> "내 약속 조회";
             case "delete_plan"        -> "약속 지우기";
+            case "launch_program"     -> "🖥️ 프로그램 실행 (" + str(input.get("name")) + ")";
             case "open_page"          -> "🧭 화면 열기 (" + str(input.get("page")) + ")";
             case "search_market"      -> "🛍️ 장터 검색 (" + str(input.get("query")) + ")";
             case "screen_stocks"      -> "조건 검색 (" + describeScreen(input) + ")";

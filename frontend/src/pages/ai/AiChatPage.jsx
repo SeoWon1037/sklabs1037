@@ -15,6 +15,7 @@ import VoiceButton from '../../components/ai/VoiceButton'
 import { canSpeak, speak, stopSpeaking } from '../../voice/speech'
 import { alwaysOn } from '../../voice/alwaysListen'
 import { voiceIntent } from '../../voice/voiceIntent'
+import { launchByName, tryLaunch } from '../../pc/pcHelper'
 
 // 🧾 답변 근거 종류
 const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속', MARKET: '장터' }
@@ -130,6 +131,16 @@ function AiChatPage() {
       return
     }
 
+    // 🖥️ "배틀그라운드 실행해줘": PC 도우미가 연결되어 있으면 이름이 맞는 프로그램을 바로 실행, 애매하면 목록과 함께 AI에게
+    const pc = await tryLaunch(question)
+    if (pc.launched || pc.error) {
+      const say = pc.launched ? `▶ ${pc.launched}을(를) 실행할게요.` : `실행하지 못했어요. ${pc.error}`
+      setMessages((prev) => [...prev, { role: 'user', text: question }, { role: 'ai', text: say }])
+      setInput('')
+      if (talkRef.current) speak(say)
+      return
+    }
+
     // 🧠 대화 기억: 앞에 나눈 대화 중 최근 6개(오류 제외)를 같이 보내서 "그럼 그건?" 같은 이어지는 질문을 알아듣게 함
     const history = messages
       .filter((m) => !m.error && m.text)
@@ -144,9 +155,18 @@ function AiChatPage() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: question, history }),
+        body: JSON.stringify({ message: question, history, programs: pc.programs }),
       })
       const data = await res.json()
+
+      // 🖥️ 챗봇이 고른 프로그램을 이 PC의 도우미에게 실행시킴
+      if (data.success && typeof data.launch === 'string' && data.launch) {
+        try {
+          data.answer = `▶ ${await launchByName(data.launch)}을(를) 실행할게요.`
+        } catch (e) {
+          data.answer = `실행하지 못했어요. ${e.message}`
+        }
+      }
 
       if (data.success) {
         setMessages((prev) => [

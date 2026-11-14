@@ -17,6 +17,7 @@ import { canListen, listen, speak, stopSpeaking } from '../../voice/speech'
 import { voiceIntent } from '../../voice/voiceIntent'
 import { alwaysOn, onAlwaysChange, setAlways, wakeCommand } from '../../voice/alwaysListen'
 import { aiActed, onOpenVoice } from '../../voice/aiActed'
+import { launchByName, tryLaunch } from '../../pc/pcHelper'
 import './VoiceCommand.css'
 
 const EXAMPLES = ['오늘 날씨 어때?', '커플한테 하트 보내줘', '토요일 7시 데이트 잡아줘', '모의투자 열어줘', '삼성전자 주가 보여줘']
@@ -73,7 +74,8 @@ function VoiceCommand() {
   }
 
   // 그 자리에서 AI 챗봇에게 묻기 (AI 챗봇 화면과 같은 API · 같은 도구)
-  const askHere = async (question) => {
+  // programs: 🖥️ PC 도우미가 연결되어 있고 "실행해줘" 같은 말일 때, 설치된 프로그램 이름 목록 (AI가 그중에서 고름)
+  const askHere = async (question, programs) => {
     const history = chat.filter((m) => m.text).slice(-6).map((m) => ({ role: m.role === 'ai' ? 'assistant' : 'user', text: m.text.slice(0, 500) }))
     setChat((c) => [...c, { role: 'user', text: question }])
     setHeard('')
@@ -84,11 +86,21 @@ function VoiceCommand() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: question.slice(0, 500), history }),
+        body: JSON.stringify({ message: question.slice(0, 500), history, programs }),
       })
       const data = await res.json()
       setState('idle')
       setMessage('')
+
+      // 🖥️ 챗봇이 고른 프로그램을 이 PC의 도우미에게 실행시킴
+      if (data.success && typeof data.launch === 'string' && data.launch) {
+        try {
+          const name = await launchByName(data.launch)
+          data.answer = `▶ ${name}을(를) 실행할게요.`
+        } catch (e) {
+          data.answer = `실행하지 못했어요. ${e.message}`
+        }
+      }
 
       if (!data.success) {
         setChat((c) => [...c, { role: 'ai', text: data.message ?? 'AI 응답에 실패했어요.', needLogin: data.loginRequired === true }])
@@ -120,6 +132,17 @@ function VoiceCommand() {
     if (intent.type === 'go') return go(intent.to, `${intent.label} 화면을 열게요.`)
     if (intent.type === 'translate') return go(`/translate?text=${encodeURIComponent(intent.text)}&to=${intent.to}`, '번역할게요.')
     if (intent.type === 'market') return go(`/market?q=${encodeURIComponent(intent.q)}`, `${intent.q} 상품을 찾아볼게요.`)
+
+    // 🖥️ "배틀그라운드 실행해줘": PC 도우미가 연결되어 있으면 이름이 맞는 프로그램을 바로 실행, 애매하면 목록과 함께 AI에게
+    const pc = await tryLaunch(text)
+    if (pc.launched || pc.error) {
+      const say = pc.launched ? `▶ ${pc.launched}을(를) 실행할게요.` : `실행하지 못했어요. ${pc.error}`
+      setChat((c) => [...c, { role: 'user', text }, { role: 'ai', text: say }])
+      setHeard('')
+      return speak(say)
+    }
+    if (pc.programs && intent.type !== 'stock') return askHere(text, pc.programs)   // ("삼성전자 열어줘"는 아래에서 종목부터 찾아봄)
+
     if (intent.type === 'ask') return askHere(intent.q)
 
     // 종목: 이름으로 찾아서 있으면 그 종목 화면, 없으면 AI 챗봇에게
@@ -129,7 +152,7 @@ function VoiceCommand() {
       const j = await fetch(`/api/stock/search?q=${encodeURIComponent(intent.q)}`).then((r) => r.json())
       const stock = j.success ? j.stocks?.[0] : null
       if (stock) return go(`/stock?symbol=${stock.symbol}`, `${stock.name} 화면을 열게요.`)
-      return askHere(text)
+      return askHere(text, pc.programs)
     } catch {
       setState('idle')
       return setMessage('서버에 연결하지 못했어요. 잠시 후 다시 해주세요.')

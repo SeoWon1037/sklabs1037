@@ -9,6 +9,8 @@
 // 실행
 //   node tools\pc-helper\sklabs-pc-helper.js          ← 켜 두는 동안만 동작 (창을 닫으면 꺼짐)
 //   node tools\pc-helper\sklabs-pc-helper.js --pair   ← 연결 화면을 다시 열기
+//   node tools\pc-helper\sklabs-pc-helper.js --autostart     ← 윈도우에 로그인할 때마다 자동으로 켜지게 (--mouse 를 같이 붙이면 마우스 기능도 함께)
+//   node tools\pc-helper\sklabs-pc-helper.js --no-autostart  ← 자동 실행 끄기
 //   node tools\pc-helper\sklabs-pc-helper.js --mouse  ← 🖱️ 말로 마우스 움직이기도 허용 (이 옵션 없이 켜면 마우스 기능은 꺼져 있음)
 //
 // 안전 장치 (웹사이트가 내 PC의 프로그램을 실행하게 여는 것이므로)
@@ -31,7 +33,7 @@ const os = require('os')
 const crypto = require('crypto')
 const { execFile, spawn } = require('child_process')
 
-const VERSION = '1.2.1'
+const VERSION = '1.3.0'
 const PORT = 47613
 const ALLOWED_ORIGINS = ['https://sklabs1037.com', 'https://www.sklabs1037.com', 'http://localhost:5173']
 const SITE = 'https://sklabs1037.com'
@@ -109,6 +111,41 @@ const dedupe = (items) => {
     if (!seen.has(k) || it.kind === 'steam') seen.set(k, it)
   }
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+}
+
+// ---------- 🚀 윈도우 로그인 때 자동 실행 ----------
+// 시작프로그램 폴더(이 사용자 것)에 작은 .cmd 파일 하나를 둠 → 로그인하면 도우미가 최소화된 창으로 켜짐
+// (숨기지 않고 작업 표시줄에 보이게 둠: 켜져 있는지 알 수 있고, 창을 닫으면 꺼짐. 파일을 지우면 자동 실행도 끝)
+const STARTUP_FILE = path.join(process.env.APPDATA || os.homedir(), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'sklabs-pc-helper.cmd')
+
+/** 시작프로그램에 둘 파일 내용 (순수 함수). 경로의 큰따옴표는 넣을 수 없는 글자라 거절 */
+const startupScript = (nodePath, scriptPath, mouse) => {
+  if (/["\r\n%]/.test(nodePath) || /["\r\n%]/.test(scriptPath)) return null
+  return [
+    '@echo off',
+    'rem SKLabs PC helper: starts when you sign in to Windows. Delete this file to stop it. (made by: pc-helper.cmd --autostart)',
+    'chcp 65001 >nul',
+    `start "SKLabs PC helper" /min "${nodePath}" "${scriptPath}"${mouse ? ' --mouse' : ''}`,
+    '',
+  ].join('\r\n')
+}
+
+const setAutostart = (on, mouse) => {
+  if (!on) {
+    try { fs.unlinkSync(STARTUP_FILE) } catch { /* 원래 없었음 */ }
+    console.log('  자동 실행을 껐어요. (이미 켜져 있는 도우미 창은 직접 닫아 주세요)')
+    return true
+  }
+  const script = startupScript(process.execPath, __filename, mouse)
+  if (!script) {
+    console.log('  자동 실행을 설정하지 못했어요. (폴더 경로에 쓸 수 없는 글자가 있어요)')
+    return false
+  }
+  fs.mkdirSync(path.dirname(STARTUP_FILE), { recursive: true })
+  fs.writeFileSync(STARTUP_FILE, script, 'utf8')
+  console.log(`  ✅ 이제 윈도우에 로그인하면 도우미가 자동으로 켜져요.${mouse ? ' (마우스 기능 포함)' : ' (마우스 기능은 빼고 — 넣으려면 --autostart --mouse)'}`)
+  console.log(`     끄려면: pc-helper.cmd --no-autostart   (또는 이 파일을 지우기: ${STARTUP_FILE})`)
+  return true
 }
 
 // ---------- 🌐 사이트 열기 (순수 함수) ----------
@@ -398,8 +435,16 @@ const main = async () => {
     process.exit(1)
   }
 
-  const { token, fresh } = loadToken()
   console.log(`SKLabs PC 도우미 ${VERSION}`)
+
+  // 자동 실행 켜기 / 끄기 (끄기는 설정만 하고 끝남, 켜기는 설정한 뒤 그대로 도우미도 켬)
+  if (process.argv.includes('--no-autostart')) {
+    setAutostart(false)
+    return
+  }
+  if (process.argv.includes('--autostart')) setAutostart(true, process.argv.includes('--mouse'))
+
+  const { token, fresh } = loadToken()
   console.log('  이 PC에 설치된 프로그램을 찾는 중...')
   await scan()
 
@@ -425,4 +470,4 @@ const main = async () => {
 
 if (require.main === module) main()
 
-module.exports = { safeUrl, mouseLine, MOUSE_SCRIPT, allowedOrigin, allowedHost, safeEqual, makeId, startAppsFromJson, parseVdfPaths, parseAcf, launchCommand, dedupe, createServer, PORT, _setPrograms: (list) => { programs = list; scannedAt = Date.now() } }
+module.exports = { startupScript, safeUrl, mouseLine, MOUSE_SCRIPT, allowedOrigin, allowedHost, safeEqual, makeId, startAppsFromJson, parseVdfPaths, parseAcf, launchCommand, dedupe, createServer, PORT, _setPrograms: (list) => { programs = list; scannedAt = Date.now() } }

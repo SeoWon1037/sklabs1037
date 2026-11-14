@@ -70,6 +70,22 @@ test('같은 이름은 하나만, 스팀 것을 남김', () => {
   assert.ok(list.some((p) => p.kind === 'steam'))
 })
 
+test('자동 실행 파일 내용', () => {
+  const node = 'C:\\Program Files\\nodejs\\node.exe'
+  const js = 'C:\\Users\\Administrator\\IdeaProjects\\sklabs1037\\tools\\pc-helper\\sklabs-pc-helper.js'
+
+  const plain = h.startupScript(node, js, false)
+  assert.ok(plain.includes(`start "SKLabs PC helper" /min "${node}" "${js}"\r\n`))
+  assert.ok(!plain.includes('--mouse'))
+  assert.ok(plain.startsWith('@echo off\r\n'))
+  assert.ok(h.startupScript(node, js, true).includes(`"${js}" --mouse\r\n`))
+
+  // 명령으로 해석될 수 있는 글자가 경로에 있으면 만들지 않음
+  assert.strictEqual(h.startupScript('C:\\a" & calc & "\\node.exe', js, false), null)
+  assert.strictEqual(h.startupScript(node, 'C:\\x\r\ncalc', false), null)
+  assert.strictEqual(h.startupScript(node, 'C:\\%TEMP%\\x.js', false), null)
+})
+
 test('사이트 열기는 정해진 https 주소만', () => {
   assert.strictEqual(h.safeUrl('https://www.youtube.com/'), 'https://www.youtube.com/')
   assert.ok(h.safeUrl('https://www.youtube.com/results?search_query=%EC%95%84%EC%9D%B4%EC%9C%A0'))

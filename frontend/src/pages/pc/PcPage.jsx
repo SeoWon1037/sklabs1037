@@ -97,6 +97,7 @@ function PcPage() {
             <li>프로젝트 폴더에서 아래 한 줄을 실행해요. (또는 폴더의 <b>pc-helper.cmd</b>를 더블클릭)<code>.\pc-helper.cmd</code></li>
             <li>처음 켜면 이 화면이 자동으로 열리면서 연결돼요. 브라우저가 “이 기기의 앱에 접근”을 물으면 <b>허용</b>을 눌러요.</li>
             <li>도우미 창을 켜 둔 동안만 동작해요. 창을 닫으면 꺼져요.</li>
+            <li>매번 켜기 번거로우면 아래 한 줄을 한 번만 실행해요. 그 뒤로는 윈도우에 로그인할 때마다 자동으로 켜져요. (끄려면 <b>--no-autostart</b>)<code>.\pc-helper.cmd --autostart --mouse</code></li>
           </ol>
           {state === 'unpaired' && <p className="pc-muted">연결이 안 되면 도우미 창을 닫고 <code>.\pc-helper.cmd --pair</code> 로 다시 켜 주세요.</p>}
           <p className="pc-safe">

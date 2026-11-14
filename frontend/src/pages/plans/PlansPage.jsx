@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom'
 import { canListen, canSpeak, speak, stopSpeaking } from '../../voice/speech'
 import { READ_ALOUD_KEY } from '../../voice/readAloud'
 import { alwaysOn, onAlwaysChange, setAlways } from '../../voice/alwaysListen'
+import { onAiActed } from '../../voice/aiActed'
 import './PlansPage.css'
 
 // 오늘 날짜 (한국 시간, YYYY-MM-DD) — 날짜 칸의 가장 이른 값
@@ -43,6 +44,9 @@ function PlansPage() {
       .then((json) => setPlans(json.success ? json.plans : []))
       .catch(() => setPlans([]))
   }, [])
+
+  // 🎤 챗봇이 약속을 잡거나 지웠으면 목록을 다시
+  useEffect(() => onAiActed(load), [load])
 
   useEffect(() => {
     load()

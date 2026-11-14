@@ -5,11 +5,15 @@
 // - 커플 정보는 두 사람에게만 보여요
 // - 백엔드: GET /api/couple, POST /api/couple/request, /api/couple/{id}/accept|decline|cancel, /api/couple/end
 // - ⏱ 다음 기념일 · 생일까지 남은 시간은 D-day 대신 일 · 시간 · 분 · 초로 1초마다 (Countdown)
+// - 🗓️ 함께하는 약속: CouplePlans (약속 잡기 · 목록 · 남은 시간)
 // - 🎂 생일: POST /api/couple/birthday { who: me | partner, month, day } → 커플 정보 (couple.birthdays.me / partner: { month, day, dDay })
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import CoupleAlbum from './CoupleAlbum'
+import CouplePlans from './CouplePlans'
+import Countdown from './Countdown'
+import { onAiActed } from '../../voice/aiActed'
 import './CouplePage.css'
 
 const dot = (d) => d.replaceAll('-', '.')
@@ -20,31 +24,6 @@ const post = (url, body) =>
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   }).then((res) => res.json())
-
-// ⏱ 그날(한국 시간 0시)까지 남은 시간을 1초마다: "23일 04시간 12분 30초" (그날이 됐으면 done을 보여 줌)
-const pad = (n) => String(n).padStart(2, '0')
-const leftUntil = (date) => new Date(`${date}T00:00:00+09:00`).getTime() - Date.now()
-
-function Countdown({ date, done }) {
-
-  const [left, setLeft] = useState(() => leftUntil(date))
-
-  useEffect(() => {
-    const tick = () => setLeft(leftUntil(date))
-    const timer = setInterval(tick, 1000)
-    return () => clearInterval(timer)
-  }, [date])
-
-  if (left <= 0) return <b className="cp-count cp-count-done">{done}</b>
-
-  const s = Math.floor(left / 1000)
-  const days = Math.floor(s / 86400)
-  return (
-    <b className="cp-count" role="timer" aria-label={`${days}일 ${Math.floor((s % 86400) / 3600)}시간 남음`}>
-      {days > 0 && <>{days}<i>일</i> </>}{pad(Math.floor((s % 86400) / 3600))}<i>시간</i> {pad(Math.floor((s % 3600) / 60))}<i>분</i> {pad(s % 60)}<i>초</i>
-    </b>
-  )
-}
 
 // 🎂 생일 한 줄: 입력 전에는 [생일 넣기], 입력 뒤에는 날짜와 D-day (두 사람 모두 서로의 생일을 넣고 고칠 수 있음)
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -125,6 +104,10 @@ function CouplePage() {
     }
   }
 
+  // 🎤 챗봇이 이 화면에서 하트를 보내거나 약속을 잡았으면 숫자 · 목록을 다시 불러옴
+  const [reloadKey, setReloadKey] = useState(0)
+  useEffect(() => onAiActed(() => setReloadKey((k) => k + 1)), [])
+
   useEffect(() => {
     let ignore = false
     fetch('/api/couple')
@@ -139,12 +122,12 @@ function CouplePage() {
         if (ignore || !json) return
         if (json.success) {
           setData(json)
-          setStartDate(json.today)
+          setStartDate((d) => d || json.today)
         } else setError(json.message || '불러오지 못했어요.')
       })
       .catch(() => { if (!ignore) setError('서버에 연결할 수 없습니다.') })
     return () => { ignore = true }
-  }, [])
+  }, [reloadKey])
 
   const act = async (url, body, done) => {
     setBusy(true)
@@ -237,6 +220,8 @@ function CouplePage() {
           )}
         </section>
       ) : null}
+
+      {c && <CouplePlans partnerName={c.partnerName} reloadKey={reloadKey} />}
 
       {c && <CoupleAlbum key={c.id} />}
 

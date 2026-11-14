@@ -206,3 +206,20 @@
   .cp-bday li:not(.cp-bday-edit) .cp-bday-dday { grid-column: 1 / -1; grid-row: 3; text-align: left; }
   .cp-bday li:not(.cp-bday-edit) .cp-bday-btn { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
 }
+
+/* 🗓️ 함께하는 약속 */
+.cp-plans-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.cp-plans-head h2 { margin: 0; }
+.cp-plans-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.cp-plans-form input { min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font-size: 16px; }
+.cp-plans-wide { grid-column: 1 / -1; }
+.cp-plans-form .btn { min-height: 46px; }
+.cp-plans-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.cp-plans-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--cp-pink) 7%, transparent); }
+.cp-plans-what { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.cp-plans-what > b:first-child { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.cp-plans-what span { color: var(--cp-muted); font-size: 12px; }
+.cp-plans-del { flex: none; width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--cp-muted); font-size: 14px; cursor: pointer; }
+.cp-plans-foot { margin: 10px 0 0; font-size: 12px; }
+.cp-plans-foot a { color: var(--cp-pink); }
+.cp-plans .cp-msg { margin: 10px 0 0; font-size: 13px; text-align: left; }

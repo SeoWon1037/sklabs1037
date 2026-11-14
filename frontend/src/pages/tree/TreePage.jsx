@@ -5,11 +5,13 @@
 //   칸마다 가장 앞에 있는 점만 남겨(깊이 비교) 밝기에 맞는 글자와 색으로 찍음
 // - /tree?to=이름 → "To. 이름"이 같이 보임 (링크로 보내는 카드). 이름은 20자까지, 글자로만 표시
 // - 움직임 줄이기를 켠 기기에서는 다 자란 트리를 멈춘 채로 시작
+// - [🎵 노래 켜기] → 캐럴을 오르골 소리로 연주 (treeMusic.js, 음원 파일 없음). 브라우저 규칙상 눌러야 소리가 남
 // ============================================
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { saveCanvas } from '../../components/me/shareImage'
 import { STAGES, TIMES, buildSnow, buildTree } from './treeModel'
+import { createTreeMusic } from './treeMusic'
 import './TreePage.css'
 
 const COLS = 84
@@ -115,6 +117,22 @@ function TreePage() {
   const [stage, setStage] = useState(0)
   const [info, setInfo] = useState({ shown: 0, degrees: 0 })
   const [toast, setToast] = useState('')
+  const [music, setMusic] = useState(false)
+  const musicRef = useRef(null)
+
+  // 노래: 누른 순간에 만들어서 시작 (자동 재생은 브라우저가 막음), 화면을 떠나면 끔
+  const toggleMusic = () => {
+    if (music) {
+      musicRef.current?.stop()
+      setMusic(false)
+      return
+    }
+    if (!musicRef.current) musicRef.current = createTreeMusic()
+    const ok = musicRef.current.start()
+    setMusic(ok)
+    if (!ok) setToast('이 브라우저에서는 노래를 틀 수 없어요.')
+  }
+  useEffect(() => () => { musicRef.current?.dispose(); musicRef.current = null }, [])
 
   const canvasRef = useRef(null)
   const clock = useRef({ time: reduced ? TIMES.end : 0, last: 0 })
@@ -205,6 +223,7 @@ function TreePage() {
       <div className="tree-actions">
         <button type="button" className="tree-btn" onClick={replay}>↻ 처음부터</button>
         <button type="button" className="tree-btn" onClick={togglePause} aria-pressed={paused}>{paused ? '▶ 다시 움직이기' : '⏸ 멈추기'}</button>
+        <button type="button" className="tree-btn" onClick={toggleMusic} aria-pressed={music}>{music ? '🔇 노래 끄기' : '🎵 노래 켜기'}</button>
         <button type="button" className="tree-btn tree-btn-primary" onClick={save}>🖼️ 이미지 저장</button>
       </div>
 

@@ -16,7 +16,7 @@
 .tree-btn:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 .tree-btn-primary { border-color: var(--primary); background: var(--primary); color: var(--primary-text); }
 .tree-btn-primary:hover { background: var(--primary-hover); }
-.tree-actions .tree-btn { flex: 1; }
+.tree-actions .tree-btn { flex: 1 1 40%; }
 
 .tree-code { margin: 14px 0 0; padding: 10px 14px 12px; border-radius: 12px; background: #0b1020; color: #7f8aa3; font: 12px/1.9 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; list-style: none; }
 .tree-code li { display: flex; gap: 10px; white-space: nowrap; overflow: hidden; }

@@ -154,7 +154,7 @@ public class AiChatServiceImpl implements IAiChatService {
             tool("open_page",
                     "SKLabs의 화면을 연다. 사용자가 어떤 화면을 열어 달라 · 가 달라 · 보여 달라고 했을 때만 쓴다. 성공하면 사용자의 화면이 그 화면으로 바뀐다.",
                     Map.of("page", Map.of("type", "string", "enum", new ArrayList<>(AiChatRules.PAGES.keySet()),
-                            "description", "home=첫 화면, stock=주식 종목, mock=모의투자, market=중고거래, market_sell=판매하기, market_my=내 장터, messages=메시지, couple=커플, plans=내 약속·음성 브리핑, translate=번역, calendar=증시 일정, whatif=그때 샀더라면, league=AI 리그, predict=예측 게임, quiz=뉴스 퀴즈, persona=투자 성향 테스트, tree=글자 트리, duel=친구 대결, activity=내 활동, mypage=마이페이지, login=로그인, support=문의하기, about=만든 사람")),
+                            "description", "home=첫 화면, stock=주식 종목, mock=모의투자, market=중고거래, market_sell=판매하기, market_my=내 장터, messages=메시지, couple=커플, plans=내 약속·음성 브리핑, pc=PC 프로그램 실행(PC 도우미 연결), translate=번역, calendar=증시 일정, whatif=그때 샀더라면, league=AI 리그, predict=예측 게임, quiz=뉴스 퀴즈, persona=투자 성향 테스트, tree=글자 트리, duel=친구 대결, activity=내 활동, mypage=마이페이지, login=로그인, support=문의하기, about=만든 사람")),
                     List.of("page")),
             tool("search_market",
                     "SKLabs 중고거래 장터에서 지금 판매 중인 상품을 찾는다. 제목 · 가격(원) · 지역 · 판매자를 최대 8개 준다.",
@@ -221,7 +221,7 @@ public class AiChatServiceImpl implements IAiChatService {
             tools.add(LAUNCH_TOOL);
         }
 
-        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), tools, AiChatRules.history(vo.getHistory()), programs);
+        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), tools, AiChatRules.history(vo.getHistory()), programs, "off".equals(vo.getPcStatus()));
 
         vo.setSources(r.sources());
         vo.setLoginRequired(r.loginRequired());
@@ -236,7 +236,7 @@ public class AiChatServiceImpl implements IAiChatService {
     @Override
     public Map<String, Object> answerWith(String systemPrompt, String question, Long userId) {
 
-        AgentResult r = runAgent(systemPrompt, question, userId, READ_ONLY_TOOLS, List.of(), List.of());   // 채점 중에 진짜 하트가 나가면 안 됨
+        AgentResult r = runAgent(systemPrompt, question, userId, READ_ONLY_TOOLS, List.of(), List.of(), false);   // 채점 중에 진짜 하트가 나가면 안 됨
 
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("answer", r.answer());
@@ -256,11 +256,11 @@ public class AiChatServiceImpl implements IAiChatService {
     @SuppressWarnings("unchecked")
     // history: 🧠 앞에 나눈 대화 (AiChatRules.history가 다듬은 것, 없으면 빈 목록)
     // programs: 🖥️ 이 PC에 설치된 프로그램 이름 (없으면 빈 목록)
-    private AgentResult runAgent(String stockRules, String question, Long userId, List<Map<String, Object>> tools, List<Map<String, Object>> history, List<String> programs) {
+    private AgentResult runAgent(String stockRules, String question, Long userId, List<Map<String, Object>> tools, List<Map<String, Object>> history, List<String> programs, boolean helperOff) {
 
         // 고정 틀(무엇이든 답하기 · 로그인 안내 · 하트) + 주식 규칙
         String systemPrompt = AiChatRules.systemPrompt(stockRules, userId != null, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")))
-                + AiChatRules.programsPrompt(programs);
+                + AiChatRules.programsPrompt(programs, helperOff);
         String launch = null;
         String openUrl = null;
         boolean loginRequired = false;

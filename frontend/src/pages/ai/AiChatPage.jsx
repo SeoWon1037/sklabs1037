@@ -168,7 +168,7 @@ function AiChatPage() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: question, history, programs: pc.programs }),
+        body: JSON.stringify({ message: question, history, programs: pc.programs, pcStatus: pc.helperOff ? 'off' : undefined }),
       })
       const data = await res.json()
 

@@ -80,7 +80,8 @@ function VoiceCommand() {
 
   // 그 자리에서 AI 챗봇에게 묻기 (AI 챗봇 화면과 같은 API · 같은 도구)
   // programs: 🖥️ PC 도우미가 연결되어 있고 "실행해줘" 같은 말일 때, 설치된 프로그램 이름 목록 (AI가 그중에서 고름)
-  const askHere = async (question, programs) => {
+  // pcOff: 🖥️ 연결은 해 뒀는데 도우미가 꺼져 있음 → 프로그램 실행 요청이면 AI가 도우미를 켜 달라고 안내
+  const askHere = async (question, programs, pcOff) => {
     const history = chatRef.current.filter((m) => m.text).slice(-6).map((m) => ({ role: m.role === 'ai' ? 'assistant' : 'user', text: m.text.slice(0, 500) }))
     chatRef.current = [...chatRef.current, { role: 'user', text: question }]
     setChat(chatRef.current)
@@ -92,7 +93,7 @@ function VoiceCommand() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: question.slice(0, 500), history, programs }),
+        body: JSON.stringify({ message: question.slice(0, 500), history, programs, pcStatus: pcOff ? 'off' : undefined }),
       })
       const data = await res.json()
       setState('idle')
@@ -166,7 +167,7 @@ function VoiceCommand() {
     }
     if (pc.programs && intent.type !== 'stock') return askHere(text, pc.programs)   // ("삼성전자 열어줘"는 아래에서 종목부터 찾아봄)
 
-    if (intent.type === 'ask') return askHere(intent.q)
+    if (intent.type === 'ask') return askHere(intent.q, undefined, pc.helperOff)
 
     // 종목: 이름으로 찾아서 있으면 그 종목 화면, 없으면 AI 챗봇에게
     setState('working')
@@ -175,7 +176,7 @@ function VoiceCommand() {
       const j = await fetch(`/api/stock/search?q=${encodeURIComponent(intent.q)}`).then((r) => r.json())
       const stock = j.success ? j.stocks?.[0] : null
       if (stock) return go(`/stock?symbol=${stock.symbol}`, `${stock.name} 화면을 열게요.`)
-      return askHere(text, pc.programs)
+      return askHere(text, pc.programs, pc.helperOff)
     } catch {
       setState('idle')
       return setMessage('서버에 연결하지 못했어요. 잠시 후 다시 해주세요.')

@@ -22,6 +22,7 @@ public class AiChatVO {
     private List<java.util.Map<String, Object>> sources;   // 🧾 답변 근거 자료 (뉴스 기사 링크 · 종목 · 문서), 화면 표시용 (DB 저장 안 함)
     private Object history;          // 🧠 앞에 나눈 대화 [{ role: user|assistant, text }] (화면이 보냄 → AiChatRules.history가 다듬음)
     private Object programs;         // 🖥️ 이 PC에 설치된 프로그램 이름 목록 (PC 도우미가 연결된 화면이 "실행해줘"일 때만 보냄)
+    private String pcStatus;         // 🖥️ "off" = PC 도우미를 연결해 뒀지만 지금 꺼져 있음 (화면이 알려 줌)
     private String launch;           // 🖥️ 챗봇이 실행하기로 한 프로그램 이름 (화면이 PC 도우미에게 실행을 시킴)
     private String openUrl;          // 🌐 챗봇이 열기로 한 바깥 사이트 주소 (정해진 사이트만, 화면이 새 창으로 엶)
     private String navigate;         // 🧭 챗봇이 열기로 한 화면 주소 (화면이 이 주소로 이동)

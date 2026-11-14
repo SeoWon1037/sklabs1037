@@ -243,4 +243,19 @@ class AiChatRulesTest {
         assertTrue(String.valueOf(AiChatRules.website("naver", "가".repeat(300)).get("openUrl")).length() < 1100);
 
     }
+
+    @Test
+    void 도우미가_꺼져_있으면_켜_달라고_안내하게_한다() {
+
+        String off = AiChatRules.programsPrompt(List.of(), true);
+
+        assertTrue(off.contains("도우미가 꺼져"));
+        assertTrue(off.contains("pc-helper.cmd"));
+        assertFalse(off.contains("<programs>"));
+        assertEquals("", AiChatRules.programsPrompt(List.of(), false));
+        // 목록이 있으면(도우미가 켜져 있으면) 꺼짐 안내는 붙지 않음
+        assertFalse(AiChatRules.programsPrompt(List.of("Chrome"), true).contains("꺼져"));
+        assertEquals("/pc", AiChatRules.openPage("pc").get("open"));
+
+    }
 }

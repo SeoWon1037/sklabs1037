@@ -31,7 +31,7 @@ const os = require('os')
 const crypto = require('crypto')
 const { execFile, spawn } = require('child_process')
 
-const VERSION = '1.2.0'
+const VERSION = '1.2.1'
 const PORT = 47613
 const ALLOWED_ORIGINS = ['https://sklabs1037.com', 'https://www.sklabs1037.com', 'http://localhost:5173']
 const SITE = 'https://sklabs1037.com'
@@ -215,6 +215,7 @@ const startMouseWorker = () => {
   child.stdout.once('data', () => console.log('  🖱️ 마우스 기능이 준비됐어요.'))
   child.on('exit', () => { if (mouseWorker === child) mouseWorker = null })
   child.on('error', () => { if (mouseWorker === child) mouseWorker = null })
+  child.stdin.on('error', () => { if (mouseWorker === child) mouseWorker = null })   // 일꾼이 꺼진 뒤에 쓰면 나는 오류로 도우미가 꺼지지 않게
   mouseWorker = child
 }
 

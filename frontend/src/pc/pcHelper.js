@@ -81,10 +81,21 @@ export const LAUNCH_RE = /(실행|켜\s?줘|켜\s?봐|켜\s?주세요|틀어|시
 
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^0-9a-z가-힣]/g, '')
 
+// 자주 쓰는 한국어 이름 · 줄임말 → 프로그램 이름에 들어 있을 영어 (AI에게 묻지 않고 바로 맞추려고)
+const ALIASES = [
+  [/^(구글\s?)?크롬$/, ['chrome']], [/^(마이크로소프트\s?)?엣지$/, ['edge']], [/^(웨일|네이버\s?웨일)$/, ['whale']], [/^파이어폭스$/, ['firefox']],
+  [/^메모장$/, ['메모장', 'notepad']], [/^계산기$/, ['계산기', 'calculator']], [/^(파일\s?)?탐색기$/, ['파일탐색기', 'fileexplorer']], [/^그림판$/, ['그림판', 'paint']],
+  [/^(디스코드|디코)$/, ['discord']], [/^(카카오톡|카톡)$/, ['카카오톡', 'kakaotalk']], [/^스팀$/, ['steam']], [/^(배틀그라운드|배그|펍지)$/, ['pubg']],
+  [/^(롤|리그\s?오브\s?레전드)$/, ['leagueoflegends']], [/^유튜브\s?뮤직$/, ['youtubemusic']], [/^스포티파이$/, ['spotify']],
+  [/^엑셀$/, ['excel']], [/^워드$/, ['word']], [/^(파워포인트|피피티)$/, ['powerpoint']], [/^(브이에스\s?코드|vs\s?코드|비주얼\s?스튜디오\s?코드)$/i, ['visualstudiocode']],
+  [/^인텔리제이$/, ['intellij']], [/^(설정|윈도우\s?설정)$/, ['설정', 'settings']], [/^(작업\s?관리자)$/, ['작업관리자', 'taskmanager']],
+]
+
 // "배틀그라운드 좀 실행해줘" → "배틀그라운드"
 export const launchTarget = (text) => String(text ?? '')
   .replace(/(내\s?(pc|컴퓨터|컴)에서|pc에서|컴퓨터에서)/gi, ' ')
   .replace(/(프로그램|게임|앱|어플)\s*(을|를)?/g, ' ')
+  .replace(/(인터넷|브라우저|새\s?창|창|화면|하나|한\s?개)(?=\s|$)/g, ' ')   // "크롬 인터넷 창 하나 열어줘" → "크롬"
   .replace(/(을|를|좀|한번|한 번|빨리|지금|바로)(?=\s|$)/g, ' ')
   .replace(/(실행해\s?줘요?|실행해\s?주세요|실행시켜\s?줘|실행해|실행|켜\s?줘요?|켜\s?봐|켜\s?주세요|틀어\s?줘|시작해\s?줘|시작해|띄워\s?줘|열어\s?줘요?|열어\s?주세요|열어|플레이해\s?줘|플레이|run|play|launch|open)/gi, ' ')
   .replace(/\s+/g, ' ')
@@ -95,7 +106,16 @@ export const launchTarget = (text) => String(text ?? '')
  * - 똑같거나, 프로그램 이름이 말한 이름을 품고 있을 때(가장 짧은 것). 여러 개가 비슷하게 맞으면 null → AI에게 물어봄
  */
 export function matchProgram(text, programs) {
-  const want = norm(launchTarget(text))
+  const target = launchTarget(text)
+  const want = norm(target)
+  if (want.length < 1) return null
+
+  // 자주 쓰는 한국어 이름이면 그 영어 이름이 들어 있는 것 중 가장 짧은 것 ("크롬" → Chrome, "Chrome 원격 데스크톱" 말고)
+  const alias = ALIASES.find(([re]) => re.test(target.trim()))
+  if (alias) {
+    const hits = programs.filter((p) => alias[1].some((k) => norm(p.name).includes(k))).sort((a, b) => a.name.length - b.name.length)
+    if (hits.length > 0) return hits[0]
+  }
   if (want.length < 2) return null
 
   const exact = programs.filter((p) => norm(p.name) === want)
@@ -109,8 +129,9 @@ export function matchProgram(text, programs) {
 
 /**
  * 말(text)이 프로그램 실행 요청이면 처리
- * @returns {Promise<{ launched?: string, programs?: string[], error?: string }>}
- *   launched: 바로 실행한 프로그램 이름 / programs: 이름이 그대로 맞지 않아 AI에게 같이 보낼 목록 / 둘 다 없으면 상관없는 말
+ * @returns {Promise<{ launched?: string, programs?: string[], error?: string, helperOff?: boolean }>}
+ *   launched: 바로 실행한 프로그램 이름 / programs: 이름이 그대로 맞지 않아 AI에게 같이 보낼 목록
+ *   helperOff: 연결은 해 뒀는데 도우미가 꺼져 있음(또는 응답 없음) → AI가 "도우미를 켜 달라"고 안내하게 알려 줌 / 모두 없으면 상관없는 말
  */
 export async function tryLaunch(text) {
   if (!pcPaired() || !LAUNCH_RE.test(text)) return {}
@@ -118,7 +139,7 @@ export async function tryLaunch(text) {
   try {
     list = await pcPrograms()
   } catch {
-    return {}   // 도우미가 꺼져 있으면 평소처럼
+    return { helperOff: true }   // 도우미가 꺼져 있음 → 평소처럼 진행하되, AI에게 그 사실을 알려 줌
   }
   const hit = matchProgram(text, list)
   if (!hit) return { programs: list.map((p) => p.name) }

@@ -23,12 +23,13 @@ const ERRORS = {
 
 /**
  * 한 번 듣기
- * @param {{ lang?: string, onInterim?: (text) => void, onFinal: (text) => void, onError?: (message) => void, onEnd?: () => void }} options
+ * @param {{ lang?: string, onInterim?: (text) => void, onFinal: (text) => void, onError?: (message, code) => void, onEnd?: () => void }} options
+ *        onError의 code: 'not-allowed' · 'no-speech' · 'unsupported' 등 (항상 듣기가 권한 문제인지 구분하는 데 씀)
  * @returns {{ stop: () => void }} stop(): 그만 듣기 (그때까지 들은 말로 onFinal)
  */
 export function listen({ lang = 'ko', onInterim, onFinal, onError, onEnd }) {
   if (!Recognition) {
-    onError?.('이 브라우저에서는 음성 인식을 쓸 수 없어요.')
+    onError?.('이 브라우저에서는 음성 인식을 쓸 수 없어요.', 'unsupported')
     onEnd?.()
     return { stop: () => {} }
   }
@@ -47,21 +48,21 @@ export function listen({ lang = 'ko', onInterim, onFinal, onError, onEnd }) {
   r.onerror = (e) => {
     if (e.error === 'aborted') return
     failed = true
-    onError?.(ERRORS[e.error] ?? '음성 인식을 하지 못했어요.')
+    onError?.(ERRORS[e.error] ?? '음성 인식을 하지 못했어요.', e.error)
   }
   let ended = false
   r.onend = () => {
     if (ended) return          // 끝났다는 신호가 두 번 와도 한 번만 처리
     ended = true
     if (!failed && heard) onFinal(heard)
-    else if (!failed && !heard) onError?.(ERRORS['no-speech'])
+    else if (!failed && !heard) onError?.(ERRORS['no-speech'], 'no-speech')
     onEnd?.()
   }
 
   try {
     r.start()
   } catch {
-    onError?.('음성 인식을 시작하지 못했어요.')
+    onError?.('음성 인식을 시작하지 못했어요.', 'start-failed')
     onEnd?.()
   }
   return { stop: () => { try { r.stop() } catch { /* 이미 끝남 */ } } }

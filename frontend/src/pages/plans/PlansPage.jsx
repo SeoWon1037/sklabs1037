@@ -8,8 +8,9 @@
 // ============================================
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { canSpeak, speak, stopSpeaking } from '../../voice/speech'
+import { canListen, canSpeak, speak, stopSpeaking } from '../../voice/speech'
 import { READ_ALOUD_KEY } from '../../voice/readAloud'
+import { alwaysOn, onAlwaysChange, setAlways } from '../../voice/alwaysListen'
 import './PlansPage.css'
 
 // 오늘 날짜 (한국 시간, YYYY-MM-DD) — 날짜 칸의 가장 이른 값
@@ -28,6 +29,9 @@ function PlansPage() {
   const [readAloud, setReadAloud] = useState(() => {
     try { return localStorage.getItem(READ_ALOUD_KEY) === '1' } catch { return false }
   })
+
+  const [always, setAlwaysState] = useState(alwaysOn)
+  useEffect(() => onAlwaysChange(setAlwaysState), [])
 
   const load = useCallback(() => {
     fetch('/api/plans')
@@ -206,6 +210,18 @@ function PlansPage() {
                   {settings.close ? '켜짐' : '꺼짐'}
                 </button>
               </div>
+
+              {canListen() && (
+                <div className="plans-set">
+                  <div>
+                    <b>🟢 항상 듣기</b>
+                    <span>켜 두면 버튼 없이 “챗봇아, 오늘 날씨 어때?”처럼 부르면 돼요. 사이트가 열려 있는 동안만 들어요. (이 기기에서만)</span>
+                  </div>
+                  <button type="button" className={`plans-switch ${always ? 'plans-on' : ''}`} onClick={() => setAlways(!always)} aria-pressed={always}>
+                    {always ? '켜짐' : '꺼짐'}
+                  </button>
+                </div>
+              )}
 
               {canSpeak() && (
                 <>

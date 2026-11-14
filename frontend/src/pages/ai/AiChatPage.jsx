@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import VoiceButton from '../../components/ai/VoiceButton'
 import { canSpeak, speak, stopSpeaking } from '../../voice/speech'
+import { alwaysOn } from '../../voice/alwaysListen'
 
 // 🧾 답변 근거 종류
 const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속' }
@@ -54,6 +55,7 @@ function AiChatPage() {
   const [talk, setTalk] = useState(() => {
     if (!canSpeak()) return false
     if (searchParams.get('voice') === '1') return true
+    if (alwaysOn()) return true                       // 🟢 항상 듣기를 켠 기기는 음성 대화도 켠 채로
     try { return localStorage.getItem('sklabs.ai.talk') === '1' } catch { return false }
   })
   const talkRef = useRef(talk)
@@ -97,6 +99,15 @@ function AiChatPage() {
   // ============================================
   // 질문 보내기
   // ============================================
+  // 🟢 항상 듣기: 이 화면에 들어오면 마이크를 바로 켜고, 말이 없어도 계속 듣고, 답한 뒤에도 다시 들음 ("챗봇아"라고 부르지 않아도 됨)
+  const [always] = useState(alwaysOn)
+  useEffect(() => {
+    if (!always || searchParams.get('voice') === '1' || searchParams.get('brief')) return undefined
+    const timer = setTimeout(() => voiceRef.current?.start(), 500)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // byVoice: 🎤로 말한 질문 → 답을 다 읽은 뒤 마이크를 다시 켬 (계속 듣기: 버튼 없이 이어서 대화)
   const voiceRef = useRef(null)
   const sendMessage = async (text, byVoice = false) => {
@@ -122,7 +133,8 @@ function AiChatPage() {
           { role: 'ai', text: data.answer, tools: data.toolsUsed, sources: data.sources, chatId: data.chatId, rating: null, needLogin: data.loginRequired === true },
         ])
         // 🔊 음성 대화 중이면 답을 읽어줌. 말로 물었으면 다 읽고 나서 다시 들음
-        if (talkRef.current) speak(data.answer, 'ko', byVoice ? () => { if (talkRef.current) voiceRef.current?.start() } : undefined)
+        if (talkRef.current) speak(data.answer, 'ko', byVoice || always ? () => { if (talkRef.current) voiceRef.current?.start() } : undefined)
+        else if (always) setTimeout(() => voiceRef.current?.start(), 300)
       } else {
         setMessages((prev) => [...prev, { role: 'ai', text: data.message, error: true, needLogin: data.loginRequired === true }])
       }
@@ -331,7 +343,7 @@ function AiChatPage() {
             <button type="button" className={`ai-talk-btn ${talk ? 'ai-talk-on' : ''}`} onClick={toggleTalk} aria-pressed={talk}>
               {talk ? '🔊 음성 대화 켜짐' : '🔈 음성 대화'}
             </button>
-            <span>{talk ? '🎤로 말하면 바로 묻고, 답을 읽은 뒤 다시 들어요. 말이 없으면 멈춰요.' : '켜면 말로 묻고 소리로 답을 들을 수 있어요.'}</span>
+            <span>{always ? '🟢 항상 듣는 중이에요. 말하면 바로 묻고, 답한 뒤 다시 들어요. ⏺를 누르면 쉬어요.' : talk ? '🎤로 말하면 바로 묻고, 답을 읽은 뒤 다시 들어요. 말이 없으면 멈춰요.' : '켜면 말로 묻고 소리로 답을 들을 수 있어요.'}</span>
           </div>
         )}
 
@@ -346,7 +358,7 @@ function AiChatPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <VoiceButton ref={voiceRef} onText={setInput} onFinal={(text) => { if (talkRef.current) sendMessage(text, true) }} disabled={loading} />
+          <VoiceButton ref={voiceRef} keep={always} onText={setInput} onFinal={(text) => { if (talkRef.current) sendMessage(text, true) }} disabled={loading} />
           <button
             type="button"
             className="btn btn-primary ai-send"

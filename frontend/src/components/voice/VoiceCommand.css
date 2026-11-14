@@ -5,6 +5,17 @@
 .vc-fab:hover { background: var(--primary-hover); }
 .vc-fab-raised { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }   /* 상품 화면: 아래에 붙은 찜 · 채팅 줄 위로 */
 
+/* 🟢 항상 듣는 중: 초록 테두리가 천천히 퍼짐 */
+.vc-fab-live { box-shadow: 0 6px 18px rgb(0 0 0 / 28%), 0 0 0 3px #22c55e; animation: vc-live 2.4s ease-in-out infinite; }
+@keyframes vc-live { 50% { box-shadow: 0 6px 18px rgb(0 0 0 / 28%), 0 0 0 7px color-mix(in srgb, #22c55e 35%, transparent); } }
+
+.vc-always { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+.vc-always > div { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.vc-always b { font-size: 14px; }
+.vc-always span { color: var(--text-muted); font-size: 12px; line-height: 1.5; word-break: keep-all; }
+.vc-always button { flex: none; min-width: 64px; min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; }
+.vc-always button.vc-always-on { border-color: #22c55e; background: #22c55e; color: #fff; }
+
 .vc-backdrop { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: flex-end; justify-content: center; background: rgb(0 0 0 / 55%); }
 .vc-sheet { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 480px; max-height: 92dvh; padding: 26px 20px calc(20px + env(safe-area-inset-bottom, 0px)); border-radius: 20px 20px 0 0; background: var(--bg); color: var(--text); overflow-y: auto; }
 .vc-close { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 16px; }
@@ -32,4 +43,4 @@
   .vc-backdrop { align-items: center; }
   .vc-sheet { border-radius: 20px; }
 }
-@media (prefers-reduced-motion: reduce) { .vc-mic-on { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .vc-mic-on, .vc-fab-live { animation: none; } }

@@ -4,6 +4,8 @@
 //     화면 열기 · 종목 찾기 · 장터 검색 · 번역 · (나머지) AI 챗봇에게 질문
 // - 주문 · 글쓰기 · 삭제 같은 실제 동작은 하지 않음 (화면을 열거나 찾아주기만)
 // - 음성 인식이 안 되는 기기(아이폰 홈 화면 앱 등)에서는 글자 입력칸으로: 키보드의 🎤 받아쓰기를 쓰면 됨
+// - 🟢 항상 듣기(voice/alwaysListen.js): 켜 두면 버튼을 누르지 않아도 계속 듣다가 "챗봇아, …"로 부른 말만 실행
+//   (시트가 열려 있거나, 탭이 가려졌거나, 소리로 읽는 중이면 잠깐 쉼. 마이크 권한이 막혀 있으면 이번 접속에서는 멈춤)
 // - 자기 🎤이 있는 화면(AI 챗봇 · 번역)과 입력칸이 아래에 붙는 화면(메시지)에서는 버튼을 숨김
 // ============================================
 import { useEffect, useRef, useState } from 'react'
@@ -11,6 +13,7 @@ import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { canListen, listen, speak, stopSpeaking } from '../../voice/speech'
 import { voiceIntent } from '../../voice/voiceIntent'
+import { alwaysOn, onAlwaysChange, setAlways, wakeCommand } from '../../voice/alwaysListen'
 import './VoiceCommand.css'
 
 const EXAMPLES = ['모의투자 열어줘', '삼성전자 주가 보여줘', '아이폰 중고 찾아줘', '화장실 어디예요 영어로', '오늘 코스피 어땠어?']
@@ -27,6 +30,13 @@ function VoiceCommand() {
   const [typed, setTyped] = useState('')
   const session = useRef(null)
   const supported = canListen()
+  const hidden = HIDE.some((re) => re.test(pathname))
+
+  // 🟢 항상 듣기
+  const [always, setAlwaysState] = useState(alwaysOn)
+  const [blocked, setBlocked] = useState(false)     // 마이크 권한이 막힘 → 이번 접속에서는 쉬기
+  const wake = useRef(null)                         // 부르는 말을 들었을 때 할 일 (아래 함수들을 가리킴)
+  useEffect(() => onAlwaysChange(setAlwaysState), [])
 
   const close = () => {
     session.current?.stop()
@@ -95,16 +105,73 @@ function VoiceCommand() {
     if (supported) start()
   }
 
+  // 부르는 말을 들었을 때: 부르기만 했으면 "네" 하고 시트를 열어 다음 말을 듣고, 뒤에 시킬 말이 있으면 바로 실행
+  useEffect(() => {
+    wake.current = (command) => {
+      setOpen(true)
+      // "챗봇 열어줘"는 부른 게 아니라 AI 챗봇 화면을 열라는 말
+      if (/^(열어|켜|보여|틀어|띄워|화면|페이지|(으)?로\s?가)/.test(command)) return run(`AI 챗봇 ${command}`)
+      if (command) return run(command)
+      speak('네')
+      return setTimeout(start, 700)   // "네"가 끝날 즈음 듣기 시작 (소리가 막혀 있어도 듣기는 시작)
+    }
+  })
+
+  // 항상 듣기 반복: 듣기 → (부른 말이면 실행) → 끝나면 조금 뒤 다시 듣기
+  useEffect(() => {
+    if (!always || !supported || blocked || open || hidden) return undefined
+
+    let stopped = false
+    let timer = 0
+    let current = null
+
+    const loop = () => {
+      if (stopped) return
+      // 탭이 가려졌거나 소리로 읽는 중(내 목소리를 다시 듣지 않게)이면 잠깐 뒤에
+      if (document.visibilityState !== 'visible' || window.speechSynthesis?.speaking) {
+        timer = setTimeout(loop, 1000)
+        return
+      }
+      current = listen({
+        onFinal: (text) => {
+          const command = wakeCommand(text)
+          if (command !== null && !stopped) wake.current?.(command)
+        },
+        onError: (_msg, code) => {
+          if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'unsupported') setBlocked(true)
+        },
+        onEnd: () => { if (!stopped) timer = setTimeout(loop, 400) },
+      })
+    }
+    timer = setTimeout(loop, 600)
+
+    return () => {
+      stopped = true
+      clearTimeout(timer)
+      current?.stop()
+    }
+  }, [always, supported, blocked, open, hidden])
+
+  const toggleAlways = () => {
+    const next = !always
+    setBlocked(false)
+    setAlways(next)
+    setMessage(next ? '항상 듣기를 켰어요. 이제 “챗봇아, 모의투자 열어줘”처럼 불러 주세요.' : '항상 듣기를 껐어요.')
+  }
+
   const submitTyped = (e) => {
     e.preventDefault()
     if (typed.trim()) run(typed.trim())
   }
 
-  if (HIDE.some((re) => re.test(pathname))) return null
+  if (hidden) return null
+
+  const live = always && supported && !blocked
 
   return (
     <>
-      <button type="button" className={`vc-fab ${/^\/market\/\d+$/.test(pathname) ? 'vc-fab-raised' : ''}`} onClick={openSheet} aria-label="말로 시키기">
+      <button type="button" className={`vc-fab ${/^\/market\/\d+$/.test(pathname) ? 'vc-fab-raised' : ''} ${live ? 'vc-fab-live' : ''}`} onClick={openSheet}
+        aria-label={live ? '말로 시키기 (항상 듣는 중: 챗봇아 하고 불러 보세요)' : '말로 시키기'} title={live ? '항상 듣는 중 · “챗봇아”라고 불러 보세요' : '말로 시키기'}>
         <span aria-hidden="true">🎤</span>
       </button>
 
@@ -129,6 +196,16 @@ function VoiceCommand() {
               <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="직접 입력해도 돼요" maxLength={200} aria-label="시킬 말 입력" enterKeyHint="go" />
               <button type="submit" disabled={!typed.trim() || state === 'working'}>보내기</button>
             </form>
+
+            {supported && (
+              <div className="vc-always">
+                <div>
+                  <b>🟢 항상 듣기</b>
+                  <span>{blocked ? '마이크 권한이 막혀 있어요. 주소창의 자물쇠에서 마이크를 허용해 주세요.' : '켜 두면 버튼 없이 “챗봇아, …” 하고 부르면 돼요.'}</span>
+                </div>
+                <button type="button" className={always ? 'vc-always-on' : ''} onClick={toggleAlways} aria-pressed={always}>{always ? '켜짐' : '꺼짐'}</button>
+              </div>
+            )}
 
             <div className="vc-examples">
               <span>이렇게 말해보세요</span>

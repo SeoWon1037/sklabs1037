@@ -114,7 +114,26 @@ public class AiChatServiceImpl implements IAiChatService {
             tool("send_couple_heart",
                     "질문한 사용자의 커플(애인)에게 💗 하트를 한 개 보낸다. 사용자가 하트를 보내 달라고 직접 말했을 때만 쓴다. 받는 사람은 서버가 정하므로 입력이 없다. 결과: sent.today = 오늘 보낸 개수, sent.total = 지금까지 보낸 개수.",
                     Map.of(),
-                    List.of())
+                    List.of()),
+            tool("get_weather",
+                    "오늘 날씨를 조회한다 (서울 · 경기권만). 하늘 상태, 최저 · 최고 · 현재 기온, 비 올 확률(%), 미세먼지를 준다.",
+                    Map.of("region", Map.of("type", "string", "description", "지역 이름 (서울, 인천, 수원, 성남, 고양, 용인, 부천, 안양, 화성, 의정부 중 하나). 말하지 않았으면 서울")),
+                    List.of()),
+            tool("add_plan",
+                    "질문한 사용자의 약속(일정)을 저장한다. 하루 전과 당일 오전 9시에 알림이 간다. 사용자가 약속을 잡아 달라고 했을 때만 쓴다.",
+                    Map.of("title", Map.of("type", "string", "description", "약속 이름 (예: 민지랑 저녁)"),
+                            "date", Map.of("type", "string", "description", "날짜 YYYY-MM-DD (한국 시간)"),
+                            "time", Map.of("type", "string", "description", "시간 HH:mm 24시간 (예: 19:00). 시간을 모르면 넣지 않는다"),
+                            "place", Map.of("type", "string", "description", "장소 (예: 강남). 없으면 넣지 않는다")),
+                    List.of("title", "date")),
+            tool("list_plans",
+                    "질문한 사용자의 앞으로의 약속을 시간순으로 준다 (id, title, place, date, time, weekday).",
+                    Map.of(),
+                    List.of()),
+            tool("delete_plan",
+                    "질문한 사용자의 약속 하나를 지운다. id는 list_plans로 확인한 값만 쓴다.",
+                    Map.of("id", Map.of("type", "integer", "description", "지울 약속의 id")),
+                    List.of("id"))
     );
 
     // 채점용 재답변에서는 실제 행동(하트)을 하는 도구를 뺀 목록
@@ -138,6 +157,12 @@ public class AiChatServiceImpl implements IAiChatService {
     @Autowired
     private com.sklabs1037.sklabs1037.couple.service.CoupleService coupleService;
 
+    @Autowired
+    private com.sklabs1037.sklabs1037.plan.service.PlanService planService;
+
+    @Autowired
+    private com.sklabs1037.sklabs1037.plan.service.VoiceBriefService voiceBriefService;
+
     // 도구 결과를 JSON 문자열로 바꿀 때 사용 (Spring Boot가 만들어둔 것 재사용)
     @Autowired
     private JsonMapper jsonMapper;
@@ -151,7 +176,8 @@ public class AiChatServiceImpl implements IAiChatService {
         PromptStore.Active prompt = promptStore.active();
         vo.setPromptVersion(prompt.version());
 
-        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), TOOLS);
+        // 체험 계정(모두가 같이 쓰는 계정)은 하트 · 약속처럼 무언가를 바꾸는 도구를 쓰지 않음
+        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), vo.isReadOnly() ? READ_ONLY_TOOLS : TOOLS);
 
         vo.setSources(r.sources());
         vo.setLoginRequired(r.loginRequired());
@@ -332,6 +358,8 @@ public class AiChatServiceImpl implements IAiChatService {
             case "search_stock_docs" -> rows.stream().limit(3).forEach(r ->
                     addSource(sources, "DOC", str(r.get("name")) + " · " + str(r.get("title")), str(r.get("symbol")), "/stock?symbol=" + str(r.get("symbol"))));
             case "get_my_mock_portfolio" -> addSource(sources, "MOCK", "내 모의투자 계좌", "", "/mock");
+            case "add_plan", "list_plans" -> addSource(sources, "PLAN", "내 약속", "", "/plans");
+            case "get_weather" -> addSource(sources, "DATA", "오늘 날씨 (Open-Meteo 예보)", "", null);
             case "get_return_ranking" -> addSource(sources, "DATA", "수익률 순위 (" + input.get("days") + "거래일, 우리 DB 종가)", "", null);
             case "screen_stocks" -> addSource(sources, "DATA", "조건 검색 (우리 DB 종가·거래량)", "", null);
             default -> {
@@ -521,6 +549,35 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "get_weather": {
+
+                return voiceBriefService.weatherFor(input.get("region"));
+
+            }
+
+            case "add_plan": {
+
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+                Map<String, Object> plan = planService.add(userId, input.get("title"), input.get("date"), input.get("time"), input.get("place"));
+                return Map.of("saved", plan, "reminders", "하루 전 오전 9시 · 당일 오전 9시");
+
+            }
+
+            case "list_plans": {
+
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+                return Map.of("plans", planService.upcoming(userId));
+
+            }
+
+            case "delete_plan": {
+
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+                planService.delete(userId, input.get("id") instanceof Number n ? n.longValue() : null);
+                return Map.of("deleted", true);
+
+            }
+
             case "screen_stocks": {
 
                 AiScreenVO param = new AiScreenVO();
@@ -608,6 +665,10 @@ public class AiChatServiceImpl implements IAiChatService {
             case "search_news"        -> "뉴스 검색 (" + str(input.get("query")) + ")";
             case "get_my_mock_portfolio" -> "내 모의투자 계좌 조회";
             case "send_couple_heart"  -> "💗 커플에게 하트 보내기";
+            case "get_weather"        -> "날씨 조회 (" + (str(input.get("region")).isBlank() ? "서울" : str(input.get("region"))) + ")";
+            case "add_plan"           -> "🗓️ 약속 저장 (" + str(input.get("title")) + ")";
+            case "list_plans"         -> "내 약속 조회";
+            case "delete_plan"        -> "약속 지우기";
             case "screen_stocks"      -> "조건 검색 (" + describeScreen(input) + ")";
             default                   -> toolName;
         };

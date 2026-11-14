@@ -14,7 +14,7 @@ import VoiceButton from '../../components/ai/VoiceButton'
 import { canSpeak, speak, stopSpeaking } from '../../voice/speech'
 
 // 🧾 답변 근거 종류
-const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터' }
+const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속' }
 import './AiChatPage.css'
 
 // 예시 질문 (처음 화면에 버튼으로 표시)
@@ -22,9 +22,9 @@ const EXAMPLES = [
   '삼성전자 최근 한 달 주가 흐름 알려줘',
   '🔎 코스닥에서 최근 3일 연속 오른 종목 찾아줘',
   '삼성전자 요즘 왜 이렇게 떨어졌어? 최근 뉴스로 알려줘',
+  '💬 오늘 서울 날씨 어때?',
   '💬 면접에서 1분 자기소개 어떻게 하면 좋을까?',
-  '💬 ETF랑 펀드는 뭐가 달라? 쉽게 설명해줘',
-  '🔒 내 모의투자 포트폴리오 어때? 비중이랑 수익/손실 종목 짚어줘',
+  '🔒 토요일 저녁 7시 강남에서 민지랑 약속 잡아줘',
   '🔒 커플한테 하트 보내줘',
 ]
 
@@ -61,7 +61,10 @@ function AiChatPage() {
     const next = !talk
     talkRef.current = next
     setTalk(next)
-    if (!next) stopSpeaking()
+    if (!next) {
+      stopSpeaking()
+      voiceRef.current?.stop()
+    }
     try { localStorage.setItem('sklabs.ai.talk', next ? '1' : '0') } catch { /* 기억 못 해도 됨 */ }
   }
 
@@ -94,7 +97,9 @@ function AiChatPage() {
   // ============================================
   // 질문 보내기
   // ============================================
-  const sendMessage = async (text) => {
+  // byVoice: 🎤로 말한 질문 → 답을 다 읽은 뒤 마이크를 다시 켬 (계속 듣기: 버튼 없이 이어서 대화)
+  const voiceRef = useRef(null)
+  const sendMessage = async (text, byVoice = false) => {
 
     const question = text.trim()
     if (question === '' || loading) return
@@ -116,7 +121,8 @@ function AiChatPage() {
           ...prev,
           { role: 'ai', text: data.answer, tools: data.toolsUsed, sources: data.sources, chatId: data.chatId, rating: null, needLogin: data.loginRequired === true },
         ])
-        if (talkRef.current) speak(data.answer)   // 🔊 음성 대화 중이면 답을 읽어줌
+        // 🔊 음성 대화 중이면 답을 읽어줌. 말로 물었으면 다 읽고 나서 다시 들음
+        if (talkRef.current) speak(data.answer, 'ko', byVoice ? () => { if (talkRef.current) voiceRef.current?.start() } : undefined)
       } else {
         setMessages((prev) => [...prev, { role: 'ai', text: data.message, error: true, needLogin: data.loginRequired === true }])
       }
@@ -135,7 +141,28 @@ function AiChatPage() {
     let timer = 0
     if (searchParams.get('voice') === '1' && q && !autoAsked.current) {
       autoAsked.current = true
-      timer = setTimeout(() => sendMessage(q), 0)
+      timer = setTimeout(() => sendMessage(q, true), 0)
+    }
+
+    // 🔔 브리핑 · 약속 알림을 눌러 들어온 경우(?brief=morning|close|plan): 지금 기준 문장을 받아서 바로 읽음
+    const brief = searchParams.get('brief')
+    if (brief && !autoAsked.current) {
+      autoAsked.current = true
+      fetch(`/api/voice/brief?kind=${encodeURIComponent(brief)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.success) {
+            setMessages((prev) => [...prev, { role: 'ai', text: data.message ?? '브리핑을 가져오지 못했어요.', error: true, needLogin: true }])
+            return
+          }
+          speak(data.text)
+          // 브라우저가 "누르기 전에는 소리 금지"로 막았으면 큰 버튼을 보여 줌
+          setTimeout(() => {
+            const silent = !window.speechSynthesis?.speaking && !window.speechSynthesis?.pending
+            setMessages((prev) => [...prev, { role: 'ai', text: `${data.title}\n\n${data.text}`, speech: data.text, tapToHear: silent }])
+          }, 400)
+        })
+        .catch(() => setMessages((prev) => [...prev, { role: 'ai', text: '서버에 연결할 수 없습니다.', error: true }]))
     }
     return () => {
       clearTimeout(timer)
@@ -232,9 +259,9 @@ function AiChatPage() {
                 <Link to="/login" className="ai-login">🔑 로그인하러 가기</Link>
               )}
 
-              {/* 🔊 이 답 듣기 */}
+              {/* 🔊 이 답 듣기 (브리핑인데 자동으로 소리가 안 났으면 크게) */}
               {m.role === 'ai' && !m.error && canSpeak() && (
-                <button type="button" className="ai-speak" onClick={() => speak(m.text)} aria-label="이 답을 소리로 듣기">🔊 듣기</button>
+                <button type="button" className={m.tapToHear ? 'ai-login' : 'ai-speak'} onClick={() => speak(m.speech ?? m.text)} aria-label="이 답을 소리로 듣기">{m.tapToHear ? '▶ 눌러서 듣기' : '🔊 듣기'}</button>
               )}
 
               {/* AI가 사용한 도구 */}
@@ -304,7 +331,7 @@ function AiChatPage() {
             <button type="button" className={`ai-talk-btn ${talk ? 'ai-talk-on' : ''}`} onClick={toggleTalk} aria-pressed={talk}>
               {talk ? '🔊 음성 대화 켜짐' : '🔈 음성 대화'}
             </button>
-            <span>{talk ? '🎤로 말하면 바로 묻고, 답을 소리로 읽어드려요.' : '켜면 말로 묻고 소리로 답을 들을 수 있어요.'}</span>
+            <span>{talk ? '🎤로 말하면 바로 묻고, 답을 읽은 뒤 다시 들어요. 말이 없으면 멈춰요.' : '켜면 말로 묻고 소리로 답을 들을 수 있어요.'}</span>
           </div>
         )}
 
@@ -319,7 +346,7 @@ function AiChatPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <VoiceButton onText={setInput} onFinal={(text) => { if (talkRef.current) sendMessage(text) }} disabled={loading} />
+          <VoiceButton ref={voiceRef} onText={setInput} onFinal={(text) => { if (talkRef.current) sendMessage(text, true) }} disabled={loading} />
           <button
             type="button"
             className="btn btn-primary ai-send"

@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { disablePush, enablePush, pushState, sendTestPush, syncPush } from '../../pwa'
+import { readAloudOn, speakNewest } from '../../voice/readAloud'
 import './NotificationBell.css'
 
 const POLL_MS = 60 * 1000
@@ -79,10 +80,23 @@ function NotificationBell() {
   const location = useLocation()
   const navigate = useNavigate()
 
+  // 📣 알림 읽어 주기: 안 읽은 수가 늘었으면(처음 불러올 때는 제외) 가장 새 알림을 소리로
+  const lastUnread = useRef(null)
   const refresh = useCallback(() => {
     fetch('/api/me/notifications/unread')
       .then((res) => res.json())
-      .then((json) => { if (json.success) setUnread(json.unread) })
+      .then((json) => {
+        if (!json.success) return
+        setUnread(json.unread)
+        const grew = lastUnread.current !== null && json.unread > lastUnread.current
+        lastUnread.current = json.unread
+        if (grew && readAloudOn()) {
+          fetch('/api/me/notifications')
+            .then((res) => res.json())
+            .then((list) => { if (list.success) speakNewest(list.items) })
+            .catch(() => {})
+        }
+      })
       .catch(() => {})
   }, [])
 

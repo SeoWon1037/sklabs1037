@@ -38,7 +38,7 @@ public class OpsJobs {
 
     // 관리자 화면에서 직접 실행할 수 있는 작업
     public static final List<String> MANUAL_JOBS = List.of(
-            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE", "CALENDAR_ALERT", "BACKUP_CHECK", "DEMO_RESET", "SEASON_CLOSE");
+            "STOCK_STALE", "STOCK_DAILY", "STOCK_STARTUP", "NEWS_COLLECT", "NEWS_SUMMARY", "MOCK_SNAPSHOT", "MORNING_BRIEF", "AI_LEAGUE", "AI_IMPROVE", "PREDICT_GRADE", "NEWS_QUIZ", "WEEKLY_COACH", "DUEL_SETTLE", "DAILY_IMPROVE", "CALENDAR_ALERT", "BACKUP_CHECK", "DEMO_RESET", "SEASON_CLOSE", "VOICE_MORNING", "PLAN_REMIND", "VOICE_CLOSE");
 
     @Autowired
     private JobRunService jobRunService;
@@ -90,6 +90,12 @@ public class OpsJobs {
 
     @Autowired
     private com.sklabs1037.sklabs1037.mock.service.MockSeasonService mockSeasonService;
+
+    @Autowired
+    private com.sklabs1037.sklabs1037.plan.service.PlanService planService;
+
+    @Autowired
+    private com.sklabs1037.sklabs1037.plan.service.VoiceBriefService voiceBriefService;
 
     @Value("${stock.collect.daily-count}")
     private int dailyCount;
@@ -199,6 +205,11 @@ public class OpsJobs {
 
             // 🏆 모의투자 주간 시즌 마감 (TOP 3 기록 · 배지 · 알림)
             case "SEASON_CLOSE" -> mockSeasonService::closeWeek;
+
+            // 🔊 음성 브리핑 (아침 날씨 · 약속 / 장 마감 관심 종목) · 🗓️ 약속 알림 (하루 전 · 당일 09:00)
+            case "VOICE_MORNING" -> voiceBriefService::morningAll;
+            case "VOICE_CLOSE" -> voiceBriefService::closeAll;
+            case "PLAN_REMIND" -> planService::remindAll;
 
             default -> throw new IllegalArgumentException("모르는 작업: " + job);
 

@@ -50,6 +50,7 @@ const DuelPage = lazyPage(() => import('./pages/duel/DuelPage'))
 const SharePage = lazyPage(() => import('./pages/share/SharePage'))
 const IdeasPage = lazyPage(() => import('./pages/ideas/IdeasPage'))
 const CouplePage = lazyPage(() => import('./pages/couple/CouplePage'))
+const PlansPage = lazyPage(() => import('./pages/plans/PlansPage'))
 const AboutPage = lazyPage(() => import('./pages/about/AboutPage'))
 const LottoPage = lazyPage(() => import('./pages/lotto/LottoPage'))
 const BeautyLabPage = lazyPage(() => import('./pages/beauty/BeautyLabPage'))
@@ -69,7 +70,7 @@ const WhatIfPage = lazyPage(() => import('./pages/whatif/WhatIfPage'))
 // 주소 → 탭 제목 (앞부분이 맞는 것 중 가장 긴 것, 없으면 SKLabs)
 const TITLES = {
   '/': 'SKLabs - AI 챗봇 · 모의투자 · 중고거래', '/invest': 'SKLabs - AI 챗봇 · 모의투자 · 중고거래',
-  '/stock': '주식 종목 · SKLabs', '/mock': '모의투자 · SKLabs', '/ai': 'AI 챗봇 · SKLabs', '/whatif': '그때 샀더라면 · SKLabs', '/tree': '글자 트리 · SKLabs', '/translate': '번역 · SKLabs',
+  '/stock': '주식 종목 · SKLabs', '/mock': '모의투자 · SKLabs', '/ai': 'AI 챗봇 · SKLabs', '/plans': '내 약속 · 음성 브리핑 · SKLabs', '/whatif': '그때 샀더라면 · SKLabs', '/tree': '글자 트리 · SKLabs', '/translate': '번역 · SKLabs',
   '/calendar': '증시 일정 · SKLabs', '/league': 'AI 리그 · SKLabs', '/predict': '예측 게임 · SKLabs', '/quiz': '뉴스 퀴즈 · SKLabs',
   '/persona': '투자 성향 테스트 · SKLabs', '/market': '중고거래 · SKLabs', '/market/new': '판매하기 · SKLabs', '/market/my': '내 장터 · SKLabs',
   '/messages': '메시지 · SKLabs', '/about': '만든 사람 · SKLabs', '/status': '서비스 상태 · SKLabs', '/login': '로그인 · SKLabs', '/admin': '관리자 · SKLabs',
@@ -133,6 +134,7 @@ function App() {
         <Route path="/app" element={<AppInstallPage />} />               {/* 📲 앱 설치 안내 (QR · 기기별) */}
         <Route path="/about" element={<AboutPage />} />                  {/* 👤 만든 사람 (로그인 없이) */}
         <Route path="/couple" element={<CouplePage />} />                {/* 💕 커플 */}
+        <Route path="/plans" element={<PlansPage />} />                  {/* 🗓️ 내 약속 · 🔊 음성 브리핑 */}
         <Route path="/ideas" element={<IdeasPage />} />                  {/* 💡 기능 제안 + 투표 */}
         <Route path="/s/:code" element={<SharePage />} />                {/* 📸 공유받은 성적 카드 */}
         <Route path="/ai" element={<AiChatPage />} />                    {/* AI 챗봇 */}

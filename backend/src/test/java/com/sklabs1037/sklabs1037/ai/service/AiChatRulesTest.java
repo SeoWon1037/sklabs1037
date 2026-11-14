@@ -21,7 +21,9 @@ class AiChatRulesTest {
 
         assertTrue(p.startsWith("너는 SKLabs의 AI 챗봇이야"));
         assertTrue(p.indexOf("[주식 규칙]") < p.indexOf("- 숫자는 도구로만"));
-        assertTrue(p.contains("오늘 날짜: 2026-11-14"));
+        assertTrue(p.contains("오늘 날짜: 2026-11-14 토요일"));
+        assertTrue(p.contains("add_plan"));
+        assertTrue(p.contains("get_weather"));
         assertTrue(p.contains("사용자 상태: 로그인함"));
         assertTrue(p.contains("send_couple_heart"));
         assertTrue(p.contains("loginRequired"));
@@ -53,6 +55,9 @@ class AiChatRulesTest {
         assertTrue(AiChatRules.needsLogin("get_my_mock_portfolio", null));
         assertTrue(AiChatRules.needsLogin("send_couple_heart", null));
         assertFalse(AiChatRules.needsLogin("send_couple_heart", 7L));
+        assertTrue(AiChatRules.needsLogin("add_plan", null));
+        assertTrue(AiChatRules.needsLogin("list_plans", null));
+        assertFalse(AiChatRules.needsLogin("get_weather", null));
         assertFalse(AiChatRules.needsLogin("find_stock", null));
         assertFalse(AiChatRules.needsLogin("search_news", null));
 
@@ -72,11 +77,12 @@ class AiChatRulesTest {
     @Test
     void 채점용_도구_목록에서는_하트가_빠진다() {
 
-        List<Map<String, Object>> tools = List.of(Map.of("name", "find_stock"), Map.of("name", "send_couple_heart"), Map.of("name", "search_news"));
+        List<Map<String, Object>> tools = List.of(Map.of("name", "find_stock"), Map.of("name", "send_couple_heart"), Map.of("name", "search_news"),
+                Map.of("name", "add_plan"), Map.of("name", "delete_plan"), Map.of("name", "list_plans"));
 
         List<Map<String, Object>> safe = AiChatRules.withoutActions(tools);
 
-        assertEquals(2, safe.size());
+        assertEquals(3, safe.size());
         assertTrue(safe.stream().noneMatch(t -> "send_couple_heart".equals(t.get("name"))));
 
     }

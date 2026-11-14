@@ -107,6 +107,7 @@ public class AiChatController {
 
             vo.setMessage(message);
             vo.setUserId(userId);
+            vo.setReadOnly(session != null && Boolean.TRUE.equals(session.getAttribute(com.sklabs1037.sklabs1037.demo.service.DemoService.SESSION_KEY)));
 
             AiChatVO result = aiChatService.chat(vo);
 

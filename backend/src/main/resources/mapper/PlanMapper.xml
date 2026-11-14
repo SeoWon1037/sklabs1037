@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🗓️ 내 약속 (T_PLAN) + 🔊 음성 브리핑 설정 (T_VOICE_BRIEF) -->
+<mapper namespace="com.sklabs1037.sklabs1037.plan.dao.PlanDao">
+
+    <insert id="insertPlan" parameterType="map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_PLAN (USER_ID, TITLE, PLACE, PLAN_AT)
+        VALUES (#{userId}, #{title}, #{place}, #{planAt})
+    </insert>
+
+    <select id="countUpcoming" resultType="int">
+        SELECT COUNT(*) FROM T_PLAN WHERE USER_ID = #{userId} AND PLAN_AT &gt;= #{from}
+    </select>
+
+    <select id="selectMine" resultType="java.util.LinkedHashMap">
+        SELECT  P.ID        AS "id"
+               ,P.TITLE     AS "title"
+               ,P.PLACE     AS "place"
+               ,P.PLAN_AT   AS "planAt"
+          FROM T_PLAN P
+         WHERE 1=1
+           AND P.USER_ID = #{userId}
+           AND P.PLAN_AT &gt;= #{from}
+           <if test="to != null">AND P.PLAN_AT &lt; #{to}</if>
+         ORDER BY P.PLAN_AT, P.ID
+         LIMIT 100
+    </select>
+
+    <delete id="deletePlan">
+        DELETE FROM T_PLAN WHERE ID = #{id} AND USER_ID = #{userId}
+    </delete>
+
+    <select id="selectAllBetween" resultType="java.util.LinkedHashMap">
+        SELECT  P.USER_ID   AS "userId"
+               ,P.TITLE     AS "title"
+               ,P.PLACE     AS "place"
+               ,P.PLAN_AT   AS "planAt"
+          FROM T_PLAN P
+          JOIN T_USER U ON U.ID = P.USER_ID AND U.DEL_DAY IS NULL
+         WHERE 1=1
+           AND P.PLAN_AT &gt;= #{from}
+           AND P.PLAN_AT &lt; #{to}
+         ORDER BY P.USER_ID, P.PLAN_AT, P.ID
+    </select>
+
+    <delete id="deleteOld">
+        DELETE FROM T_PLAN WHERE PLAN_AT &lt; #{before}
+    </delete>
+
+    <select id="selectSetting" resultType="java.util.LinkedHashMap">
+        SELECT  MORNING_YN  AS "morning"
+               ,CLOSE_YN    AS "close"
+               ,REGION      AS "region"
+          FROM T_VOICE_BRIEF
+         WHERE USER_ID = #{userId}
+    </select>
+
+    <insert id="upsertSetting">
+        INSERT INTO T_VOICE_BRIEF (USER_ID, MORNING_YN, CLOSE_YN, REGION)
+        VALUES (#{userId}, #{morning}, #{close}, #{region})
+        ON CONFLICT (USER_ID) DO UPDATE
+           SET  MORNING_YN = EXCLUDED.MORNING_YN
+               ,CLOSE_YN   = EXCLUDED.CLOSE_YN
+               ,REGION     = EXCLUDED.REGION
+               ,UPD_DAY    = NOW()
+    </insert>
+
+    <select id="selectMorningUsers" resultType="java.util.LinkedHashMap">
+        SELECT  V.USER_ID   AS "userId"
+               ,U.NICKNAME  AS "nickname"
+               ,V.REGION    AS "region"
+          FROM T_VOICE_BRIEF V
+          JOIN T_USER U ON U.ID = V.USER_ID AND U.DEL_DAY IS NULL
+         WHERE V.MORNING_YN = 'Y'
+         ORDER BY V.USER_ID
+    </select>
+
+    <select id="selectCloseUsers" resultType="java.util.LinkedHashMap">
+        SELECT  V.USER_ID   AS "userId"
+               ,U.NICKNAME  AS "nickname"
+          FROM T_VOICE_BRIEF V
+          JOIN T_USER U ON U.ID = V.USER_ID AND U.DEL_DAY IS NULL
+         WHERE V.CLOSE_YN = 'Y'
+         ORDER BY V.USER_ID
+    </select>
+
+    <select id="selectNickname" resultType="java.lang.String">
+        SELECT NICKNAME FROM T_USER WHERE ID = #{userId}
+    </select>
+
+    <!--
+        내 관심 종목 + 오늘 전 마지막 종가(prev) + 오늘 종가가 이미 들어와 있으면 그 값(todayClose)
+        - 장 마감 브리핑의 등락률 = (지금 가격 − prev) ÷ prev
+    -->
+    <select id="selectWatchPrev" resultType="java.util.LinkedHashMap">
+        SELECT  W.STOCK_ID      AS "stockId"
+               ,S.NAME          AS "name"
+               ,(SELECT P.CLOSE_PRICE FROM T_STOCK_PRICE P
+                  WHERE P.STOCK_ID = W.STOCK_ID AND P.TRADE_DATE &lt; #{today}
+                  ORDER BY P.TRADE_DATE DESC LIMIT 1)   AS "prev"
+               ,(SELECT P.CLOSE_PRICE FROM T_STOCK_PRICE P
+                  WHERE P.STOCK_ID = W.STOCK_ID AND P.TRADE_DATE = #{today}
+                  LIMIT 1)                              AS "todayClose"
+          FROM T_WATCHLIST W
+          JOIN T_STOCK S ON S.ID = W.STOCK_ID
+         WHERE W.USER_ID = #{userId}
+         ORDER BY W.CREATED_AT
+         LIMIT 30
+    </select>
+</mapper>

@@ -2,22 +2,21 @@
 // 🎤 말로 묻기 (AI 챗봇 입력칸 옆)
 // - 브라우저 음성 인식(Web Speech API, 한국어)으로 말한 내용을 입력칸에 채움 → 확인하고 [보내기]
 // - onFinal: 다 들은 뒤 한 번 불림 (🔊 음성 대화가 켜져 있으면 AI 챗봇이 바로 보냄)
+// - ref.start(): 밖에서 마이크 켜기 (🔊 음성 대화의 "계속 듣기")
 // - 지원하지 않는 브라우저(일부 PC 파이어폭스 등)면 버튼을 안 보여줌
 // - 음성은 브라우저(구글·애플) 쪽에서 글자로 바뀌고, 우리 서버로는 글자만 감
 // ============================================
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 const Recognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null
 
-function VoiceButton({ onText, onFinal, disabled }) {
+function VoiceButton({ onText, onFinal, disabled, ref }) {
 
   const [listening, setListening] = useState(false)
   const [error, setError] = useState('')
   const rec = useRef(null)
 
   useEffect(() => () => rec.current?.abort?.(), [])
-
-  if (!Recognition) return null
 
   const start = () => {
     setError('')
@@ -43,6 +42,14 @@ function VoiceButton({ onText, onFinal, disabled }) {
   }
 
   const stop = () => rec.current?.stop()
+
+  // 계속 듣기: AI 챗봇이 답을 다 읽은 뒤 ref.current.start()로 마이크를 다시 켬 (듣는 중 · 답 기다리는 중이면 아무 일도 안 함)
+  useImperativeHandle(ref, () => ({
+    start: () => { if (Recognition && !listening && !disabled) start() },
+    stop,
+  }))
+
+  if (!Recognition) return null
 
   return (
     <>

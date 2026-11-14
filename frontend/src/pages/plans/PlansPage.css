@@ -1,0 +1,53 @@
+/* 🗓️ 내 약속 · 음성 브리핑 (plans-) */
+.plans-page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 56px; }
+.plans-head h1, .plans-page > h1 { margin: 0; font-size: 24px; }
+.plans-muted { margin: 8px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.plans-login { display: inline-flex; margin-top: 16px; }
+
+.plans-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 18px; }
+.plans-card { padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface, transparent); }
+.plans-card h2 { margin: 0 0 14px; font-size: 16px; }
+
+.plans-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.plans-form label { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; color: var(--text-muted); }
+.plans-form input { min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font-size: 16px; }
+.plans-wide { grid-column: 1 / -1; }
+.plans-form button { min-height: 46px; }
+.plans-tip { margin: 12px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.6; }
+.plans-tip a { color: var(--primary); }
+
+.plans-empty { margin: 18px 0 4px; padding: 22px 0; border-radius: 12px; background: color-mix(in srgb, var(--text) 4%, transparent); color: var(--text-muted); font-size: 13px; text-align: center; }
+.plans-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.plans-list li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+.plans-list li.plans-today { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.plans-when { display: flex; flex: none; flex-direction: column; width: 96px; }
+.plans-when strong { font-size: 13px; }
+.plans-when span { color: var(--text-muted); font-size: 12px; }
+.plans-what { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.plans-what b { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.plans-what span { color: var(--text-muted); font-size: 12px; }
+.plans-del { flex: none; width: 36px; height: 36px; border: none; border-radius: 10px; background: transparent; color: var(--text-muted); font-size: 14px; cursor: pointer; }
+.plans-del:hover { background: color-mix(in srgb, #e5484d 12%, transparent); color: #e5484d; }
+
+.plans-set { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.plans-card h2 + .plans-set { padding-top: 0; border-top: none; }
+.plans-set > div { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
+.plans-set b { font-size: 14px; }
+.plans-set span { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.plans-switch { flex: none; min-width: 64px; min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+.plans-switch.plans-on { border-color: var(--primary); background: var(--primary); color: var(--primary-text); }
+.plans-region { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 12px; color: var(--text-muted); font-size: 13px; }
+.plans-region select { height: 40px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg, transparent); color: var(--text); font-size: 16px; }
+.plans-listen { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.plans-listen .btn { flex: 1 1 30%; min-height: 42px; padding: 0 8px; font-size: 13px; white-space: nowrap; }
+.plans-note { margin: 14px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.7; }
+.plans-msg { margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--primary) 9%, transparent); font-size: 13px; line-height: 1.6; }
+
+@media (max-width: 640px) {
+  .plans-page { padding: 18px 12px 48px; }
+  .plans-head h1, .plans-page > h1 { font-size: 21px; }
+  .plans-grid { grid-template-columns: minmax(0, 1fr); }
+  .plans-card { padding: 14px; }
+  .plans-when { width: 78px; }
+  .plans-listen .btn { flex: 1 1 100%; }
+}

@@ -262,6 +262,9 @@ public class JobRunService {
             Map.entry("BACKUP_CHECK", "DB 백업 확인"),
             Map.entry("DEMO_RESET", "체험 계정 초기화"),
             Map.entry("SEASON_CLOSE", "모의투자 주간 시즌 마감"),
+            Map.entry("VOICE_MORNING", "아침 음성 브리핑"),
+            Map.entry("VOICE_CLOSE", "장 마감 음성 브리핑"),
+            Map.entry("PLAN_REMIND", "약속 알림"),
             Map.entry("WATCHDOG", "작업 감시")
     );
 

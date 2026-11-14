@@ -1,5 +1,6 @@
 // ============================================
 // 🎤 항상 듣기 (한 번 켜면 이 기기에서 계속 켜져 있음 — localStorage)
+// - 설치한 앱(홈 화면 앱)에서는 따로 켜지 않아도 처음부터 켜져 있음 (끄면 그 뒤로는 꺼진 채로)
 // - 켜 두면 사이트가 열려 있는 동안 마이크가 계속 듣고 있다가, 말소리가 들리면 챗봇 창이 저절로 열리고
 //   말한 내용이 그대로 입력되어 바로 실행됨 ("모의투자 열어줘" → 모의투자 화면 / "오늘 날씨 어때?" → 챗봇이 답함)
 //   "챗봇아, …"라고 불러도 됨 (부르는 말은 떼고 실행, "챗봇"만 부르면 "네" 하고 다음 말을 들음)
@@ -11,8 +12,22 @@
 export const ALWAYS_KEY = 'sklabs.voice.always'
 const EVENT = 'sklabs:voice-always'
 
+// 설치한 앱(홈 화면에 추가 · PC에 설치)으로 열었는지
+export const isApp = () => {
+  try {
+    return window.matchMedia?.('(display-mode: standalone)').matches === true || window.navigator.standalone === true
+  } catch { return false }
+}
+
+// 저장된 값('1' 켬 · '0' 끔 · 없음)과 앱 여부로 정하기 (순수 계산)
+// - 한 번이라도 직접 켜거나 끈 적이 있으면 그 값을 따름
+// - 정한 적이 없으면: 앱에서는 켜진 채로 시작, 브라우저에서는 꺼진 채로 시작
+export const decideAlways = (stored, app) => (stored === '1' ? true : stored === '0' ? false : app === true)
+
 export const alwaysOn = () => {
-  try { return localStorage.getItem(ALWAYS_KEY) === '1' } catch { return false }
+  let stored = null
+  try { stored = localStorage.getItem(ALWAYS_KEY) } catch { /* 저장소를 못 쓰면 정한 적 없는 것으로 */ }
+  return decideAlways(stored, isApp())
 }
 
 export const setAlways = (on) => {

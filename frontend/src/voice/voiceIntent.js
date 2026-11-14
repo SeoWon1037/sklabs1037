@@ -2,7 +2,7 @@
 // 🎤 들은 말 → 무엇을 할지 (순수 계산, 화면 · 서버 호출 없음)
 // - AI를 쓰지 않고 규칙으로만 가림 → 빠르고, 비용이 없고, 엉뚱한 일을 하지 않음
 // - 순서: ① 번역 ("화장실 어디예요 영어로") ② 장터 검색 ("아이폰 중고 찾아줘")
-//         ③ 화면 열기 ("모의투자 열어줘") ④ 종목 ("삼성전자 주가 보여줘") ⑤ 나머지는 AI 비서에게 질문
+//         ③ 화면 열기 ("모의투자 열어줘") ④ 종목 ("삼성전자 주가 보여줘") ⑤ 나머지는 AI 챗봇에게 질문
 // - 실제 동작(주문 · 글쓰기 · 삭제)은 하지 않음: 화면을 열거나 검색하거나 묻기만 함
 // ============================================
 
@@ -11,7 +11,7 @@ export const PAGES = [
   { to: '/', label: '투자 홈', names: ['투자 홈', '첫 화면', '메인 화면', '메인', '홈'] },
   { to: '/stock', label: '주식 종목', names: ['주식 종목', '종목 목록', '종목', '주식'] },
   { to: '/mock', label: '모의투자', names: ['모의투자', '모의 투자', '모의'] },
-  { to: '/ai', label: 'AI 비서', names: ['ai 비서', '에이아이 비서', '에이아이', '인공지능 비서', '비서'] },
+  { to: '/ai', label: 'AI 챗봇', names: ['ai 챗봇', 'ai 챗 봇', '에이아이 챗봇', '챗봇', '챗 봇', 'ai 비서', '에이아이 비서', '에이아이', '인공지능 비서', '인공지능', '비서'] },
   { to: '/whatif', label: '그때 샀더라면', names: ['그때 샀더라면', '그 때 샀더라면', '샀더라면'] },
   { to: '/market/new', label: '판매하기', names: ['판매하기', '상품 올리기', '물건 올리기'] },
   { to: '/market/my', label: '내 장터', names: ['내 장터', '내 상품'] },
@@ -74,6 +74,9 @@ export function voiceIntent(heard) {
   const text = tidy(heard)
   if (text.length < 1) return { type: 'none' }
 
+  // ⓪ 하트 보내기: "커플한테 하트 보내줘" → AI 챗봇이 실제로 보냄 (커플 화면으로 가지 않게 먼저 걸러 둠)
+  if (/하트/.test(text) && /(보내|날려|쏴|전해|줘)/.test(text)) return { type: 'ask', q: text }
+
   // ① 번역: "… 영어로", "… 일본어로 번역해줘", "… 영어로 뭐라고 해"
   const tr = text.match(new RegExp(`^(.*?)\\s*(?:을|를|은|는)?\\s*(${LANG_PATTERN})로(?:는)?\\s*(?:번역|통역|뭐|어떻게|말|바꿔|해|알려)?.*$`))
   if (tr) {
@@ -99,6 +102,6 @@ export function voiceIntent(heard) {
   if (st && !asking && tidy(st[1]).length >= 2) return { type: 'stock', q: tidy(st[1]) }
   if (GO_WORDS.test(text) && !asking && name.length >= 2 && name.length <= 12 && !/\s.*\s/.test(name)) return { type: 'stock', q: name }
 
-  // ⑤ 나머지는 AI 비서에게
+  // ⑤ 나머지는 AI 챗봇에게
   return { type: 'ask', q: text }
 }

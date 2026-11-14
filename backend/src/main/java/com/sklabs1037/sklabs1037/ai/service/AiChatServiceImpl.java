@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 /**
- * AI 주식 비서 Service 구현 (AI Agent)
+ * AI 챗봇 Service 구현 (AI Agent)
  *
  * Agent 동작 방식
  *   1. Claude에게 질문 + 쓸 수 있는 도구 목록을 보냄
@@ -37,6 +37,9 @@ import java.util.*;
  *     → get_my_mock_portfolio 도구 추가 (질문한 회원 본인의 계좌만 조회, 회원 번호는 AI가 아니라 서버 세션에서)
  *   - 종목이 3,900개로 늘어 "코스닥에서 5일 연속 오른 종목" 같은 조건 질문이 생김
  *     → screen_stocks 도구 추가 (AI는 정해진 조건 칸만 채우고, SQL은 서버에 고정 → 아무 SQL이나 실행될 위험 없음)
+ *   - "주식 비서"에서 "AI 챗봇"으로: 주식 밖의 질문도 답함 · 로그인 없이도 질문 가능
+ *     → 시스템 프롬프트 = AiChatRules.FRAME(고정 틀) + 아래 주식 규칙. 로그인이 필요한 도구는 loginRequired로 안내
+ *     → send_couple_heart 도구 추가 ("커플한테 하트 보내줘"). 누구에게 보낼지는 AI가 아니라 서버가 세션의 회원으로 정함
  */
 @Slf4j
 @Service
@@ -45,10 +48,10 @@ public class AiChatServiceImpl implements IAiChatService {
     // 도구 반복 최대 횟수 (무한 반복 + 비용 폭주 방지)
     private static final int MAX_TURNS = 5;
 
-    // AI의 역할과 규칙 (기본 = 버전 0)
+    // 주식 질문일 때의 규칙 (기본 = 버전 0). 실제 프롬프트는 AiChatRules.systemPrompt()가 고정 틀을 앞에 붙여 만듦
     // - 실제로 쓰는 프롬프트는 PromptStore가 정함: 관리자가 적용한 개선 버전이 있으면 그것, 없으면 이것
     static final String BASE_PROMPT = """
-            너는 SKLabs의 한국 주식 분석 도우미야.
+            주식 질문에서 너는 한국 주식 분석 도우미야.
             규칙:
             - 주가, 날짜, 거래량 같은 숫자는 반드시 도구로 조회한 값만 사용해. 절대 지어내지 마.
             - 종목코드를 모르면 먼저 find_stock으로 찾아.
@@ -65,7 +68,6 @@ public class AiChatServiceImpl implements IAiChatService {
             - 지원 종목은 코스피·코스닥 상장 주식과 ETF야. find_stock으로 찾아도 없으면 지원하지 않는다고 말해.
             - 시세 데이터의 기준 날짜를 함께 알려줘.
             - 투자 권유(사라/팔라)는 하지 말고, 데이터 기반 설명만 해. 답변 끝에 "투자 판단은 본인 책임입니다."를 붙여.
-            - 한국어로 간결하게. 마크다운 표, 제목(#)은 쓰지 말고 짧은 문단과 "-" 목록만 사용해. 강조가 꼭 필요할 때만 **굵게**를 써.
             """;
 
     // screen_stocks 정렬 (정해진 값만 SQL로, TOOLS보다 먼저 만들어져야 함)
@@ -108,8 +110,15 @@ public class AiChatServiceImpl implements IAiChatService {
             tool("get_my_mock_portfolio",
                     "질문한 사용자 본인의 모의투자 계좌를 조회한다. 현금, 총자산, 시작 자금 대비 수익률, 보유 종목별 수량·평균 단가·현재가·평가손익·비중(%), 체결 대기 중인 지정가 주문, 최근 거래 5건을 준다.",
                     Map.of(),
+                    List.of()),
+            tool("send_couple_heart",
+                    "질문한 사용자의 커플(애인)에게 💗 하트를 한 개 보낸다. 사용자가 하트를 보내 달라고 직접 말했을 때만 쓴다. 받는 사람은 서버가 정하므로 입력이 없다. 결과: sent.today = 오늘 보낸 개수, sent.total = 지금까지 보낸 개수.",
+                    Map.of(),
                     List.of())
     );
+
+    // 채점용 재답변에서는 실제 행동(하트)을 하는 도구를 뺀 목록
+    private static final List<Map<String, Object>> READ_ONLY_TOOLS = AiChatRules.withoutActions(TOOLS);
 
     @Autowired
     private ClaudeApiClient claudeApiClient;
@@ -126,6 +135,9 @@ public class AiChatServiceImpl implements IAiChatService {
     @Autowired
     private IMockTradeService mockTradeService;
 
+    @Autowired
+    private com.sklabs1037.sklabs1037.couple.service.CoupleService coupleService;
+
     // 도구 결과를 JSON 문자열로 바꿀 때 사용 (Spring Boot가 만들어둔 것 재사용)
     @Autowired
     private JsonMapper jsonMapper;
@@ -139,9 +151,10 @@ public class AiChatServiceImpl implements IAiChatService {
         PromptStore.Active prompt = promptStore.active();
         vo.setPromptVersion(prompt.version());
 
-        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId());
+        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), TOOLS);
 
         vo.setSources(r.sources());
+        vo.setLoginRequired(r.loginRequired());
         return finish(vo, r.answer(), r.toolsUsed());
 
     }
@@ -150,7 +163,7 @@ public class AiChatServiceImpl implements IAiChatService {
     @Override
     public Map<String, Object> answerWith(String systemPrompt, String question, Long userId) {
 
-        AgentResult r = runAgent(systemPrompt, question, userId);
+        AgentResult r = runAgent(systemPrompt, question, userId, READ_ONLY_TOOLS);   // 채점 중에 진짜 하트가 나가면 안 됨
 
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("answer", r.answer());
@@ -160,12 +173,16 @@ public class AiChatServiceImpl implements IAiChatService {
 
     }
 
-    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources) {
+    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources, boolean loginRequired) {
     }
 
     // 질문 하나를 Claude + 도구 반복으로 답하기
     @SuppressWarnings("unchecked")
-    private AgentResult runAgent(String systemPrompt, String question, Long userId) {
+    private AgentResult runAgent(String stockRules, String question, Long userId, List<Map<String, Object>> tools) {
+
+        // 고정 틀(무엇이든 답하기 · 로그인 안내 · 하트) + 주식 규칙
+        String systemPrompt = AiChatRules.systemPrompt(stockRules, userId != null, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")));
+        boolean loginRequired = false;
 
         // 대화 기록 (질문 → 도구 요청 → 도구 결과 → ... 순서로 쌓임)
         List<Map<String, Object>> messages = new ArrayList<>();
@@ -177,7 +194,7 @@ public class AiChatServiceImpl implements IAiChatService {
         for (int turn = 0; turn < MAX_TURNS; turn++) {
 
             // 1. Claude 호출
-            Map<String, Object> response = claudeApiClient.createMessage(systemPrompt, TOOLS, messages);
+            Map<String, Object> response = claudeApiClient.createMessage(systemPrompt, tools, messages);
             List<Map<String, Object>> content = (List<Map<String, Object>>) response.get("content");
 
             // Claude의 응답도 대화 기록에 추가 (다음 호출 때 "내가 이 도구를 요청했었지"를 알 수 있게)
@@ -194,7 +211,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     answer += "\n\n(답변이 길어 일부가 생략되었습니다. 궁금한 부분을 나눠서 질문해주세요.)";
                 }
 
-                return new AgentResult(answer, toolsUsed, sources);
+                return new AgentResult(answer, toolsUsed, sources, loginRequired);
 
             }
 
@@ -217,7 +234,10 @@ public class AiChatServiceImpl implements IAiChatService {
 
                 try {
 
-                    Object out = runTool(toolName, input, userId);
+                    // 로그인해야 하는 도구를 로그인 없이 부르면 실행하지 않고 "로그인 필요"만 알려줌 → AI가 로그인하라고 안내
+                    boolean needLogin = AiChatRules.needsLogin(toolName, userId);
+                    if (needLogin) loginRequired = true;
+                    Object out = needLogin ? AiChatRules.loginRequired(toolName) : runTool(toolName, input, userId);
                     collectSources(toolName, input, out, sources);
                     // 기사 주소는 화면용 (AI에게는 안 보냄 → 토큰 절약)
                     result.put("content", jsonMapper.writeValueAsString(withoutLinks(out)));
@@ -240,7 +260,7 @@ public class AiChatServiceImpl implements IAiChatService {
         }
 
         // 최대 횟수 안에 답을 못 끝낸 경우
-        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources);
+        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources, loginRequired);
 
     }
 
@@ -262,6 +282,9 @@ public class AiChatServiceImpl implements IAiChatService {
         vo.setAnswer(answer);
         vo.setToolsUsed(toolsUsed);
         vo.setToolsText(String.join(", ", toolsUsed));
+
+        // 로그인하지 않은 사람의 질문은 기록하지 않음 (누구 것인지 모르고, 👍/👎도 받지 않음)
+        if (vo.getUserId() == null) return vo;
 
         // 기록 저장이 실패해도 답변은 보여줘야 하니까 따로 처리 (chatId가 없으면 화면에서 피드백 버튼만 숨김)
         try {
@@ -490,6 +513,14 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "send_couple_heart": {
+
+                // 받는 사람은 세션의 회원과 커플인 사람 (AI가 고를 수 없음). 커플이 아니거나 하루 한도면 예외 → AI가 이유를 전함
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+                return coupleService.heart(userId);
+
+            }
+
             case "screen_stocks": {
 
                 AiScreenVO param = new AiScreenVO();
@@ -576,6 +607,7 @@ public class AiChatServiceImpl implements IAiChatService {
             case "search_stock_docs"  -> "문서 검색 (" + str(input.get("query")) + ")";
             case "search_news"        -> "뉴스 검색 (" + str(input.get("query")) + ")";
             case "get_my_mock_portfolio" -> "내 모의투자 계좌 조회";
+            case "send_couple_heart"  -> "💗 커플에게 하트 보내기";
             case "screen_stocks"      -> "조건 검색 (" + describeScreen(input) + ")";
             default                   -> toolName;
         };

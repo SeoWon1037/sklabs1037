@@ -59,7 +59,7 @@ const PAGES = [
   { key: 'stock', name: '주식 종목', path: '/stock?symbol=005930' },
   { key: 'mock', name: '모의투자', path: '/mock' },
   { key: 'league', name: 'AI 리그', path: '/league' },
-  { key: 'ai', name: 'AI 비서', path: '/ai' },
+  { key: 'ai', name: 'AI 챗봇', path: '/ai' },
   { key: 'beauty', name: '뷰티 랩', path: '/beauty' },
   {
     key: 'formula',

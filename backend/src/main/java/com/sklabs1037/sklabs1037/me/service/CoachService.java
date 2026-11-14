@@ -52,12 +52,12 @@ public class CoachService {
             new Mission("QUIZ_SCORE", "🧠", "뉴스 퀴즈 정답 %d개", 3, 35, RangeStats::quizScore, "/quiz"),
             new Mission("TRADE", "💰", "모의투자 %d번 거래", 1, 20, RangeStats::trades, "/mock"),
             new Mission("BOARD", "💬", "토론방 글·댓글 %d개", 1, 10, s -> s.boardPosts() + s.comments(), "/stock"),
-            new Mission("AI_CHAT", "🤖", "AI 비서에게 %d번 질문", 1, 10, RangeStats::aiChats, "/ai"),
+            new Mission("AI_CHAT", "🤖", "AI 챗봇에게 %d번 질문", 1, 10, RangeStats::aiChats, "/ai"),
             new Mission("BEAUTY", "🔬", "뷰티 랩 성분 분석 %d번", 1, 5, RangeStats::beautyLogs, "/beauty")
     );
 
     private static final String SYSTEM = """
-            너는 SKLabs(모의투자·예측 게임·뉴스 퀴즈·종목 토론·AI 비서·뷰티 랩이 있는 사이트)의 친근한 주간 코치다.
+            너는 SKLabs(모의투자·예측 게임·뉴스 퀴즈·종목 토론·AI 챗봇·뷰티 랩이 있는 사이트)의 친근한 주간 코치다.
             사용자의 지난주 활동 숫자를 보고 짧은 주간 리포트와 이번 주 미션 3개를 만든다.
 
             규칙
@@ -338,7 +338,7 @@ public class CoachService {
 
         return "출석 " + s.attendDays() + "일, 예측 " + s.predictVotes() + "개(채점 " + s.predictGraded() + "개 중 " + s.predictHits() + "개 적중), "
                 + "뉴스 퀴즈 " + s.quizPlays() + "일(정답 " + s.quizScore() + "개), 모의투자 거래 " + s.trades() + "번, "
-                + "토론 글 " + s.boardPosts() + "개·댓글 " + s.comments() + "개, AI 비서 질문 " + s.aiChats() + "번, 성분 분석 " + s.beautyLogs() + "번";
+                + "토론 글 " + s.boardPosts() + "개·댓글 " + s.comments() + "개, AI 챗봇 질문 " + s.aiChats() + "번, 성분 분석 " + s.beautyLogs() + "번";
 
     }
 

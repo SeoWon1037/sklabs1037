@@ -3,7 +3,7 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <!--
-    AI 주식 비서 SQL
+    AI 챗봇 SQL
     - 도구(tool)가 사용하는 조회 SQL
     - 대화 기록 / 피드백 저장 SQL
 -->

@@ -453,7 +453,7 @@ function MockTradePage() {
             <ul>
               <li>토스증권 실시간 가격으로 체결되는 시장가 · 지정가 주문</li>
               <li>평균 단가 · 평가손익 · 종목 비중 자동 계산</li>
-              <li>AI 비서에게 "내 포트폴리오 어때?" 물어보기</li>
+              <li>AI 챗봇에게 "내 포트폴리오 어때?" 물어보기</li>
             </ul>
             <div className="mock-guest-actions">
               <Link to="/login" className="btn btn-primary">로그인하고 시작하기</Link>

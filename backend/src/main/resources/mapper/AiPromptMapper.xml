@@ -3,7 +3,7 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <!--
-    🔁 스스로 고치는 AI 비서: 프롬프트 버전 + 개선 재료(평가된 대화)
+    🔁 스스로 고치는 AI 챗봇: 프롬프트 버전 + 개선 재료(평가된 대화)
 -->
 <mapper namespace="com.sklabs1037.sklabs1037.ai.dao.AiPromptDao">
 

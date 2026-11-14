@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 🔁 AI 비서 프롬프트 버전 / 개선 재료
+ * 🔁 AI 챗봇 프롬프트 버전 / 개선 재료
  * - 사용 테이블: T_AI_PROMPT, T_AI_CHAT_LOG
  */
 @Data

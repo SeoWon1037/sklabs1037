@@ -12,7 +12,7 @@ export const SERVICES = {
   whatif: { icon: '⏳', label: '그때 샀더라면', to: '/whatif', color: '#ef4444', desc: '지금 얼마가 됐을까' },
   league: { icon: '🏆', label: 'AI 리그', to: '/league', color: '#eab308', desc: 'AI vs 사람 수익률' },
   predict: { icon: '🎯', label: '예측 게임', to: '/predict', color: '#ef4444', desc: '오를까 내릴까' },
-  ai: { icon: '🤖', label: 'AI 비서', to: '/ai', color: '#3b82f6', desc: '종목 · 시장 질문' },
+  ai: { icon: '🤖', label: 'AI 챗봇', to: '/ai', color: '#3b82f6', desc: '무엇이든 질문' },
   lotto: { icon: '🍀', label: '오늘의 숫자', to: '/lotto', color: '#10b981', desc: '로또 · 연금복권' },
   quiz: { icon: '📰', label: '뉴스 퀴즈', to: '/quiz', color: '#64748b', desc: '매일 5문제' },
   duel: { icon: '⚔️', label: '친구 대결', to: '/duel', color: '#8b5cf6', desc: '7일 1:1 승부' },
@@ -32,9 +32,9 @@ export const SERVICES = {
   ideas: { icon: '💡', label: '기능 제안', to: '/ideas', color: '#facc15', desc: '원하는 기능 투표' },
 }
 
-// 첫 화면 검색창 아래 한 줄: 꼭 필요한 4개만 + 마지막 칸은 "⋯ 전체" (AI 비서는 바로 위 검색창이 입구)
+// 첫 화면 검색창 아래 한 줄: 주식 종목 · AI 챗봇 · 중고거래 셋만 (나머지는 왼쪽 위 ☰ 전체 메뉴)
 // - 여기서 빠진 기능도 없어진 게 아님 → ☰ 전체 메뉴에 모두 있음
-export const SHORTCUT_KEYS = ['stock', 'mock', 'whatif', 'market']
+export const SHORTCUT_KEYS = ['stock', 'ai', 'market']
 
 // ☰ 전체 메뉴: 묶음별 (모든 기능이 여기에 있음)
 export const CATEGORIES = [

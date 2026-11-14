@@ -1,6 +1,6 @@
 // ============================================
 // ⌘K 빠른 이동 (어디서든 Ctrl+K · ⌘K · / 키, PC 상단바 🔍 버튼)
-// - 서비스(☰ 메뉴와 같은 목록) · 종목(GET /api/stock/search) · "AI 비서에게 묻기"를 한 칸에서
+// - 서비스(☰ 메뉴와 같은 목록) · 종목(GET /api/stock/search) · "AI 챗봇에게 묻기"를 한 칸에서
 // - ↑↓로 고르고 Enter, Esc로 닫기
 // ============================================
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -44,7 +44,7 @@ function Palette({ onClose }) {
     const found = keyword ? stocks.map((s) => ({
       key: `k:${s.symbol}`, icon: '📈', title: s.name, sub: [s.symbol, s.market].filter(Boolean).join(' · '), to: `/stock?symbol=${s.symbol}`, group: '종목',
     })) : []
-    const ask = keyword ? [{ key: 'ai', icon: '🤖', title: `AI 비서에게 묻기: "${keyword}"`, sub: '시세·뉴스·종목 문서를 찾아보고 답해요', to: `/ai?q=${encodeURIComponent(keyword)}`, group: 'AI' }] : []
+    const ask = keyword ? [{ key: 'ai', icon: '🤖', title: `AI 챗봇에게 묻기: "${keyword}"`, sub: '시세·뉴스·종목 문서를 찾아보고 답해요', to: `/ai?q=${encodeURIComponent(keyword)}`, group: 'AI' }] : []
     return [...found, ...services, ...ask]
   }, [keyword, stocks])
 

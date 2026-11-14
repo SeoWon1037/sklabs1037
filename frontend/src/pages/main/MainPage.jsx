@@ -1,6 +1,6 @@
 // ============================================
 // 메인 화면 (주소: /) — 네이버 메인 구조, 줄마다 왼쪽·오른쪽 칸의 위아래 끝이 딱 맞게
-// - 위: 로고 + 검색창(= AI 비서에게 질문), 아래에 바로가기 아이콘
+// - 위: 로고 + 검색창(= AI 챗봇에게 질문), 아래에 바로가기 아이콘
 // - 1줄: 💰 모의투자 배너(TOP 3)          | 로그인 카드
 // - 2줄: 뉴스(+💬토론 탭, AI 요약은 눌러야 펼침, 안에서 스크롤) | 오늘의 시세(시가총액 TOP 3 | ⭐ 관심 종목) + 💬 지금 토론 중 + 날씨
 //   → 뉴스 칸은 오른쪽 세 칸 높이만큼 길어짐
@@ -14,7 +14,7 @@
 //   GET /api/mock/ranking?size=3             모의투자 수익률 TOP 3 (MockBanner)
 //   GET /api/watchlist                       관심 종목 (⭐ 관심 종목 탭)
 // ============================================
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useBoardStream from '../../hooks/useBoardStream'
 import './MainPage.css'
@@ -23,7 +23,6 @@ import NewsSummaryBox from '../../components/news/NewsSummaryBox'
 import MockBanner from '../../components/mock/MockBanner'
 import TodayCard from '../../components/me/TodayCard'
 import CoupleLine from '../../components/me/CoupleLine'
-import AllMenu from '../../components/layout/AllMenu'
 import FxList from '../../components/fx/FxList'
 import { SERVICES, SHORTCUT_KEYS } from '../../components/layout/menuData'
 import DemoButton from '../../components/layout/DemoButton'
@@ -95,8 +94,6 @@ function MainPage() {
   const [stocks, setStocks] = useState([])
   const [baseDate, setBaseDate] = useState(null)
   const [user, setUser] = useState(null)
-  const [menuOpen, setMenuOpen] = useState(false)   // ☰ 전체 메뉴
-  const closeMenu = useCallback(() => setMenuOpen(false), [])
   const [stockTab, setStockTab] = useState('ALL')   // 종목 카드 탭: 'ALL' | 'FX' | 'WATCH'
   const [watchStocks, setWatchStocks] = useState([])   // 관심 종목 (시세 포함, 전 종목 중 어떤 종목이든)
 
@@ -199,7 +196,7 @@ function MainPage() {
     setSize(PAGE_SIZE)
   }
 
-  // 검색 → AI 비서로 질문 넘기기
+  // 검색 → AI 챗봇으로 질문 넘기기
   const handleSearch = (e) => {
     e.preventDefault()
     const q = query.trim()
@@ -238,14 +235,14 @@ function MainPage() {
               className="home-search-input"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="종목이나 시장에 대해 물어보세요"
+              placeholder="무엇이든 물어보세요"
               maxLength={500}
             />
             <button type="submit" className="home-search-btn">✨ AI</button>
           </form>
         </div>
 
-        {/* 바로가기 (검색창 바로 아래 촘촘하게, 마지막 칸은 ☰ 전체 메뉴) */}
+        {/* 바로가기: 주식 종목 · AI 챗봇 · 중고거래 (나머지 기능은 왼쪽 위 ☰ 전체 메뉴) */}
         <nav className="home-shortcuts">
           {SHORTCUT_KEYS.map((k) => {
             const s = SERVICES[k]
@@ -256,14 +253,8 @@ function MainPage() {
               </Link>
             )
           })}
-          <button type="button" className="home-shortcut" onClick={() => setMenuOpen(true)}>
-            <span className="home-shortcut-icon home-shortcut-more">⋯</span>
-            <span className="home-shortcut-label">전체</span>
-          </button>
         </nav>
       </section>
-
-      {menuOpen && <AllMenu user={user} onClose={closeMenu} />}
 
       {/* 줄마다 왼쪽·오른쪽 칸 높이가 같음 (grid: 같은 줄 칸끼리 위아래 끝 맞춤) */}
       <div className="home-grid">
@@ -284,7 +275,7 @@ function MainPage() {
                   </div>
                 </div>
                 <nav className="home-login-menu">
-                  <Link to="/ai">AI 비서</Link>
+                  <Link to="/ai">AI 챗봇</Link>
                   <Link to="/mock">모의투자</Link>
                   <Link to="/activity">🏅 내 활동</Link>
                   <Link to="/mypage">마이페이지</Link>
@@ -292,7 +283,7 @@ function MainPage() {
               </>
             ) : (
               <div className="home-login-guest">
-                <p className="home-login-desc">로그인하고 AI 비서 · 모의투자 · 관심 종목을 이용해보세요.</p>
+                <p className="home-login-desc">로그인하고 모의투자 · 관심 종목 · 내 활동을 이용해보세요.</p>
                 <Link to="/login" className="btn btn-primary home-login-btn">SKLabs 로그인</Link>
                 <DemoButton className="btn btn-ghost home-login-btn home-demo-btn" />
                 <div className="home-login-links">

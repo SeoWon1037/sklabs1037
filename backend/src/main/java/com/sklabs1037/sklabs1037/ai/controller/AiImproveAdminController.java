@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 관리자: 🔁 스스로 고치는 AI 비서
+ * 관리자: 🔁 스스로 고치는 AI 챗봇
  *
  * API 목록 (관리자만, 매 요청마다 DB에서 ROLE 확인)
  *   GET  /api/admin/ai-improve                     지금 버전, 개선안 목록(분석·변경점·채점), 버전별 👍/👎

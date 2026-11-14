@@ -51,7 +51,7 @@ public class DemoController {
             info.put("demo", true);
 
             body.put("success", true);
-            body.put("message", "체험 계정으로 들어왔어요. 모의투자·AI 비서·뷰티 랩을 자유롭게 써 보세요!");
+            body.put("message", "체험 계정으로 들어왔어요. 모의투자·AI 챗봇·뷰티 랩을 자유롭게 써 보세요!");
             body.put("user", info);
             return ResponseEntity.ok(body);
 

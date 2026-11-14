@@ -238,7 +238,7 @@ function UserMyPage() {
 
         {chats.total === 0 ? (
           <p className="mypage-desc">
-            아직 AI 비서에게 물어본 질문이 없어요. <Link to="/ai" className="mypage-link">AI 비서에게 물어보기 →</Link>
+            아직 AI 챗봇에게 물어본 질문이 없어요. <Link to="/ai" className="mypage-link">AI 챗봇에게 물어보기 →</Link>
           </p>
         ) : (
           <ul className="mypage-chats">

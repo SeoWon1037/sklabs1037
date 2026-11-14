@@ -1,10 +1,10 @@
 // ============================================
 // 🎤 말로 시키기 (모든 화면 오른쪽 아래의 동그란 버튼)
 // - 누르면 듣기 시작 → 들은 말을 voiceIntent로 가려서
-//     화면 열기 · 종목 찾기 · 장터 검색 · 번역 · (나머지) AI 비서에게 질문
+//     화면 열기 · 종목 찾기 · 장터 검색 · 번역 · (나머지) AI 챗봇에게 질문
 // - 주문 · 글쓰기 · 삭제 같은 실제 동작은 하지 않음 (화면을 열거나 찾아주기만)
 // - 음성 인식이 안 되는 기기(아이폰 홈 화면 앱 등)에서는 글자 입력칸으로: 키보드의 🎤 받아쓰기를 쓰면 됨
-// - 자기 🎤이 있는 화면(AI 비서 · 번역)과 입력칸이 아래에 붙는 화면(메시지)에서는 버튼을 숨김
+// - 자기 🎤이 있는 화면(AI 챗봇 · 번역)과 입력칸이 아래에 붙는 화면(메시지)에서는 버튼을 숨김
 // ============================================
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -61,16 +61,16 @@ function VoiceCommand() {
     if (intent.type === 'go') return go(intent.to, `${intent.label} 화면을 열게요.`)
     if (intent.type === 'translate') return go(`/translate?text=${encodeURIComponent(intent.text)}&to=${intent.to}`, '번역할게요.')
     if (intent.type === 'market') return go(`/market?q=${encodeURIComponent(intent.q)}`, `${intent.q} 상품을 찾아볼게요.`)
-    if (intent.type === 'ask') return go(`/ai?q=${encodeURIComponent(intent.q)}&voice=1`, 'AI 비서에게 물어볼게요.')
+    if (intent.type === 'ask') return go(`/ai?q=${encodeURIComponent(intent.q)}&voice=1`, 'AI 챗봇에게 물어볼게요.')
 
-    // 종목: 이름으로 찾아서 있으면 그 종목 화면, 없으면 AI 비서에게
+    // 종목: 이름으로 찾아서 있으면 그 종목 화면, 없으면 AI 챗봇에게
     setState('working')
     setMessage(`"${intent.q}" 종목을 찾는 중...`)
     try {
       const j = await fetch(`/api/stock/search?q=${encodeURIComponent(intent.q)}`).then((r) => r.json())
       const stock = j.success ? j.stocks?.[0] : null
       if (stock) return go(`/stock?symbol=${stock.symbol}`, `${stock.name} 화면을 열게요.`)
-      return go(`/ai?q=${encodeURIComponent(text)}&voice=1`, 'AI 비서에게 물어볼게요.')
+      return go(`/ai?q=${encodeURIComponent(text)}&voice=1`, 'AI 챗봇에게 물어볼게요.')
     } catch {
       setState('idle')
       return setMessage('서버에 연결하지 못했어요. 잠시 후 다시 해주세요.')

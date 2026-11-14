@@ -13,7 +13,7 @@ import './AdminStatsPage.css'
 
 const num = (n) => Number(n ?? 0).toLocaleString('ko-KR')
 const PAGE_NAMES = {
-  '/': '투자 홈', '/market': '중고거래', '/whatif': '그때 샀더라면', '/tree': '글자 트리', '/translate': '번역', '/invest': '투자 홈(예전 주소)', '/stock': '주식 종목', '/mock': '모의투자', '/ai': 'AI 비서', '/beauty': '뷰티 랩', '/league': 'AI 리그',
+  '/': '투자 홈', '/market': '중고거래', '/whatif': '그때 샀더라면', '/tree': '글자 트리', '/translate': '번역', '/invest': '투자 홈(예전 주소)', '/stock': '주식 종목', '/mock': '모의투자', '/ai': 'AI 챗봇', '/beauty': '뷰티 랩', '/league': 'AI 리그',
   '/predict': '예측 게임', '/quiz': '뉴스 퀴즈', '/calendar': '증시 일정', '/messages': '메시지', '/mypage': '마이페이지',
   '/activity': '내 활동', '/login': '로그인', '/signup': '회원가입', '/about': '만든 사람', '/status': '서비스 상태',
   '/support': '문의하기', '/ideas': '기능 제안', '/duel': '친구 대결', '/couple': '커플', '/lotto': '오늘의 숫자', '/persona': '투자 성향', '/app': '앱 설치',

@@ -27,7 +27,7 @@ export function applyTextSize(key) {
   const size = TEXT_SIZES.find((s) => s.key === key) ?? TEXT_SIZES[1]
   document.body.style.zoom = size.zoom === 1 ? '' : String(size.zoom)
   document.documentElement.dataset.textSize = size.key
-  // 화면 높이·너비(vh, vw)도 같이 커지므로, 꽉 찬 화면(AI 비서·메시지·메뉴)은 CSS에서 이 값으로 나눠서 맞춤
+  // 화면 높이·너비(vh, vw)도 같이 커지므로, 꽉 찬 화면(AI 챗봇·메시지·메뉴)은 CSS에서 이 값으로 나눠서 맞춤
   document.documentElement.style.setProperty('--tz', String(size.zoom))
   try {
     localStorage.setItem(STORAGE_KEY, size.key)

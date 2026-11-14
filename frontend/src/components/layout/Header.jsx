@@ -21,7 +21,7 @@ import CommandPalette from './CommandPalette'
 const SECTIONS = [
   {
     key: 'invest', to: '/', label: '투자',
-    subs: [{ to: '/stock', label: '주식 종목' }, { to: '/mock', label: '모의투자' }, { to: '/ai', label: 'AI 비서' }],
+    subs: [{ to: '/stock', label: '주식 종목' }, { to: '/mock', label: '모의투자' }, { to: '/ai', label: 'AI 챗봇' }],
   },
   {
     key: 'market', to: '/market', label: '중고거래',

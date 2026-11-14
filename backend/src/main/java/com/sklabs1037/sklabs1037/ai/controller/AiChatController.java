@@ -2,6 +2,7 @@ package com.sklabs1037.sklabs1037.ai.controller;
 
 import com.sklabs1037.sklabs1037.client.ClaudeApiClient;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
+import com.sklabs1037.sklabs1037.ai.service.AiChatRules;
 import com.sklabs1037.sklabs1037.ai.service.IAiChatService;
 import com.sklabs1037.sklabs1037.ai.vo.AiChatVO;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,14 +19,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * AI 주식 비서 Controller
+ * AI 챗봇 Controller
  *
  * API 목록
- *   POST /api/ai/chat       질문하기   { message }          → { success, chatId, answer, toolsUsed, sources }
+ *   POST /api/ai/chat       질문하기   { message }          → { success, chatId, answer, toolsUsed, sources, loginRequired }
  *   POST /api/ai/feedback   답변 평가  { chatId, rating }   → { success }   (rating: UP / DOWN)
  *
  * 비용 보호
- *   - 로그인한 사람만 사용 가능
+ *   - 로그인하지 않아도 질문 가능: IP당 하루 20번 (AiChatRules.ANON_DAILY) + 요청 제한(RateLimitGuard) + 하루 비용 한도(ClaudeApiClient)
+ *   - 로그인이 필요한 답(내 계좌 · 하트)은 AI가 "로그인해 주세요"라고 안내 → loginRequired: true
+ *   - 👍/👎 평가는 로그인한 사람만
  *   - 질문 500자 제한
  */
 @Slf4j
@@ -45,6 +48,9 @@ public class AiChatController {
     @Autowired
     private JsonMapper jsonMapper;
 
+    // "날짜:IP" → 로그인하지 않은 사람이 오늘 질문한 횟수 (서버 메모리)
+    private final Map<String, Integer> anonymousCounts = new java.util.concurrent.ConcurrentHashMap<>();
+
     // ============================================
     // 질문하기
     // ============================================
@@ -52,13 +58,9 @@ public class AiChatController {
     public ResponseEntity<Map<String, Object>> chat(@RequestBody AiChatVO vo,
                                                     HttpServletRequest request) {
 
-        // 1. 로그인 확인
+        // 1. 로그인 여부 (안 해도 질문은 가능)
         HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute(UserLoginController.LOGIN_USER) == null) {
-
-            return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
-
-        }
+        Long userId = (session == null) ? null : getLoginUserId(session);
 
         // 2. 입력 확인
         String message = (vo.getMessage() == null) ? "" : vo.getMessage().trim();
@@ -81,11 +83,30 @@ public class AiChatController {
 
         }
 
-        // 3. AI 호출
+        // 3. 로그인하지 않은 사람은 하루 횟수 제한
+        if (userId == null) {
+
+            String ip = request.getHeader("X-Real-IP");
+            String day = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString();
+
+            if (!AiChatRules.allowAnonymous(anonymousCounts, day, ip == null || ip.isBlank() ? "local" : ip)) {
+
+                Map<String, Object> body = new HashMap<>();
+                body.put("success", false);
+                body.put("loginRequired", true);
+                body.put("message", "로그인 없이 쓸 수 있는 하루 " + AiChatRules.ANON_DAILY + "번을 다 썼어요. 로그인하면 계속 물어볼 수 있어요.");
+
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(body);
+
+            }
+
+        }
+
+        // 4. AI 호출
         try {
 
             vo.setMessage(message);
-            vo.setUserId(getLoginUserId(session));
+            vo.setUserId(userId);
 
             AiChatVO result = aiChatService.chat(vo);
 
@@ -95,6 +116,7 @@ public class AiChatController {
             body.put("answer", result.getAnswer());
             body.put("toolsUsed", result.getToolsUsed());
             body.put("sources", result.getSources());
+            body.put("loginRequired", result.isLoginRequired());
 
             return ResponseEntity.ok(body);
 

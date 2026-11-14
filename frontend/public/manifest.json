@@ -1,7 +1,7 @@
 {
-  "name": "SKLabs - AI 주식 비서 · 모의투자 · 중고거래",
+  "name": "SKLabs - AI 챗봇 · 모의투자 · 중고거래",
   "short_name": "SKLabs",
-  "description": "실제 시세로 답하는 AI 주식 비서, 모의투자, 실시간 토론, 화장품 성분 분석",
+  "description": "실제 시세로 답하는 AI 챗봇, 모의투자, 실시간 토론, 화장품 성분 분석",
   "lang": "ko",
   "start_url": "/",
   "scope": "/",

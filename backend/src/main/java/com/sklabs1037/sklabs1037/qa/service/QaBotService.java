@@ -38,7 +38,7 @@ public class QaBotService {
     private static final int OVERFLOW_PX = 4;
 
     private static final String VISION_SYSTEM = """
-            너는 한국어 웹사이트(SKLabs: 주식 시세·모의투자·AI 비서·화장품 성분 도구)의 QA 엔지니어다.
+            너는 한국어 웹사이트(SKLabs: 주식 시세·모의투자·AI 챗봇·화장품 성분 도구)의 QA 엔지니어다.
             휴대폰(390px)과 PC(1400px) 화면 캡처를 보고, 사용자가 바로 알아챌 화면 문제만 찾는다.
 
             찾을 것

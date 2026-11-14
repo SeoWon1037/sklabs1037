@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 🔁 스스로 고치는 AI 비서
+ * 🔁 스스로 고치는 AI 챗봇
  *
  * 매일 04:10 (PromptImproveScheduler → OpsJobs "AI_IMPROVE"), 또는 관리자 "지금 실행"
  *   1. 재료 모으기 : 지난번 개선 이후 👎 받은 대화 (3개 미만이면 쉼)
@@ -46,7 +46,7 @@ public class PromptImproveService {
     static final List<String> REQUIRED_PHRASES = List.of("투자 판단은 본인 책임입니다", "지어내지", "도구");
 
     private static final String PROPOSE_SYSTEM = """
-            너는 한국 주식 분석 AI 비서의 시스템 프롬프트를 고치는 프롬프트 엔지니어다.
+            너는 한국 주식 분석 AI 챗봇의 시스템 프롬프트를 고치는 프롬프트 엔지니어다.
             사용자에게 👎를 받은 대화들을 보고 공통 원인을 찾아, 시스템 프롬프트를 최소한으로 고친다.
 
             규칙
@@ -78,13 +78,13 @@ public class PromptImproveService {
                     "required", List.of("patterns", "changes", "newPrompt")));
 
     private static final String JUDGE_SYSTEM = """
-            너는 한국 주식 분석 AI 비서의 답변을 비교 채점하는 심판이다.
+            너는 한국 주식 분석 AI 챗봇의 답변을 비교 채점하는 심판이다.
             같은 질문에 대한 답변 A와 B를 1~10점으로 채점한다.
 
             기준 (중요한 순)
             1. 질문에 실제로 답했는가 (엉뚱한 답, 되묻기만 하기, 회피는 감점)
             2. 숫자·사실을 도구로 조회한 근거로 말했는가 (사용 도구 목록 참고, 도구 없이 숫자를 말하면 크게 감점)
-            3. 규칙: 사라/팔라 권유 금지, 끝에 "투자 판단은 본인 책임입니다." 문구, 마크다운 표·제목 금지
+            3. 규칙: 사라/팔라 권유 금지, 주식·투자 답변이면 끝에 "투자 판단은 본인 책임입니다." 문구(주식 밖의 질문에는 없어도 됨), 마크다운 표·제목 금지
             4. 간결하고 읽기 쉬운가
             - 너는 숫자가 실제로 맞는지 확인할 수 없다. 길이나 말투가 아니라 위 기준으로만 본다.
             - 원래 사용자가 👎를 줬던 질문이면, 그 불만이 고쳐졌는지 특히 본다.
@@ -197,7 +197,7 @@ public class PromptImproveService {
         String summary = "v" + vo.getVersion() + " (v" + active.version() + " 개선) 옛 " + s.oldAvg() + "점 → 새 " + s.newAvg() + "점"
                 + (s.recommend() ? " · 추천" : " · 보류") + " (채점 " + evals.size() + "문항)";
 
-        opsAlertService.send("[SKLabs] AI 비서 개선안 " + summary,
+        opsAlertService.send("[SKLabs] AI 챗봇 개선안 " + summary,
                 "👎 " + downs.size() + "개를 분석해서 시스템 프롬프트 개선안을 만들었어요.\n" + summary
                         + "\n\n확인하고 적용하기: " + siteUrl + "/admin/ai-improve");
 

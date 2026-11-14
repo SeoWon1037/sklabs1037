@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 
 /**
- * 🔁 AI 비서가 지금 쓰는 시스템 프롬프트
+ * 🔁 AI 챗봇이 지금 쓰는 시스템 프롬프트
  * - 관리자가 적용(ACTIVE)한 개선 버전이 있으면 그것, 없으면 코드의 기본 프롬프트(버전 0)
  * - 매 질문마다 DB를 읽지 않게 1분 캐시 (적용·되돌리기 하면 바로 비움)
  */
@@ -40,7 +40,7 @@ public class PromptStore {
 
         } catch (Exception e) {
 
-            // 테이블이 아직 없어도 AI 비서는 동작 (기본 프롬프트)
+            // 테이블이 아직 없어도 AI 챗봇은 동작 (기본 프롬프트)
             log.warn("AI 프롬프트 읽기 실패, 기본 프롬프트 사용: {}", e.getMessage());
             a = base();
 

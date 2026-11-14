@@ -68,8 +68,8 @@ const WhatIfPage = lazyPage(() => import('./pages/whatif/WhatIfPage'))
 
 // 주소 → 탭 제목 (앞부분이 맞는 것 중 가장 긴 것, 없으면 SKLabs)
 const TITLES = {
-  '/': 'SKLabs - AI 주식 비서 · 모의투자 · 중고거래', '/invest': 'SKLabs - AI 주식 비서 · 모의투자 · 중고거래',
-  '/stock': '주식 종목 · SKLabs', '/mock': '모의투자 · SKLabs', '/ai': 'AI 비서 · SKLabs', '/whatif': '그때 샀더라면 · SKLabs', '/tree': '글자 트리 · SKLabs', '/translate': '번역 · SKLabs',
+  '/': 'SKLabs - AI 챗봇 · 모의투자 · 중고거래', '/invest': 'SKLabs - AI 챗봇 · 모의투자 · 중고거래',
+  '/stock': '주식 종목 · SKLabs', '/mock': '모의투자 · SKLabs', '/ai': 'AI 챗봇 · SKLabs', '/whatif': '그때 샀더라면 · SKLabs', '/tree': '글자 트리 · SKLabs', '/translate': '번역 · SKLabs',
   '/calendar': '증시 일정 · SKLabs', '/league': 'AI 리그 · SKLabs', '/predict': '예측 게임 · SKLabs', '/quiz': '뉴스 퀴즈 · SKLabs',
   '/persona': '투자 성향 테스트 · SKLabs', '/market': '중고거래 · SKLabs', '/market/new': '판매하기 · SKLabs', '/market/my': '내 장터 · SKLabs',
   '/messages': '메시지 · SKLabs', '/about': '만든 사람 · SKLabs', '/status': '서비스 상태 · SKLabs', '/login': '로그인 · SKLabs', '/admin': '관리자 · SKLabs',
@@ -135,11 +135,11 @@ function App() {
         <Route path="/couple" element={<CouplePage />} />                {/* 💕 커플 */}
         <Route path="/ideas" element={<IdeasPage />} />                  {/* 💡 기능 제안 + 투표 */}
         <Route path="/s/:code" element={<SharePage />} />                {/* 📸 공유받은 성적 카드 */}
-        <Route path="/ai" element={<AiChatPage />} />                    {/* AI 주식 비서 */}
+        <Route path="/ai" element={<AiChatPage />} />                    {/* AI 챗봇 */}
         <Route path="/admin" element={<AdminOpsPage />} />               {/* 관리자: 운영 상태 (기본) */}
         <Route path="/admin/ops" element={<AdminOpsPage />} />           {/* 관리자: 운영 상태 (메일 속 링크) */}
         <Route path="/admin/reports" element={<AdminReportsPage />} />   {/* 관리자: 토론방 신고 관리 */}
-        <Route path="/admin/ai-improve" element={<AdminImprovePage />} /> {/* 관리자: 🔁 AI 비서 자기 개선 */}
+        <Route path="/admin/ai-improve" element={<AdminImprovePage />} /> {/* 관리자: 🔁 AI 챗봇 자기 개선 */}
         <Route path="/admin/server" element={<AdminServerPage />} />     {/* 관리자: 🖥 서버 상태 (운영 서버 + DB, 5초마다) */}
         <Route path="/status" element={<StatusPage />} />              {/* 🟢 서비스 상태 (누구나) */}
         <Route path="/calendar" element={<MarketCalendarPage />} />     {/* 📅 증시 일정 (휴장 · FOMC · 금통위 · 만기일) */}
@@ -165,7 +165,7 @@ function App() {
       </Suspense>
       </ErrorBoundary>
 
-      {/* 하단 정보: 모든 화면 공통 (AI 비서·소셜 로그인 팝업 제외) */}
+      {/* 하단 정보: 모든 화면 공통 (AI 챗봇·소셜 로그인 팝업 제외) */}
       <Footer />
       <VoiceCommand />   {/* 🎤 말로 시키기 (오른쪽 아래 버튼) */}
 

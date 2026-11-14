@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * AI 비서의 도구(tool)가 DB를 조회할 때 쓰는 VO
+ * AI 챗봇의 도구(tool)가 DB를 조회할 때 쓰는 VO
  * - 사용 테이블: T_STOCK, T_STOCK_PRICE, T_STOCK_DOC, T_NEWS
  */
 @Getter

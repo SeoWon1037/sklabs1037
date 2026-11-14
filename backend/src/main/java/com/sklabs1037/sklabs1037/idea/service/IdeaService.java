@@ -30,7 +30,7 @@ public class IdeaService {
     private static final int CANDIDATES = 80;
 
     private static final String SYSTEM = """
-            너는 SKLabs(모의투자·예측 게임·뉴스 퀴즈·종목 토론·AI 비서·뷰티 랩 사이트)의 기능 제안 정리 담당이다.
+            너는 SKLabs(모의투자·예측 게임·뉴스 퀴즈·종목 토론·AI 챗봇·뷰티 랩 사이트)의 기능 제안 정리 담당이다.
             새 제안과 기존 제안 목록을 보고, 사실상 같은 기능을 원하는 기존 제안 번호를 최대 3개 고르고(없으면 빈 배열),
             새 제안에 맞는 카테고리를 하나 고른다. 표현이 달라도 원하는 기능이 같으면 같은 제안이다.
             반드시 match_ideas 도구로만 답한다.

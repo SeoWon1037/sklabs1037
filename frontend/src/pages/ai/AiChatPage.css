@@ -256,3 +256,5 @@
 .ai-talk-on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }
 .ai-speak { align-self: flex-start; margin-top: 4px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 12px; }
 .ai-speak:hover { color: var(--text); }
+.ai-login { align-self: flex-start; display: inline-flex; align-items: center; min-height: 36px; margin-top: 6px; padding: 0 14px; border-radius: 999px; background: var(--primary); color: var(--primary-text); font-size: 13px; font-weight: 700; text-decoration: none; }
+.ai-login:hover { background: var(--primary-hover); }

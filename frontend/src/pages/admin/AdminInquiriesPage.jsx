@@ -15,7 +15,7 @@ import './AdminInquiriesPage.css'
 const TYPE = { BUG: '🐞 버그', FEATURE: '💡 기능', QUESTION: '❓ 질문', OTHER: '💬 기타', SPAM: '🗑 스팸' }
 const AREA = {
   STOCK: '주식 종목', MOCK: '모의투자', LEAGUE: 'AI 리그', PREDICT: '예측 게임', QUIZ: '뉴스 퀴즈', DUEL: '친구 대결', COUPLE: '커플',
-  MESSAGES: '메시지', AI_CHAT: 'AI 비서', BEAUTY: '뷰티 랩', NOTIFICATION: '알림', APP: '앱 설치', ACCOUNT: '계정', ADMIN: '관리자', ETC: '기타',
+  MESSAGES: '메시지', AI_CHAT: 'AI 챗봇', BEAUTY: '뷰티 랩', NOTIFICATION: '알림', APP: '앱 설치', ACCOUNT: '계정', ADMIN: '관리자', ETC: '기타',
 }
 const SEV = { HIGH: ['심각', 'iq-high'], MEDIUM: ['보통', 'iq-mid'], LOW: ['가벼움', 'iq-low'] }
 const STATUS = { OPEN: '답변 대기', ANSWERED: '답변함', CLOSED: '종료' }

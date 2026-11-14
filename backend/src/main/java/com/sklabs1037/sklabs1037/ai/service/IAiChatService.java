@@ -3,7 +3,7 @@ package com.sklabs1037.sklabs1037.ai.service;
 import com.sklabs1037.sklabs1037.ai.vo.AiChatVO;
 
 /**
- * AI 주식 비서 Service
+ * AI 챗봇 Service
  */
 public interface IAiChatService {
 

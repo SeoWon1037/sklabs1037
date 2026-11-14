@@ -168,7 +168,7 @@ function ActivityPage() {
           <h2>🧭 탐험</h2>
           <div className="act-stats">
             <Stat label="투자 성향" value={explore.personaType ? '완료' : <Link to="/persona">하러 가기</Link>} />
-            <Stat label="AI 비서 질문" value={`${explore.aiChats}번`} />
+            <Stat label="AI 챗봇 질문" value={`${explore.aiChats}번`} />
             <Stat label="성분 분석" value={`${explore.beautyLogs}번`} />
             <Stat label="관심종목" value={`${explore.watchCount}개`} />
           </div>

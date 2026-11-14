@@ -175,7 +175,7 @@ function AdminAiCostPage() {
               </button>
             ) : (
               <button type="button" className="iq-btn ac-stop-btn" disabled={busy}
-                onClick={() => save(true, '모든 AI 기능(AI 비서, 뷰티 랩, 뉴스 요약, 문의 분류, 매일 개선 …)을 바로 멈출까요?')}>
+                onClick={() => save(true, '모든 AI 기능(AI 챗봇, 뷰티 랩, 뉴스 요약, 문의 분류, 매일 개선 …)을 바로 멈출까요?')}>
                 🛑 긴급 정지
               </button>
             )}

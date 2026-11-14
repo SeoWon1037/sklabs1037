@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
- * 🔁 AI 비서 프롬프트 버전 DAO (SQL: resources/mapper/AiPromptMapper.xml)
+ * 🔁 AI 챗봇 프롬프트 버전 DAO (SQL: resources/mapper/AiPromptMapper.xml)
  */
 @Mapper
 public interface AiPromptDao {

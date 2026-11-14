@@ -63,7 +63,7 @@
   letter-spacing: -0.02em;
 }
 
-/* 메뉴 탭 (뉴스 / 주식 종목 / AI 비서) */
+/* 메뉴 탭 (뉴스 / 주식 종목 / AI 챗봇) */
 .header-menu {
   display: flex;
   align-items: center;

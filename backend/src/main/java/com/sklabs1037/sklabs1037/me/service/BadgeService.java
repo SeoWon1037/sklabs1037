@@ -54,7 +54,7 @@ public class BadgeService {
             new Badge("COMMENT_10", "🗨️", "수다쟁이", "댓글 10개", "커뮤니티", s -> s.comments() >= 10),
 
             new Badge("PERSONA_DONE", "🧭", "나를 알다", "투자 성향 테스트 완료", "탐험", Stats::personaDone),
-            new Badge("AI_CHAT10", "🤖", "AI와 친구", "AI 비서와 대화 10번", "탐험", s -> s.aiChats() >= 10),
+            new Badge("AI_CHAT10", "🤖", "AI와 친구", "AI 챗봇과 대화 10번", "탐험", s -> s.aiChats() >= 10),
             new Badge("BEAUTY_FIRST", "🔬", "성분 탐정", "뷰티 랩 첫 분석", "탐험", s -> s.beautyLogs() >= 1),
             new Badge("WATCH_5", "⭐", "관심 많은 사람", "관심 종목 5개", "탐험", s -> s.watchCount() >= 5),
             new Badge("ALERT_FIRST", "🔔", "기다리는 법", "첫 목표가 알림", "탐험", s -> s.alertCount() >= 1),

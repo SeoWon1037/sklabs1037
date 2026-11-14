@@ -219,7 +219,7 @@ function UserLoginPage() {
         {/* 🧪 로그인 없이 체험하기 */}
         <button type="button" className="login-demo-btn" onClick={handleDemo} disabled={submitting}>
           🧪 로그인 없이 체험하기
-          <small>모의투자 · AI 비서를 바로 써 봐요 (매일 아침 초기화)</small>
+          <small>모의투자 · AI 챗봇을 바로 써 봐요 (매일 아침 초기화)</small>
         </button>
 
         {/* 회원가입 / 계정 찾기 */}

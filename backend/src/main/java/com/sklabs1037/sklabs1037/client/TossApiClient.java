@@ -19,7 +19,7 @@ import java.util.function.Supplier;
  * 토스증권 Open API 클라이언트
  * - 토큰 발급과 API 호출을 한 곳에서 담당
  * - ★ 토스는 토큰을 새로 받으면 예전 토큰이 무효가 됨
- *   → 여기서 토큰을 한 번 받아 만료 전까지 재사용 (스케줄러, AI 비서가 같이 사용)
+ *   → 여기서 토큰을 한 번 받아 만료 전까지 재사용 (스케줄러, AI 챗봇이 같이 사용)
  *
  * 사용하는 API
  *   POST /oauth2/token     토큰 발급 (client_credentials)
@@ -246,7 +246,7 @@ public class TossApiClient {
     }
 
     // 토큰 꺼내기 (없거나 만료 1분 전이면 새로 발급)
-    // synchronized: 스케줄러와 AI 비서가 동시에 요청해도 토큰을 두 번 받지 않게 (두 번 받으면 첫 토큰이 무효가 됨)
+    // synchronized: 스케줄러와 AI 챗봇이 동시에 요청해도 토큰을 두 번 받지 않게 (두 번 받으면 첫 토큰이 무효가 됨)
     private synchronized String getAccessToken() {
 
         if (accessToken != null && Instant.now().isBefore(tokenExpiresAt.minusSeconds(60))) {

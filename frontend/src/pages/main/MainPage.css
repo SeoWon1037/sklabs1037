@@ -112,7 +112,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 2px;
+  gap: 2px 14px;
 }
 .home-shortcut {
   display: flex;
@@ -866,12 +866,13 @@
     font-size: 16px;   /* 16px보다 작으면 아이폰이 입력할 때 화면을 확대함 */
   }
 
-  /* 바로가기: 한 줄에 5개씩 (9개 + 전체 → 2줄) */
+  /* 바로가기: 세 칸을 가운데에 */
   .home-shortcuts {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 96px));
+    justify-content: center;
     width: 100%;
-    gap: 4px 0;
+    gap: 4px 8px;
   }
   .home-shortcut {
     width: auto;

@@ -248,7 +248,7 @@ function MarketCalendarPage() {
 
       <p className="mc-note">
         FOMC는 미국 발표 시각(오후 2시)을 한국 시간으로 바꿔서 보여줘요. 휴장일·회의 날짜는 발표 기관 사정으로 바뀔 수 있어요.
-        시장이 어떻게 반응할지 궁금하면 <Link to="/ai?q=이번 FOMC가 한국 증시에 어떤 영향을 줄까?">AI 비서</Link>에게 물어보세요.
+        시장이 어떻게 반응할지 궁금하면 <Link to="/ai?q=이번 FOMC가 한국 증시에 어떤 영향을 줄까?">AI 챗봇</Link>에게 물어보세요.
       </p>
     </main>
   )

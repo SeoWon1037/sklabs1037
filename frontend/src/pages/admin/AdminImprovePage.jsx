@@ -1,5 +1,5 @@
 // ============================================
-// 관리자: 🔁 스스로 고치는 AI 비서 (주소: /admin/ai-improve)
+// 관리자: 🔁 스스로 고치는 AI 챗봇 (주소: /admin/ai-improve)
 // - 👎 받은 답변을 AI가 분석해 시스템 프롬프트 개선안을 만들고,
 //   예전 질문으로 옛·새 프롬프트를 둘 다 돌려 AI 심판이 채점한 결과를 보여줌
 // - 사람이 보고 적용 / 거절, 언제든 예전 버전·기본 프롬프트로 되돌리기
@@ -161,7 +161,7 @@ function AdminImprovePage() {
 
   const run = () => post('/api/admin/ai-improve/run', 'run', (j) => (j.started ? '개선을 시작했어요. 몇 분 걸려요.' : '이미 실행 중이에요.'))
   const activate = (v) => {
-    if (!window.confirm(v === 0 ? '기본 프롬프트로 되돌릴까요?' : `v${v} 프롬프트를 AI 비서에 적용할까요?`)) return
+    if (!window.confirm(v === 0 ? '기본 프롬프트로 되돌릴까요?' : `v${v} 프롬프트를 AI 챗봇에 적용할까요?`)) return
     post(`/api/admin/ai-improve/${v}/activate`, `a${v}`, () => (v === 0 ? '기본 프롬프트로 되돌렸어요.' : `v${v}를 적용했어요. 1분 안에 모든 답변에 반영돼요.`))
   }
   const reject = (v) => post(`/api/admin/ai-improve/${v}/reject`, `r${v}`, () => `v${v} 개선안을 거절했어요.`)
@@ -175,9 +175,9 @@ function AdminImprovePage() {
 
       <div className="ops-head">
         <div>
-          <h1 className="admin-title">🔁 AI 비서 자기 개선</h1>
+          <h1 className="admin-title">🔁 AI 챗봇 자기 개선</h1>
           <p className="admin-desc">
-            AI 비서 답변에 달린 👎를 AI가 분석해서 시스템 프롬프트 개선안을 만들어요. 예전 질문으로 옛·새 프롬프트를 둘 다 돌려 보고
+            AI 챗봇 답변에 달린 👎를 AI가 분석해서 시스템 프롬프트 개선안을 만들어요. 예전 질문으로 옛·새 프롬프트를 둘 다 돌려 보고
             AI 심판이 순서를 섞어 채점해요. 적용은 사람이 결정하고, 언제든 되돌릴 수 있어요.
           </p>
         </div>

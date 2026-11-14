@@ -68,7 +68,7 @@
     <!-- 기능별: 오늘(한국 날짜) · 최근 7일 (기능 테이블은 읽기만) -->
     <select id="selectFeatures" resultType="java.util.LinkedHashMap">
         WITH T AS (SELECT (DATE_TRUNC('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul') AS TODAY)
-        SELECT 0 AS "ord", 'AI 비서 질문' AS "feature"
+        SELECT 0 AS "ord", 'AI 챗봇 질문' AS "feature"
               ,(SELECT COUNT(*) FROM T_AI_CHAT_LOG X WHERE X.INS_DAY &gt;= (SELECT TODAY FROM T))::INT AS "today"
               ,(SELECT COUNT(*) FROM T_AI_CHAT_LOG X WHERE X.INS_DAY &gt;= NOW() - INTERVAL '7 days')::INT AS "week"
         UNION ALL

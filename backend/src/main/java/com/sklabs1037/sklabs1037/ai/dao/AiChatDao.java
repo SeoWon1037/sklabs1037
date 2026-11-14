@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
- * AI 주식 비서 Dao
+ * AI 챗봇 Dao
  * - 메서드 이름 = AiChatMapper.xml의 id
  */
 @Mapper

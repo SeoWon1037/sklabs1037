@@ -1,5 +1,5 @@
 // ============================================
-// AI 주식 비서 화면 (주소: /ai)
+// AI 챗봇 화면 (주소: /ai) — 로그인 없이도 질문 가능 (하루 20번), 내 계좌 · 하트처럼 로그인이 필요한 답은 [로그인하러 가기]
 // - 백엔드 API
 //   POST /api/ai/chat     { message }         → { success, chatId, answer, toolsUsed, sources(🧾 참고한 기사·종목) }
 //   POST /api/ai/feedback { chatId, rating }  → { success }
@@ -20,15 +20,15 @@ import './AiChatPage.css'
 // 예시 질문 (처음 화면에 버튼으로 표시)
 const EXAMPLES = [
   '삼성전자 최근 한 달 주가 흐름 알려줘',
-  'SK하이닉스는 무슨 사업을 하는 회사야?',
   '🔎 코스닥에서 최근 3일 연속 오른 종목 찾아줘',
-  '🔎 시가총액 1조 이상인데 최근 20일 동안 10% 넘게 빠진 종목은?',
-  '🔎 어제 거래량이 평소의 3배 넘게 터진 종목 알려줘',
   '삼성전자 요즘 왜 이렇게 떨어졌어? 최근 뉴스로 알려줘',
-  '내 모의투자 포트폴리오 어때? 비중이랑 수익/손실 종목 짚어줘',
+  '💬 면접에서 1분 자기소개 어떻게 하면 좋을까?',
+  '💬 ETF랑 펀드는 뭐가 달라? 쉽게 설명해줘',
+  '🔒 내 모의투자 포트폴리오 어때? 비중이랑 수익/손실 종목 짚어줘',
+  '🔒 커플한테 하트 보내줘',
 ]
 
-// 관심 종목 브리핑 질문 (기존 AI 비서 도구로 수익률 + 뉴스를 찾아 정리)
+// 관심 종목 브리핑 질문 (기존 AI 챗봇 도구로 수익률 + 뉴스를 찾아 정리)
 const briefingQuestion = (names) =>
   `내 관심 종목 ${names.join(', ')} 브리핑해줘. 종목별로 최근 5거래일 수익률과 관련 뉴스 핵심을 2줄씩 정리해줘.`
 
@@ -114,11 +114,11 @@ function AiChatPage() {
       if (data.success) {
         setMessages((prev) => [
           ...prev,
-          { role: 'ai', text: data.answer, tools: data.toolsUsed, sources: data.sources, chatId: data.chatId, rating: null },
+          { role: 'ai', text: data.answer, tools: data.toolsUsed, sources: data.sources, chatId: data.chatId, rating: null, needLogin: data.loginRequired === true },
         ])
         if (talkRef.current) speak(data.answer)   // 🔊 음성 대화 중이면 답을 읽어줌
       } else {
-        setMessages((prev) => [...prev, { role: 'ai', text: data.message, error: true }])
+        setMessages((prev) => [...prev, { role: 'ai', text: data.message, error: true, needLogin: data.loginRequired === true }])
       }
 
     } catch {
@@ -187,9 +187,9 @@ function AiChatPage() {
       <div className="ai-card">
 
         <div className="ai-header">
-          <h1 className="ai-title">AI 주식 비서</h1>
+          <h1 className="ai-title">AI 챗봇</h1>
           <p className="ai-subtitle">
-             실제 시세 데이터와 종목 문서, 최근 뉴스를 직접 찾아보고 답해요 · 코스피 대표 12개 종목 지원
+             무엇이든 물어보세요 · 주식은 실제 시세 · 뉴스를 직접 찾아보고 답해요
           </p>
         </div>
 
@@ -202,7 +202,7 @@ function AiChatPage() {
             <div className="ai-welcome-head">
               <span className="ai-welcome-icon" aria-hidden="true">🤖</span>
               <strong>무엇이든 물어보세요</strong>
-              <p>시세 · 종목 정보 · 최근 뉴스 · 내 모의투자까지 직접 찾아보고 답해요. 아래 질문을 눌러 바로 시작해도 돼요.</p>
+              <p>주식뿐 아니라 일상 · 공부 · 글쓰기 질문도 답해요. 🔒 표시는 로그인해야 답할 수 있어요.</p>
             </div>
             <div className="ai-examples">
               {watchNames.length > 0 && (
@@ -226,6 +226,11 @@ function AiChatPage() {
               <div className={`ai-bubble ${m.error ? 'ai-bubble-error' : ''}`}>
                 {m.role === 'ai' ? renderText(m.text) : m.text}
               </div>
+
+              {/* 로그인해야 답할 수 있는 질문이었으면 바로 갈 수 있게 */}
+              {m.needLogin && (
+                <Link to="/login" className="ai-login">🔑 로그인하러 가기</Link>
+              )}
 
               {/* 🔊 이 답 듣기 */}
               {m.role === 'ai' && !m.error && canSpeak() && (
@@ -309,7 +314,7 @@ function AiChatPage() {
             className="ai-input"
             rows={2}
             maxLength={500}
-            placeholder="예: 현대차 최근 일주일 거래량 추이는?"
+            placeholder="무엇이든 물어보세요"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

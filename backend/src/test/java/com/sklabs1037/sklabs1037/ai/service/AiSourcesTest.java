@@ -7,7 +7,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 🧾 AI 비서 답변 근거: 도구 결과에서 기사 · 종목 · 계좌를 모으고, AI에게는 기사 주소를 안 보냄
+ * 🧾 AI 챗봇 답변 근거: 도구 결과에서 기사 · 종목 · 계좌를 모으고, AI에게는 기사 주소를 안 보냄
  */
 class AiSourcesTest {
 

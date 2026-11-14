@@ -15,13 +15,21 @@ import java.util.Map;
 public interface PlanDao {
 
     // ===== 약속 =====
-    // row: { userId, title, place, planAt } → 저장 후 row.id
+    // row: { userId, title, place, planAt, shared(Y/N), repeatId(null 가능) } → 저장 후 row.id
     int insertPlan(Map<String, Object> row);
 
     int countUpcoming(@Param("userId") Long userId, @Param("from") LocalDateTime from);
 
-    // 내 약속 (from 이상, to 미만 — to가 null이면 끝없이) 시간순
-    List<Map<String, Object>> selectMine(@Param("userId") Long userId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    // 내 약속 + 커플인 상대(partnerId, 없으면 null)가 "함께"로 만든 약속 (from 이상, to 미만 — to가 null이면 끝없이) 시간순
+    List<Map<String, Object>> selectMine(@Param("userId") Long userId, @Param("partnerId") Long partnerId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // 반복 약속: 그 약속부터 뒤의 것 전부 지우기 (만든 사람만) → 지운 개수
+    int deleteRepeat(@Param("userId") Long userId, @Param("id") Long id);
+
+    int updateRepeatId(@Param("id") Long id, @Param("repeatId") Long repeatId);
+
+    // 내 관심 종목의 최근 하루 뉴스 1개 { title, stock } (없으면 null)
+    Map<String, Object> selectWatchNews(Long userId);
 
     int deletePlan(@Param("userId") Long userId, @Param("id") Long id);
 

@@ -20,8 +20,8 @@ import java.util.Map;
  *
  * API 목록
  *   GET  /api/plans                내 약속 (오늘부터)            → { plans: [{ id, title, place, date, time, day, weekday, text }] }
- *   POST /api/plans                약속 추가 { title, date, time?, place? } → { plan }
- *   POST /api/plans/{id}/delete    약속 지우기
+ *   POST /api/plans                약속 추가 { title, date, time?, place?, shared?(💕 커플과 함께), weekly?(🔁 매주 12주) } → { plan }
+ *   POST /api/plans/{id}/delete    약속 지우기 (?all=true: 반복 약속이면 그 약속부터 뒤의 것까지)
  *   GET  /api/voice/settings       음성 브리핑 설정              → { morning, close, region, regions }
  *   POST /api/voice/settings       { morning, close, region }
  *   GET  /api/voice/brief?kind=    지금 읽을 문장 (morning | close | plan) → { title, text }
@@ -53,19 +53,19 @@ public class PlanController {
         Long userId = userId(request);
         if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
 
-        return run("약속 추가", () -> Map.of("plan", planService.add(userId, req.get("title"), req.get("date"), req.get("time"), req.get("place"))));
+        return run("약속 추가", () -> Map.of("plan", planService.add(userId, req.get("title"), req.get("date"), req.get("time"), req.get("place"),
+                com.sklabs1037.sklabs1037.plan.service.PlanRules.yes(req.get("shared")), com.sklabs1037.sklabs1037.plan.service.PlanRules.yes(req.get("weekly")))));
 
     }
 
     @PostMapping("/plans/{id}/delete")
-    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long id, HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable Long id, @RequestParam(defaultValue = "false") boolean all, HttpServletRequest request) {
 
         Long userId = userId(request);
         if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
 
         return run("약속 지우기", () -> {
-            planService.delete(userId, id);
-            return Map.of();
+            return Map.of("deleted", planService.delete(userId, id, all));
         });
 
     }

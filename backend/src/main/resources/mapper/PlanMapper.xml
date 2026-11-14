@@ -5,22 +5,27 @@
 <mapper namespace="com.sklabs1037.sklabs1037.plan.dao.PlanDao">
 
     <insert id="insertPlan" parameterType="map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
-        INSERT INTO T_PLAN (USER_ID, TITLE, PLACE, PLAN_AT)
-        VALUES (#{userId}, #{title}, #{place}, #{planAt})
+        INSERT INTO T_PLAN (USER_ID, TITLE, PLACE, PLAN_AT, SHARED_YN, REPEAT_ID)
+        VALUES (#{userId}, #{title}, #{place}, #{planAt}, #{shared}, #{repeatId})
     </insert>
 
     <select id="countUpcoming" resultType="int">
         SELECT COUNT(*) FROM T_PLAN WHERE USER_ID = #{userId} AND PLAN_AT &gt;= #{from}
     </select>
 
+    <!-- 내 약속 + (커플이면) 상대가 "함께"로 만든 약속 -->
     <select id="selectMine" resultType="java.util.LinkedHashMap">
         SELECT  P.ID        AS "id"
+               ,P.USER_ID   AS "ownerId"
                ,P.TITLE     AS "title"
                ,P.PLACE     AS "place"
                ,P.PLAN_AT   AS "planAt"
+               ,P.SHARED_YN AS "shared"
+               ,P.REPEAT_ID AS "repeatId"
           FROM T_PLAN P
          WHERE 1=1
-           AND P.USER_ID = #{userId}
+           AND (P.USER_ID = #{userId}
+                <if test="partnerId != null">OR (P.USER_ID = #{partnerId} AND P.SHARED_YN = 'Y')</if>)
            AND P.PLAN_AT &gt;= #{from}
            <if test="to != null">AND P.PLAN_AT &lt; #{to}</if>
          ORDER BY P.PLAN_AT, P.ID
@@ -33,6 +38,7 @@
 
     <select id="selectAllBetween" resultType="java.util.LinkedHashMap">
         SELECT  P.USER_ID   AS "userId"
+               ,P.SHARED_YN AS "shared"
                ,P.TITLE     AS "title"
                ,P.PLACE     AS "place"
                ,P.PLAN_AT   AS "planAt"
@@ -42,6 +48,31 @@
            AND P.PLAN_AT &gt;= #{from}
            AND P.PLAN_AT &lt; #{to}
          ORDER BY P.USER_ID, P.PLAN_AT, P.ID
+    </select>
+
+    <!-- 반복 약속: 그 약속부터 뒤의 것 전부 (만든 사람만) -->
+    <delete id="deleteRepeat">
+        DELETE FROM T_PLAN
+         WHERE USER_ID = #{userId}
+           AND REPEAT_ID = (SELECT R.REPEAT_ID FROM T_PLAN R WHERE R.ID = #{id} AND R.USER_ID = #{userId})
+           AND PLAN_AT &gt;= (SELECT R.PLAN_AT FROM T_PLAN R WHERE R.ID = #{id} AND R.USER_ID = #{userId})
+    </delete>
+
+    <update id="updateRepeatId">
+        UPDATE T_PLAN SET REPEAT_ID = #{repeatId} WHERE ID = #{id}
+    </update>
+
+    <!-- 아침 브리핑: 내 관심 종목의 최근 하루 뉴스 제목 1개 -->
+    <select id="selectWatchNews" resultType="java.util.LinkedHashMap">
+        SELECT  N.TITLE     AS "title"
+               ,S.NAME      AS "stock"
+          FROM T_WATCHLIST W
+          JOIN T_STOCK S ON S.ID = W.STOCK_ID
+          JOIN T_NEWS N  ON N.STOCK_ID = W.STOCK_ID
+         WHERE W.USER_ID = #{userId}
+           AND N.PUB_DATE &gt;= NOW() - INTERVAL '1 day'
+         ORDER BY N.PUB_DATE DESC
+         LIMIT 1
     </select>
 
     <delete id="deleteOld">

@@ -85,6 +85,16 @@ public final class BirthdayRules {
     public record Message(String title, String body) {
     }
 
+    /** 기념일(100일 단위 · 주년) 알림: 두 사람 모두에게 (daysLeft: 7 · 1 · 0, 그 밖이면 null) */
+    public static Message anniversaryMessage(String label, String date, long daysLeft) {
+
+        if (daysLeft == 0) return new Message("🎉 오늘은 " + label + "이에요!", "함께한 시간을 축하해요 💕");
+        if (daysLeft == 1) return new Message("💕 내일은 " + label + "이에요", date + " · 준비는 다 됐나요?");
+        if (daysLeft == 7) return new Message("💕 " + label + "이 7일 남았어요", date + " · 미리 약속을 잡아 보세요");
+        return null;
+
+    }
+
     /** 상대에게 보내는 알림 (daysLeft: 7 · 1 · 0) */
     public static Message partnerMessage(String name, MonthDay md, int daysLeft) {
 

@@ -118,6 +118,13 @@ public final class VoiceBriefRules {
     /** 아침 브리핑 전체 문장 */
     public static String morning(String nickname, String regionName, Weather w, String planSpeech) {
 
+        return morning(nickname, regionName, w, planSpeech, null, null);
+
+    }
+
+    /** newsTitle: 관심 종목의 최근 뉴스 제목 한 개 (없으면 null) */
+    public static String morning(String nickname, String regionName, Weather w, String planSpeech, String newsStock, String newsTitle) {
+
         List<String> lines = new ArrayList<>();
         lines.add((nickname == null || nickname.isBlank() ? "" : nickname + "님, ") + "좋은 아침이에요");
 
@@ -126,7 +133,14 @@ public final class VoiceBriefRules {
         else lines.addAll(weather);
 
         String text = String.join(". ", lines) + ".";
-        return planSpeech == null || planSpeech.isBlank() ? text : text + " " + planSpeech;
+        if (planSpeech != null && !planSpeech.isBlank()) text += " " + planSpeech;
+
+        if (newsTitle != null && !newsTitle.isBlank()) {
+            String title = newsTitle.replaceAll("\\s+", " ").strip();
+            if (title.length() > 80) title = title.substring(0, 80);
+            text += " 관심 종목 소식이에요. " + (newsStock == null || newsStock.isBlank() ? "" : newsStock + ": ") + title + (title.matches(".*[.!?…]$") ? "" : ".");
+        }
+        return text;
 
     }
 

@@ -219,6 +219,22 @@ public class CoupleService {
 
     }
 
+    // 🗓️ 함께하는 약속용: 지금 커플인 상대 { id, name } (커플이 아니면 null)
+    public Map<String, Object> partner(Long userId) {
+
+        Map<String, Object> active = coupleDao.selectActive(userId);
+        if (active == null) return null;
+        Long partnerId = partnerOf(num(active.get("id")), userId);
+        if (partnerId == null) return null;
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", partnerId);
+        m.put("name", String.valueOf(active.get("partnerName")));
+        m.put("myName", String.valueOf(active.get("myName")));
+        return m;
+
+    }
+
     // AI 챗봇 get_couple_info 도구용: 함께한 날 · 다음 기념일 · 두 사람 생일
     @SuppressWarnings("unchecked")
     public Map<String, Object> info(Long userId) {
@@ -239,7 +255,7 @@ public class CoupleService {
 
     }
 
-    // 매일 09:00 (작업 COUPLE_BIRTHDAY): 생일 7일 전 · 하루 전 · 당일에 상대에게 알림, 당일에는 본인에게도 축하
+    // 매일 09:00 (작업 COUPLE_BIRTHDAY): 기념일(100일 단위 · 주년)과 생일 7일 전 · 하루 전 · 당일에 상대에게 알림, 당일에는 본인에게도 축하
     public com.sklabs1037.sklabs1037.ops.service.JobRunService.JobOutcome birthdayRemindAll() {
 
         LocalDate today = today();
@@ -270,7 +286,27 @@ public class CoupleService {
             }
         }
 
-        return com.sklabs1037.sklabs1037.ops.service.JobRunService.JobOutcome.of(sent + failed, failed, "생일 알림 " + sent + "건 (7일 전 · 하루 전 · 당일)");
+        // 💕 기념일(100일 단위 · 주년)도 7일 전 · 하루 전 · 당일에 두 사람 모두에게
+        int anniversaries = 0;
+        try {
+            for (Map<String, Object> c : coupleDao.selectActiveCouples()) {
+                Map<String, Object> next = nextMilestone(LocalDate.parse(String.valueOf(c.get("startDate"))), today);
+                long left = ((Number) next.get("dDay")).longValue();
+                BirthdayRules.Message msg = BirthdayRules.anniversaryMessage(String.valueOf(next.get("label")), String.valueOf(next.get("date")), left);
+                if (msg == null) continue;
+
+                String key = "ANNIV:" + c.get("id") + ":" + next.get("date") + ":D" + left;
+                notificationService.notify(num(c.get("requesterId")), "COUPLE", msg.title(), msg.body(), "/couple", key);
+                notificationService.notify(num(c.get("partnerId")), "COUPLE", msg.title(), msg.body(), "/couple", key);
+                anniversaries++;
+            }
+        } catch (Exception e) {
+            failed++;
+            log.warn("커플 기념일 알림 실패: {}", e.getMessage());
+        }
+
+        return com.sklabs1037.sklabs1037.ops.service.JobRunService.JobOutcome.of(sent + anniversaries + failed, failed,
+                "생일 알림 " + sent + "건 · 기념일 알림 " + anniversaries + "쌍 (7일 전 · 하루 전 · 당일)");
 
     }
 

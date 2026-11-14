@@ -20,6 +20,7 @@ public class AiChatVO {
     private List<String> toolsUsed;  // AI가 사용한 도구 목록 (화면에 표시)
     private String toolsText;        // 도구 목록을 한 줄로 (DB 저장용)
     private List<java.util.Map<String, Object>> sources;   // 🧾 답변 근거 자료 (뉴스 기사 링크 · 종목 · 문서), 화면 표시용 (DB 저장 안 함)
+    private Object history;          // 🧠 앞에 나눈 대화 [{ role: user|assistant, text }] (화면이 보냄 → AiChatRules.history가 다듬음)
     private boolean readOnly;        // 체험 계정: 무언가를 바꾸는 도구(하트 · 약속)를 쓰지 않음
     private boolean loginRequired;   // 로그인해야 답할 수 있는 질문이었는지 (화면에 [로그인] 버튼)
     private String rating;           // 피드백 (UP / DOWN)

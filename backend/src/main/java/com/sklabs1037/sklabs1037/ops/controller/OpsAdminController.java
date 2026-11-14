@@ -62,7 +62,7 @@ public class OpsAdminController {
             new String[]{"VOICE_MORNING", "매일 07:00 (켠 회원만)"},
             new String[]{"PLAN_REMIND", "매일 09:00 (내일 · 오늘 약속)"},
             new String[]{"VOICE_CLOSE", "평일 15:40 (켠 회원만)"},
-            new String[]{"COUPLE_BIRTHDAY", "매일 09:00 (생일 7일 전 · 하루 전 · 당일)"},
+            new String[]{"COUPLE_BIRTHDAY", "매일 09:00 (생일 · 기념일 7일 전 · 하루 전 · 당일)"},
             new String[]{"PREDICT_GRADE", "평일 21:10"},
             new String[]{"NEWS_QUIZ", "매일 07:40"},
             new String[]{"WEEKLY_COACH", "월요일 08:10"},

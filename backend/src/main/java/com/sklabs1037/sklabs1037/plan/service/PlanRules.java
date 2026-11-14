@@ -20,7 +20,8 @@ public final class PlanRules {
     private PlanRules() {
     }
 
-    public static final int MAX_UPCOMING = 50;
+    public static final int MAX_UPCOMING = 100;
+    public static final int REPEAT_WEEKS = 12;        // 매주 반복은 12주치를 미리 만들어 둠
     public static final int MAX_TITLE = 60;
     public static final int MAX_PLACE = 40;
 
@@ -70,6 +71,24 @@ public final class PlanRules {
         if (date.isAfter(now.toLocalDate().plusYears(1))) throw new IllegalArgumentException("약속은 1년 안의 날짜만 넣을 수 있어요.");
 
         return at;
+
+    }
+
+    /** 매주 반복: 첫 약속부터 한 주씩 뒤로 weeks개 */
+    public static List<LocalDateTime> weekly(LocalDateTime first, int weeks) {
+
+        List<LocalDateTime> out = new ArrayList<>();
+        for (int i = 0; i < Math.max(1, Math.min(weeks, 26)); i++) out.add(first.plusWeeks(i));
+        return out;
+
+    }
+
+    /** true · "true" · "Y" · 1 → true */
+    public static boolean yes(Object raw) {
+
+        if (raw instanceof Boolean b) return b;
+        String s = raw == null ? "" : String.valueOf(raw).strip().toLowerCase();
+        return s.equals("true") || s.equals("y") || s.equals("1");
 
     }
 

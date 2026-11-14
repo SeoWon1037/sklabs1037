@@ -89,4 +89,15 @@ class BirthdayRulesTest {
         assertEquals("[7, 1, 0]", java.util.Arrays.toString(BirthdayRules.REMIND_DAYS));
 
     }
+
+    @Test
+    void 기념일_알림은_7일_전_하루_전_당일만() {
+
+        assertEquals("💕 300일이 7일 남았어요", BirthdayRules.anniversaryMessage("300일", "2027-01-28", 7).title());
+        assertEquals("💕 내일은 1주년이에요", BirthdayRules.anniversaryMessage("1주년", "2027-04-04", 1).title());
+        assertEquals("🎉 오늘은 300일이에요!", BirthdayRules.anniversaryMessage("300일", "2027-01-28", 0).title());
+        assertNull(BirthdayRules.anniversaryMessage("300일", "2027-01-28", 6));
+        assertNull(BirthdayRules.anniversaryMessage("300일", "2027-01-28", 75));
+
+    }
 }

@@ -104,7 +104,9 @@ public final class SchemaExpect {
             Map.entry("T_STOCK.PREV_CLOSE", "stock-all.sql"),
             Map.entry("T_STOCK.LAST_VOLUME", "stock-all.sql"),
             Map.entry("T_STOCK.HISTORY_DAY", "stock-history.sql"),
-            Map.entry("T_STOCK.SHARES_OUTSTANDING", "stock-shares.sql"));
+            Map.entry("T_STOCK.SHARES_OUTSTANDING", "stock-shares.sql"),
+            Map.entry("T_PLAN.SHARED_YN", "2026-11-14-04-plan-shared-repeat.sql"),
+            Map.entry("T_PLAN.REPEAT_ID", "2026-11-14-04-plan-shared-repeat.sql"));
 
     /**
      * @param tables  실제 DB에 있는 표 이름들 (대문자)

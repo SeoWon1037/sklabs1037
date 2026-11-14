@@ -67,6 +67,9 @@ public interface CoupleDao {
     // 그 월 · 일이 생일인 사람 (지금 커플인 쌍만) { coupleId, userId, name, partnerId, month, day }
     List<Map<String, Object>> selectBirthdaysOn(@Param("month") int month, @Param("day") int day);
 
+    // 지금 커플인 모든 쌍 { id, requesterId, partnerId, startDate } (기념일 알림용)
+    List<Map<String, Object>> selectActiveCouples();
+
     // ===== 📸 기념일 앨범 =====
     int insertPhoto(Map<String, Object> photo);   // coupleId, uploaderId, milestone, caption, contentType, bytes, data(byte[])
 

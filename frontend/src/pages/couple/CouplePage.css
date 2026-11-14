@@ -183,7 +183,7 @@
 .cp-bday li { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .cp-bday-name { flex: 1; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .cp-bday-date { flex: none; color: var(--cp-muted); font-size: 13px; }
-.cp-bday-dday { flex: none; min-width: 52px; color: var(--cp-pink); font-size: 15px; text-align: right; font-variant-numeric: tabular-nums; }
+.cp-bday-dday { flex: none; text-align: right; }
 .cp-bday-today { font-size: 14px; }
 .cp-bday-btn { flex: none; min-height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer; }
 .cp-bday-add { border-color: var(--cp-pink); color: var(--cp-pink); }
@@ -193,3 +193,16 @@
 .cp-bday-actions { display: flex; flex: 1 1 100%; gap: 6px; }
 .cp-bday-actions .btn { flex: 1; min-height: 40px; padding: 0 8px; font-size: 13px; }
 .cp-bday > p { margin: 8px 0 0; color: var(--cp-muted); font-size: 12px; line-height: 1.6; }
+
+/* ⏱ 남은 시간 (일 · 시간 · 분 · 초) */
+.cp-count { color: var(--cp-pink); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cp-count i { margin-left: 1px; font-size: 11px; font-style: normal; font-weight: 600; opacity: 0.8; }
+.cp-next .cp-count { font-size: 17px; }
+.cp-bday li { flex-wrap: wrap; }
+.cp-bday-date { order: 0; }
+@media (max-width: 420px) {
+  .cp-bday li:not(.cp-bday-edit) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; padding: 6px 0; }
+  .cp-bday li:not(.cp-bday-edit) .cp-bday-date { grid-column: 1; grid-row: 2; }
+  .cp-bday li:not(.cp-bday-edit) .cp-bday-dday { grid-column: 1 / -1; grid-row: 3; text-align: left; }
+  .cp-bday li:not(.cp-bday-edit) .cp-bday-btn { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+}

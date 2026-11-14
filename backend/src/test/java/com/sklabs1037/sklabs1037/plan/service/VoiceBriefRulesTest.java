@@ -161,4 +161,17 @@ class VoiceBriefRulesTest {
         return m;
 
     }
+
+    @Test
+    void 아침_브리핑_끝에_관심_종목_뉴스_한_줄() {
+
+        Weather w = new Weather(0, 3.0, 11.0, 0, null, null);
+
+        String text = VoiceBriefRules.morning("서원", "서울", w, "오늘 약속이 있어요. 저녁 7시 회식.", "삼성전자", "삼성전자,  HBM 공급 확대");
+
+        assertTrue(text.endsWith("오늘 약속이 있어요. 저녁 7시 회식. 관심 종목 소식이에요. 삼성전자: 삼성전자, HBM 공급 확대."), text);
+        assertFalse(VoiceBriefRules.morning("서원", "서울", w, null, null, null).contains("소식"));
+        assertTrue(VoiceBriefRules.morning("서원", "서울", w, null, null, "제목만 있는 뉴스!").endsWith("관심 종목 소식이에요. 제목만 있는 뉴스!"));
+
+    }
 }

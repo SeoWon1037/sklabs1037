@@ -128,7 +128,9 @@ public class AiChatServiceImpl implements IAiChatService {
                     Map.of("title", Map.of("type", "string", "description", "약속 이름 (예: 민지랑 저녁)"),
                             "date", Map.of("type", "string", "description", "날짜 YYYY-MM-DD (한국 시간)"),
                             "time", Map.of("type", "string", "description", "시간 HH:mm 24시간 (예: 19:00). 시간을 모르면 넣지 않는다"),
-                            "place", Map.of("type", "string", "description", "장소 (예: 강남). 없으면 넣지 않는다")),
+                            "place", Map.of("type", "string", "description", "장소 (예: 강남). 없으면 넣지 않는다"),
+                            "shared", Map.of("type", "boolean", "description", "커플(애인)과 함께하는 약속이면 true → 상대에게도 보이고 알림이 감"),
+                            "weekly", Map.of("type", "boolean", "description", "매주 반복이면 true → 그 날짜부터 12주치")),
                     List.of("title", "date")),
             tool("list_plans",
                     "질문한 사용자의 앞으로의 약속을 시간순으로 준다 (id, title, place, date, time, weekday).",
@@ -136,8 +138,14 @@ public class AiChatServiceImpl implements IAiChatService {
                     List.of()),
             tool("delete_plan",
                     "질문한 사용자의 약속 하나를 지운다. id는 list_plans로 확인한 값만 쓴다.",
-                    Map.of("id", Map.of("type", "integer", "description", "지울 약속의 id")),
-                    List.of("id"))
+                    Map.of("id", Map.of("type", "integer", "description", "지울 약속의 id"),
+                            "all", Map.of("type", "boolean", "description", "반복 약속을 그 약속부터 뒤의 것까지 모두 지우려면 true")),
+                    List.of("id")),
+            tool("search_market",
+                    "SKLabs 중고거래 장터에서 지금 판매 중인 상품을 찾는다. 제목 · 가격(원) · 지역 · 판매자를 최대 8개 준다.",
+                    Map.of("query", Map.of("type", "string", "description", "찾을 낱말 (예: 아이폰 15)"),
+                            "max_price", Map.of("type", "integer", "description", "이 가격(원) 이하만. 없으면 넣지 않는다")),
+                    List.of("query"))
     );
 
     // 채점용 재답변에서는 실제 행동(하트)을 하는 도구를 뺀 목록
@@ -165,6 +173,9 @@ public class AiChatServiceImpl implements IAiChatService {
     private com.sklabs1037.sklabs1037.plan.service.PlanService planService;
 
     @Autowired
+    private com.sklabs1037.sklabs1037.market.service.MarketService marketService;
+
+    @Autowired
     private com.sklabs1037.sklabs1037.plan.service.VoiceBriefService voiceBriefService;
 
     // 도구 결과를 JSON 문자열로 바꿀 때 사용 (Spring Boot가 만들어둔 것 재사용)
@@ -181,7 +192,7 @@ public class AiChatServiceImpl implements IAiChatService {
         vo.setPromptVersion(prompt.version());
 
         // 체험 계정(모두가 같이 쓰는 계정)은 하트 · 약속처럼 무언가를 바꾸는 도구를 쓰지 않음
-        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), vo.isReadOnly() ? READ_ONLY_TOOLS : TOOLS);
+        AgentResult r = runAgent(prompt.content(), vo.getMessage(), vo.getUserId(), vo.isReadOnly() ? READ_ONLY_TOOLS : TOOLS, AiChatRules.history(vo.getHistory()));
 
         vo.setSources(r.sources());
         vo.setLoginRequired(r.loginRequired());
@@ -193,7 +204,7 @@ public class AiChatServiceImpl implements IAiChatService {
     @Override
     public Map<String, Object> answerWith(String systemPrompt, String question, Long userId) {
 
-        AgentResult r = runAgent(systemPrompt, question, userId, READ_ONLY_TOOLS);   // 채점 중에 진짜 하트가 나가면 안 됨
+        AgentResult r = runAgent(systemPrompt, question, userId, READ_ONLY_TOOLS, List.of());   // 채점 중에 진짜 하트가 나가면 안 됨
 
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("answer", r.answer());
@@ -208,14 +219,15 @@ public class AiChatServiceImpl implements IAiChatService {
 
     // 질문 하나를 Claude + 도구 반복으로 답하기
     @SuppressWarnings("unchecked")
-    private AgentResult runAgent(String stockRules, String question, Long userId, List<Map<String, Object>> tools) {
+    // history: 🧠 앞에 나눈 대화 (AiChatRules.history가 다듬은 것, 없으면 빈 목록)
+    private AgentResult runAgent(String stockRules, String question, Long userId, List<Map<String, Object>> tools, List<Map<String, Object>> history) {
 
         // 고정 틀(무엇이든 답하기 · 로그인 안내 · 하트) + 주식 규칙
         String systemPrompt = AiChatRules.systemPrompt(stockRules, userId != null, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")));
         boolean loginRequired = false;
 
         // 대화 기록 (질문 → 도구 요청 → 도구 결과 → ... 순서로 쌓임)
-        List<Map<String, Object>> messages = new ArrayList<>();
+        List<Map<String, Object>> messages = new ArrayList<>(history);
         messages.add(Map.of("role", "user", "content", question));
 
         List<String> toolsUsed = new ArrayList<>();
@@ -363,6 +375,14 @@ public class AiChatServiceImpl implements IAiChatService {
                     addSource(sources, "DOC", str(r.get("name")) + " · " + str(r.get("title")), str(r.get("symbol")), "/stock?symbol=" + str(r.get("symbol"))));
             case "get_my_mock_portfolio" -> addSource(sources, "MOCK", "내 모의투자 계좌", "", "/mock");
             case "add_plan", "list_plans" -> addSource(sources, "PLAN", "내 약속", "", "/plans");
+            case "search_market" -> {
+                if (out instanceof Map<?, ?> m && m.get("items") instanceof List<?> items) {
+                    items.stream().limit(5).forEach(o -> {
+                        Map<String, Object> it = (Map<String, Object>) o;
+                        addSource(sources, "MARKET", str(it.get("title")), str(it.get("price")) + "원", "/market/" + it.get("id"));
+                    });
+                }
+            }
             case "get_weather" -> addSource(sources, "DATA", "오늘 날씨 (Open-Meteo 예보)", "", null);
             case "get_return_ranking" -> addSource(sources, "DATA", "수익률 순위 (" + input.get("days") + "거래일, 우리 DB 종가)", "", null);
             case "screen_stocks" -> addSource(sources, "DATA", "조건 검색 (우리 DB 종가·거래량)", "", null);
@@ -412,6 +432,34 @@ public class AiChatServiceImpl implements IAiChatService {
             copy.add(m);
         }
         return copy;
+
+    }
+
+    // 🛍️ 장터에서 판매 중인 상품 찾기 (가격 조건은 여기서 거름)
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> searchMarket(String query, Object maxPrice) {
+
+        Long max = maxPrice instanceof Number n ? Long.valueOf(n.longValue()) : null;
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) marketService.list(null, query, null, true, false, 0).get("items");
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            long price = r.get("price") instanceof Number n ? n.longValue() : 0;
+            if (max != null && price > max) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", r.get("id"));
+            m.put("title", r.get("title"));
+            m.put("price", price);
+            m.put("region", r.get("region"));
+            m.put("seller", r.get("sellerName"));
+            items.add(m);
+            if (items.size() >= 8) break;
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", items);
+        result.put("note", "판매 중인 상품만. 가격 단위는 원, 0원은 무료 나눔. 더 보려면 중고거래 화면(/market)에서 검색.");
+        return result;
 
     }
 
@@ -569,7 +617,8 @@ public class AiChatServiceImpl implements IAiChatService {
             case "add_plan": {
 
                 if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
-                Map<String, Object> plan = planService.add(userId, input.get("title"), input.get("date"), input.get("time"), input.get("place"));
+                Map<String, Object> plan = planService.add(userId, input.get("title"), input.get("date"), input.get("time"), input.get("place"),
+                        com.sklabs1037.sklabs1037.plan.service.PlanRules.yes(input.get("shared")), com.sklabs1037.sklabs1037.plan.service.PlanRules.yes(input.get("weekly")));
                 return Map.of("saved", plan, "reminders", "하루 전 오전 9시 · 당일 오전 9시");
 
             }
@@ -584,8 +633,15 @@ public class AiChatServiceImpl implements IAiChatService {
             case "delete_plan": {
 
                 if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
-                planService.delete(userId, input.get("id") instanceof Number n ? n.longValue() : null);
-                return Map.of("deleted", true);
+                int deleted = planService.delete(userId, input.get("id") instanceof Number n ? n.longValue() : null,
+                        com.sklabs1037.sklabs1037.plan.service.PlanRules.yes(input.get("all")));
+                return Map.of("deleted", deleted);
+
+            }
+
+            case "search_market": {
+
+                return searchMarket(str(input.get("query")), input.get("max_price"));
 
             }
 
@@ -681,6 +737,7 @@ public class AiChatServiceImpl implements IAiChatService {
             case "add_plan"           -> "🗓️ 약속 저장 (" + str(input.get("title")) + ")";
             case "list_plans"         -> "내 약속 조회";
             case "delete_plan"        -> "약속 지우기";
+            case "search_market"      -> "🛍️ 장터 검색 (" + str(input.get("query")) + ")";
             case "screen_stocks"      -> "조건 검색 (" + describeScreen(input) + ")";
             default                   -> toolName;
         };

@@ -38,8 +38,14 @@ public final class AiChatRules {
               "투자 판단은 본인 책임입니다." 문구는 주식 · 투자 답변에만 붙여.
             - 너는 인터넷 검색을 할 수 없어. 방금 일어난 일, 실시간 교통처럼 최신 정보가 필요한데 도구로 확인할 수 없으면 모른다고 말하고, 아는 범위까지만 답해. 지어내지 마.
             - 날씨 질문("오늘 날씨 어때?", "수원 비 와?")은 get_weather로 조회한 값만 말해. 서울 · 경기권(도구의 supportedRegions)만 되고, 다른 지역은 아직 지원하지 않는다고 말해. 지역을 말하지 않으면 서울로 조회해.
+            - 앞에 나눈 대화가 함께 올 수 있어. "그럼 그 종목 뉴스는?", "그거 다시 설명해줘"처럼 앞 대화를 가리키는 말은 그 흐름을 이어서 답해.
+              단, 앞 대화에 있던 주가 · 수익률 같은 숫자는 그대로 다시 쓰지 말고 필요하면 도구로 다시 조회해.
+            - 중고거래 상품을 찾는 질문("아이폰 15 중고 있어?", "30만 원 이하 자전거 찾아줘")은 search_market으로 찾아 답해.
+              "- 제목 · 가격 · 지역" 한 줄씩 최대 5개, 없으면 없다고 말해. 가격 조건은 max_price(원)로 넣어. 무료 나눔은 0원이야.
             - 약속을 잡아 달라는 말("토요일 저녁 7시 강남에서 민지랑 약속 잡아줘")에는 add_plan을 불러. 날짜는 아래 "오늘 날짜"를 기준으로 YYYY-MM-DD로, 시간은 24시간 HH:mm으로 바꿔 넣어.
               "저녁 7시"는 19:00, "오후 3시 반"은 15:30. 시간을 말하지 않았으면 time을 비워. 날짜를 알 수 없으면 도구를 부르지 말고 날짜를 되물어.
+              커플(애인 · 여자친구 · 남자친구)과 함께하는 약속이나 데이트라고 하면 shared=true로 넣어 (상대의 약속 목록과 알림에도 나옴).
+              "매주 화요일 7시 헬스"처럼 매주 반복이면 weekly=true로 넣고 date는 가장 가까운 그 요일로 해 (12주치가 만들어짐).
               저장되면 언제 · 어디서 · 무엇인지 한 줄로 확인해 주고, 하루 전과 당일 오전 9시에 알려준다고 말해.
             - "커플 생일 얼마나 남았어?", "우리 며칠 됐어?", "다음 기념일 언제야?" 같은 커플 질문은 get_couple_info로 조회해서 답해.
               생일은 dDay(남은 날)와 날짜를 함께 말해. 생일이 아직 입력되지 않았으면(null) 커플 화면(/couple)에서 생일을 넣어 달라고 안내해.
@@ -51,6 +57,43 @@ public final class AiChatRules {
               사용자가 보내 달라고 하지 않았는데 먼저 보내지 마. 한 번에 한 개만 보낼 수 있어.
             - SKLabs 사용법 질문: 주식 종목(/stock), 모의투자(/mock), 중고거래(/market), 번역(/translate), 커플(/couple), 내 약속 · 음성 브리핑(/plans) 화면이 있어. 모르는 기능은 ☰ 전체 메뉴를 보라고 안내해.
             """;
+
+    // 🧠 대화 기억: 화면이 보내 준 앞 대화 중 최근 몇 개만, 길이를 잘라서 Claude에게 같이 보냄
+    public static final int HISTORY_MAX = 6;          // 메시지 수 (질문 3 + 답 3)
+    public static final int HISTORY_TEXT = 500;       // 한 메시지 글자 수
+
+    /**
+     * 화면이 보낸 앞 대화 → Claude 메시지 목록 (없거나 이상하면 빈 목록)
+     * - role은 user / assistant만, 글이 아닌 것은 버림
+     * - user로 시작하고 assistant로 끝나게, 같은 역할이 이어지지 않게 다듬음 (바로 뒤에 이번 질문(user)이 붙음)
+     * - 앞 대화는 참고용: 도구 결과는 들어 있지 않으므로 숫자는 다시 조회해야 함 (FRAME에 적혀 있음)
+     */
+    public static List<Map<String, Object>> history(Object raw) {
+
+        List<Map<String, Object>> out = new java.util.ArrayList<>();
+        if (!(raw instanceof List<?> list)) return out;
+
+        for (Object o : list) {
+            if (!(o instanceof Map<?, ?> m)) continue;
+            String role = String.valueOf(m.get("role"));
+            Object text = m.get("text") != null ? m.get("text") : m.get("content");
+            if (!(text instanceof String s) || s.isBlank()) continue;
+            if (!role.equals("user") && !role.equals("assistant")) continue;
+
+            String body = s.strip();
+            if (body.length() > HISTORY_TEXT) body = body.substring(0, HISTORY_TEXT) + "…";
+
+            // 같은 역할이 이어지면 뒤의 것으로 바꿈
+            if (!out.isEmpty() && role.equals(out.get(out.size() - 1).get("role"))) out.remove(out.size() - 1);
+            out.add(Map.of("role", role, "content", body));
+        }
+
+        while (out.size() > HISTORY_MAX) out.remove(0);
+        while (!out.isEmpty() && !"user".equals(out.get(0).get("role"))) out.remove(0);
+        while (!out.isEmpty() && !"assistant".equals(out.get(out.size() - 1).get("role"))) out.remove(out.size() - 1);
+        return out;
+
+    }
 
     /** 실제로 Claude에게 보내는 시스템 프롬프트 */
     public static String systemPrompt(String stockRules, boolean loggedIn, LocalDate today) {

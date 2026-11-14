@@ -4,6 +4,7 @@
 // - 아니면: 상대 닉네임 + 시작일로 신청 / 받은 신청 수락·거절 / 보낸 신청 취소
 // - 커플 정보는 두 사람에게만 보여요
 // - 백엔드: GET /api/couple, POST /api/couple/request, /api/couple/{id}/accept|decline|cancel, /api/couple/end
+// - ⏱ 다음 기념일 · 생일까지 남은 시간은 D-day 대신 일 · 시간 · 분 · 초로 1초마다 (Countdown)
 // - 🎂 생일: POST /api/couple/birthday { who: me | partner, month, day } → 커플 정보 (couple.birthdays.me / partner: { month, day, dDay })
 // ============================================
 import { useEffect, useState } from 'react'
@@ -19,6 +20,31 @@ const post = (url, body) =>
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   }).then((res) => res.json())
+
+// ⏱ 그날(한국 시간 0시)까지 남은 시간을 1초마다: "23일 04시간 12분 30초" (그날이 됐으면 done을 보여 줌)
+const pad = (n) => String(n).padStart(2, '0')
+const leftUntil = (date) => new Date(`${date}T00:00:00+09:00`).getTime() - Date.now()
+
+function Countdown({ date, done }) {
+
+  const [left, setLeft] = useState(() => leftUntil(date))
+
+  useEffect(() => {
+    const tick = () => setLeft(leftUntil(date))
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [date])
+
+  if (left <= 0) return <b className="cp-count cp-count-done">{done}</b>
+
+  const s = Math.floor(left / 1000)
+  const days = Math.floor(s / 86400)
+  return (
+    <b className="cp-count" role="timer" aria-label={`${days}일 ${Math.floor((s % 86400) / 3600)}시간 남음`}>
+      {days > 0 && <>{days}<i>일</i> </>}{pad(Math.floor((s % 86400) / 3600))}<i>시간</i> {pad(Math.floor((s % 3600) / 60))}<i>분</i> {pad(s % 60)}<i>초</i>
+    </b>
+  )
+}
 
 // 🎂 생일 한 줄: 입력 전에는 [생일 넣기], 입력 뒤에는 날짜와 D-day (두 사람 모두 서로의 생일을 넣고 고칠 수 있음)
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -62,7 +88,7 @@ function BirthdayRow({ who, name, birthday, busy, onSave }) {
       {birthday ? (
         <>
           <span className="cp-bday-date">{birthday.month}월 {birthday.day}일</span>
-          <b className={`cp-bday-dday ${birthday.dDay === 0 ? 'cp-bday-today' : ''}`}>{birthday.dDay === 0 ? '오늘! 🎉' : `D-${birthday.dDay}`}</b>
+          <span className="cp-bday-dday"><Countdown date={birthday.date} done="오늘! 🎉" /></span>
           <button type="button" className="cp-bday-btn" onClick={() => setEditing(true)}>수정</button>
         </>
       ) : (
@@ -172,7 +198,7 @@ function CouplePage() {
           <div className="cp-next">
             {c.next.dDay === 0
               ? <span>🎉 오늘은 <b>{c.next.label}</b>이에요!</span>
-              : <span>다음 기념일 <b>{c.next.label}</b> · {dot(c.next.date)} · <b>D-{c.next.dDay}</b></span>}
+              : <span>다음 기념일 <b>{c.next.label}</b> · {dot(c.next.date)}<br /><Countdown date={c.next.date} done={`🎉 ${c.next.label}`} /> 남았어요</span>}
           </div>
 
           <div className="cp-heart-area">

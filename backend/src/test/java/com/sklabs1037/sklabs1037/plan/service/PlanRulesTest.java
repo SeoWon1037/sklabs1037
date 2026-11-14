@@ -124,4 +124,48 @@ class PlanRulesTest {
         assertEquals("오늘 약속은 없어요.", PlanRules.speech(List.of(), "오늘"));
 
     }
+
+    @Test
+    void 매주_반복은_한_주씩_뒤로() {
+
+        List<LocalDateTime> w = PlanRules.weekly(LocalDateTime.of(2026, 11, 17, 19, 0), PlanRules.REPEAT_WEEKS);
+
+        assertEquals(12, w.size());
+        assertEquals(LocalDateTime.of(2026, 11, 17, 19, 0), w.get(0));
+        assertEquals(LocalDateTime.of(2026, 11, 24, 19, 0), w.get(1));
+        assertEquals(LocalDateTime.of(2027, 2, 2, 19, 0), w.get(11));
+        assertEquals(26, PlanRules.weekly(NOW, 100).size());   // 아무리 많아도 26주
+        assertEquals(1, PlanRules.weekly(NOW, 0).size());
+
+    }
+
+    @Test
+    void 예_아니오_읽기() {
+
+        assertTrue(PlanRules.yes(true));
+        assertTrue(PlanRules.yes("true"));
+        assertTrue(PlanRules.yes("Y"));
+        assertFalse(PlanRules.yes(null));
+        assertFalse(PlanRules.yes("false"));
+        assertFalse(PlanRules.yes(0));
+
+    }
+
+    @Test
+    void 화면에_줄_모양에_함께와_내_것_표시() {
+
+        Map<String, Object> row = new java.util.HashMap<>(Map.of("id", 7, "ownerId", 2L, "title", "데이트", "place", "강남",
+                "planAt", LocalDateTime.of(2026, 11, 15, 19, 0), "shared", "Y"));
+
+        Map<String, Object> mine = PlanService.view(row, 2L, TODAY);
+        Map<String, Object> partners = PlanService.view(row, 1L, TODAY);
+
+        assertEquals(true, mine.get("shared"));
+        assertEquals(true, mine.get("mine"));
+        assertEquals(false, partners.get("mine"));      // 상대가 만든 함께 약속
+        assertEquals(false, mine.get("repeat"));
+        assertEquals("내일 저녁 7시 강남에서 데이트", mine.get("text"));
+        assertEquals("19:00", mine.get("time"));
+
+    }
 }

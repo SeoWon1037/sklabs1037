@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 🔊 음성 브리핑
- * - 아침 (작업 VOICE_MORNING, 매일 07:00): 오늘 날씨(지역 선택) + 오늘 약속 → 알림 + 📲 푸시
+ * - 아침 (작업 VOICE_MORNING, 매일 07:00): 오늘 날씨(지역 선택) + 오늘 약속 + 관심 종목 뉴스 제목 한 개 → 알림 + 📲 푸시
  * - 장 마감 (작업 VOICE_CLOSE, 거래일 15:40): 내 관심 종목이 오늘 얼마나 움직였는지 → 알림 + 📲 푸시 (모의투자 내용은 넣지 않음)
  * - 알림을 누르면 /ai?brief=morning|close|plan → GET /api/voice/brief 로 "지금 기준" 문장을 다시 만들어 소리로 읽어 줌
  *   (웹사이트는 꺼져 있을 때 스스로 소리를 낼 수 없어서, 알림 → 한 번 누르기 → 읽기 순서)
@@ -154,7 +154,16 @@ public class VoiceBriefService {
 
     private String morningText(Long userId, String nickname, Region region) {
 
-        return VoiceBriefRules.morning(nickname, region.name(), weather(region), planService.todaySpeech(userId));
+        // 관심 종목의 최근 하루 뉴스 제목 한 개 (없거나 못 읽으면 빼고)
+        Map<String, Object> news = null;
+        try {
+            news = planDao.selectWatchNews(userId);
+        } catch (Exception e) {
+            log.warn("브리핑 뉴스 조회 실패: {}", e.getMessage());
+        }
+
+        return VoiceBriefRules.morning(nickname, region.name(), weather(region), planService.todaySpeech(userId),
+                news == null ? null : String.valueOf(news.get("stock")), news == null ? null : String.valueOf(news.get("title")));
 
     }
 

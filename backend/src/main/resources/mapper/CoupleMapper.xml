@@ -215,6 +215,16 @@
            AND ID        = #{id}
            AND COUPLE_ID = #{coupleId}
     </delete>
+    <select id="selectActiveCouples" resultType="java.util.LinkedHashMap">
+        SELECT  C.ID                                  AS "id"
+               ,C.REQUESTER_ID                        AS "requesterId"
+               ,C.PARTNER_ID                          AS "partnerId"
+               ,TO_CHAR(C.START_DATE, 'YYYY-MM-DD')   AS "startDate"
+          FROM T_COUPLE C
+         WHERE C.STATUS = 'ACTIVE'
+         ORDER BY C.ID
+    </select>
+
     <!-- ===== 🎂 생일 ===== -->
     <select id="selectBirthdays" resultType="java.util.LinkedHashMap">
         SELECT  B.USER_ID       AS "userId"

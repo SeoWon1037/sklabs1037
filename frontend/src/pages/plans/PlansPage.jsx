@@ -1,5 +1,6 @@
 // ============================================
 // 🗓️ 내 약속 · 🔊 음성 브리핑 (주소: /plans, 로그인 필요)
+// - 💕 커플과 함께: 상대의 목록 · 알림에도 나옴 (지울 수 있는 사람은 만든 사람) / 🔁 매주 반복: 12주치를 한 번에
 // - 약속: 직접 추가하거나 AI 챗봇에게 "토요일 저녁 7시 강남에서 민지랑 약속 잡아줘"
 //   → 하루 전 · 당일 오전 9시에 알림(+📲 푸시), 누르면 AI 챗봇이 소리로 읽어 줌
 // - 음성 브리핑: 아침 7시(날씨 + 오늘 약속) · 장 마감 15:40(관심 종목) 켜기/끄기, 날씨 지역, [지금 들어보기]
@@ -23,7 +24,7 @@ function PlansPage() {
   const [plans, setPlans] = useState(null)        // null = 불러오는 중
   const [needLogin, setNeedLogin] = useState(false)
   const [settings, setSettings] = useState(null)
-  const [form, setForm] = useState(() => ({ title: '', date: todayKst(), time: '', place: '' }))
+  const [form, setForm] = useState(() => ({ title: '', date: todayKst(), time: '', place: '', shared: false, weekly: false }))
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [readAloud, setReadAloud] = useState(() => {
@@ -65,7 +66,7 @@ function PlansPage() {
       })
       const json = await res.json()
       if (json.success) {
-        setForm((f) => ({ ...f, title: '', time: '', place: '' }))
+        setForm((f) => ({ ...f, title: '', time: '', place: '', shared: false, weekly: false }))
         setMsg(`저장했어요: ${json.plan.text}`)
         load()
       } else {
@@ -78,9 +79,10 @@ function PlansPage() {
     }
   }
 
-  const remove = async (p) => {
-    if (!window.confirm(`"${p.title}" 약속을 지울까요?`)) return
-    const res = await fetch(`/api/plans/${p.id}/delete`, { method: 'POST' }).then((r) => r.json()).catch(() => ({}))
+  // all: 🔁 반복 약속을 이 약속부터 뒤의 것까지 모두
+  const remove = async (p, all = false) => {
+    if (!window.confirm(all ? `"${p.title}" 반복 약속을 이 날부터 모두 지울까요?` : `"${p.title}" 약속을 지울까요?`)) return
+    const res = await fetch(`/api/plans/${p.id}/delete${all ? '?all=true' : ''}`, { method: 'POST' }).then((r) => r.json()).catch(() => ({}))
     if (res.success) load()
     else setMsg(res.message ?? '지우지 못했어요.')
   }
@@ -151,6 +153,10 @@ function PlansPage() {
               <span>장소 (선택)</span>
               <input value={form.place} onChange={(e) => setForm({ ...form, place: e.target.value })} maxLength={40} placeholder="예: 강남" />
             </label>
+            <div className="plans-checks plans-wide">
+              <label><input type="checkbox" checked={form.shared} onChange={(e) => setForm({ ...form, shared: e.target.checked })} /> 💕 커플과 함께 <small>상대에게도 보이고 알림이 가요</small></label>
+              <label><input type="checkbox" checked={form.weekly} onChange={(e) => setForm({ ...form, weekly: e.target.checked })} /> 🔁 매주 반복 <small>12주치를 만들어요</small></label>
+            </div>
             <button type="submit" className="btn btn-primary plans-wide" disabled={busy || form.title.trim() === ''}>약속 추가</button>
           </form>
 
@@ -169,10 +175,11 @@ function PlansPage() {
                     <span>{NEAR.includes(p.day) ? `${p.date.slice(5).replace('-', '/')} ${p.weekday}` : `${p.weekday} · ${p.date.slice(0, 4)}`}</span>
                   </div>
                   <div className="plans-what">
-                    <b>{p.title}</b>
-                    <span>{[p.time ?? '시간 미정', p.place].filter(Boolean).join(' · ')}</span>
+                    <b>{p.shared && <span title="커플과 함께">💕 </span>}{p.repeat && <span title="매주 반복">🔁 </span>}{p.title}</b>
+                    <span>{[p.time ?? '시간 미정', p.place, p.mine ? null : '상대가 만든 약속'].filter(Boolean).join(' · ')}</span>
                   </div>
-                  <button type="button" className="plans-del" onClick={() => remove(p)} aria-label={`${p.title} 약속 지우기`}>✕</button>
+                  {p.mine && p.repeat && <button type="button" className="plans-del plans-del-all" onClick={() => remove(p, true)} aria-label={`${p.title} 반복 약속 모두 지우기`}>전체</button>}
+                  {p.mine && <button type="button" className="plans-del" onClick={() => remove(p)} aria-label={`${p.title} 약속 지우기`}>✕</button>}
                 </li>
               ))}
             </ul>

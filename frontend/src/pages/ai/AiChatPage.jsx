@@ -1,7 +1,7 @@
 // ============================================
 // AI 챗봇 화면 (주소: /ai) — 로그인 없이도 질문 가능 (하루 20번), 내 계좌 · 하트처럼 로그인이 필요한 답은 [로그인하러 가기]
 // - 백엔드 API
-//   POST /api/ai/chat     { message }         → { success, chatId, answer, toolsUsed, sources(🧾 참고한 기사·종목) }
+//   POST /api/ai/chat     { message, history(앞 대화 최근 6개) }         → { success, chatId, answer, toolsUsed, sources(🧾 참고한 기사·종목) }
 //   POST /api/ai/feedback { chatId, rating }  → { success }
 //   GET  /api/watchlist                       → 관심 종목 (브리핑 버튼용)
 // - AI가 어떤 도구(DB 조회, 문서 검색 등)를 썼는지 + 답변 피드백(👍/👎)
@@ -15,7 +15,7 @@ import { canSpeak, speak, stopSpeaking } from '../../voice/speech'
 import { alwaysOn } from '../../voice/alwaysListen'
 
 // 🧾 답변 근거 종류
-const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속' }
+const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속', MARKET: '장터' }
 import './AiChatPage.css'
 
 // 예시 질문 (처음 화면에 버튼으로 표시)
@@ -115,6 +115,12 @@ function AiChatPage() {
     const question = text.trim()
     if (question === '' || loading) return
 
+    // 🧠 대화 기억: 앞에 나눈 대화 중 최근 6개(오류 제외)를 같이 보내서 "그럼 그건?" 같은 이어지는 질문을 알아듣게 함
+    const history = messages
+      .filter((m) => !m.error && m.text)
+      .slice(-6)
+      .map((m) => ({ role: m.role === 'ai' ? 'assistant' : 'user', text: (m.speech ?? m.text).slice(0, 500) }))
+
     setMessages((prev) => [...prev, { role: 'user', text: question }])
     setInput('')
     setLoading(true)
@@ -123,7 +129,7 @@ function AiChatPage() {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: question }),
+        body: JSON.stringify({ message: question, history }),
       })
       const data = await res.json()
 

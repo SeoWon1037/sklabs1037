@@ -43,7 +43,12 @@ public final class AiChatRules {
             - "커플 페이지 열어줘", "sklabs에서 모의투자 화면으로 가줘"처럼 SKLabs의 화면을 열어 달라는 말에는 open_page 도구를 불러.
               도구가 성공하면 화면이 자동으로 열리니까 "○○ 화면을 열게요."라고 한 줄만 답해. 주소를 글로 안내하지 마.
               표에 없는 화면이면 열 수 없다고 말하고 ☰ 전체 메뉴를 안내해.
-            - 앞에 나눈 대화가 함께 올 수 있어. "그럼 그 종목 뉴스는?", "그거 다시 설명해줘"처럼 앞 대화를 가리키는 말은 그 흐름을 이어서 답해.
+            - "유튜브 열어줘", "유튜브에서 아이유 검색해줘", "네이버에서 날씨 찾아줘"처럼 바깥 사이트를 열어 달라는 말에는 open_website 도구를 불러.
+              검색할 말이 있으면 query에 넣어. 성공하면 새 창으로 열리니까 "○○을(를) 열게요."라고 한 줄만 답해.
+              "크롬에서 유튜브 열어줘"처럼 브라우저 이름이 같이 나와도 open_website 한 번이면 돼 (브라우저를 따로 실행할 필요 없음).
+              도구의 표에 없는 사이트는 아직 열 수 없다고 말해.
+            - 앞에 나눈 대화가 함께 올 수 있어. "그럼 그 종목 뉴스는?", "그거 다시 설명해줘", "그거 실행해", "응 그걸로 해줘"처럼 앞 대화를 가리키는 말은 그 흐름을 이어서 답해.
+              네가 바로 앞에서 "○○을(를) 대신 실행해 드릴까요?"처럼 제안했고 사용자가 "그거", "응", "그래"라고 했으면 그 제안을 실행해.
               단, 앞 대화에 있던 주가 · 수익률 같은 숫자는 그대로 다시 쓰지 말고 필요하면 도구로 다시 조회해.
             - 중고거래 상품을 찾는 질문("아이폰 15 중고 있어?", "30만 원 이하 자전거 찾아줘")은 search_market으로 찾아 답해.
               "- 제목 · 가격 · 지역" 한 줄씩 최대 5개, 없으면 없다고 말해. 가격 조건은 max_price(원)로 넣어. 무료 나눔은 0원이야.
@@ -108,6 +113,50 @@ public final class AiChatRules {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("open", p[0]);
         m.put("label", p[1]);
+        return m;
+
+    }
+
+    // 🌐 사이트 열기: 챗봇이 열 수 있는 바깥 사이트 (이 표에 있는 곳만 → AI가 아무 주소나 만들 수 없음)
+    //   값 = { 이름, 첫 화면 주소, 검색 주소(끝에 검색어를 붙임, 없으면 null) }
+    public static final Map<String, String[]> SITES = sites();
+
+    private static Map<String, String[]> sites() {
+
+        Map<String, String[]> m = new LinkedHashMap<>();
+        m.put("youtube", new String[]{"유튜브", "https://www.youtube.com/", "https://www.youtube.com/results?search_query="});
+        m.put("youtube_music", new String[]{"유튜브 뮤직", "https://music.youtube.com/", "https://music.youtube.com/search?q="});
+        m.put("naver", new String[]{"네이버", "https://www.naver.com/", "https://search.naver.com/search.naver?query="});
+        m.put("google", new String[]{"구글", "https://www.google.com/", "https://www.google.com/search?q="});
+        m.put("daum", new String[]{"다음", "https://www.daum.net/", "https://search.daum.net/search?q="});
+        m.put("naver_map", new String[]{"네이버 지도", "https://map.naver.com/", "https://map.naver.com/p/search/"});
+        m.put("kakao_map", new String[]{"카카오맵", "https://map.kakao.com/", "https://map.kakao.com/?q="});
+        m.put("gmail", new String[]{"지메일", "https://mail.google.com/", null});
+        m.put("netflix", new String[]{"넷플릭스", "https://www.netflix.com/", "https://www.netflix.com/search?q="});
+        m.put("chzzk", new String[]{"치지직", "https://chzzk.naver.com/", "https://chzzk.naver.com/search?query="});
+        m.put("twitch", new String[]{"트위치", "https://www.twitch.tv/", "https://www.twitch.tv/search?term="});
+        m.put("instagram", new String[]{"인스타그램", "https://www.instagram.com/", null});
+        m.put("github", new String[]{"깃허브", "https://github.com/", "https://github.com/search?q="});
+        m.put("coupang", new String[]{"쿠팡", "https://www.coupang.com/", "https://www.coupang.com/np/search?q="});
+        return java.util.Collections.unmodifiableMap(m);
+
+    }
+
+    /** open_website 도구 결과: { openUrl, label }. 표에 없는 사이트면 예외. query가 있으면 그 사이트의 검색 화면 */
+    public static Map<String, Object> website(Object site, Object query) {
+
+        String[] s = site == null ? null : SITES.get(String.valueOf(site).strip().toLowerCase());
+        if (s == null) throw new IllegalArgumentException("열 수 없는 사이트예요. 열 수 있는 사이트: " + String.join(", ", SITES.keySet()));
+
+        String q = query == null ? "" : String.valueOf(query).replaceAll("[\\p{Cntrl}]", " ").replaceAll("\\s+", " ").strip();
+        if (q.length() > 100) q = q.substring(0, 100);
+
+        String url = (q.isEmpty() || s[2] == null) ? s[1]
+                : s[2] + java.net.URLEncoder.encode(q, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("openUrl", url);
+        m.put("label", s[0] + (q.isEmpty() || s[2] == null ? "" : " 검색: " + q));
         return m;
 
     }

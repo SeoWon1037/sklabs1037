@@ -9,6 +9,7 @@
 // 실행
 //   node tools\pc-helper\sklabs-pc-helper.js          ← 켜 두는 동안만 동작 (창을 닫으면 꺼짐)
 //   node tools\pc-helper\sklabs-pc-helper.js --pair   ← 연결 화면을 다시 열기
+//   node tools\pc-helper\sklabs-pc-helper.js --mouse  ← 🖱️ 말로 마우스 움직이기도 허용 (이 옵션 없이 켜면 마우스 기능은 꺼져 있음)
 //
 // 안전 장치 (웹사이트가 내 PC의 프로그램을 실행하게 여는 것이므로)
 //   1. 이 PC 안에서만 들음 (127.0.0.1) — 인터넷이나 같은 와이파이의 다른 기기에서는 접속할 수 없음
@@ -17,6 +18,9 @@
 //   4. "시작 메뉴에 있는 프로그램"과 "스팀 게임"만 실행함. 사이트가 보내는 것은 목록의 번호(id)뿐이고,
 //      명령어 · 파일 경로를 받아서 실행하는 기능은 없음
 //   5. 실행은 1초에 한 번까지
+//   6. 🌐 사이트 열기는 정해진 사이트(유튜브 · 네이버 · 구글 등)의 https 주소만
+//   7. 🖱️ 마우스는 --mouse 로 켰을 때만 (사이트에서는 켤 수 없음). 이동 · 클릭 · 스크롤만 하고 키보드 입력 기능은 없음.
+//      사이트가 보내는 것은 숫자(거리 · 위치 · 횟수)뿐이고, 범위를 벗어난 값은 거절
 // ============================================
 'use strict'
 
@@ -27,7 +31,7 @@ const os = require('os')
 const crypto = require('crypto')
 const { execFile, spawn } = require('child_process')
 
-const VERSION = '1.0.0'
+const VERSION = '1.2.0'
 const PORT = 47613
 const ALLOWED_ORIGINS = ['https://sklabs1037.com', 'https://www.sklabs1037.com', 'http://localhost:5173']
 const SITE = 'https://sklabs1037.com'
@@ -105,6 +109,118 @@ const dedupe = (items) => {
     if (!seen.has(k) || it.kind === 'steam') seen.set(k, it)
   }
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+}
+
+// ---------- 🌐 사이트 열기 (순수 함수) ----------
+
+// 기본 브라우저로 열어 줄 수 있는 사이트 (사이트의 AiChatRules.SITES와 같은 곳들). 여기 없는 주소는 열지 않음
+const OPEN_HOSTS = ['www.youtube.com', 'music.youtube.com', 'www.naver.com', 'search.naver.com', 'www.google.com', 'www.daum.net', 'search.daum.net',
+  'map.naver.com', 'map.kakao.com', 'mail.google.com', 'www.netflix.com', 'chzzk.naver.com', 'www.twitch.tv', 'www.instagram.com', 'github.com', 'www.coupang.com']
+
+/** 열어도 되는 주소면 다듬은 주소, 아니면 null (https · 표에 있는 사이트 · 아이디/비밀번호 없음 · 500자까지) */
+const safeUrl = (raw) => {
+  if (typeof raw !== 'string' || raw.length > 500) return null
+  let u
+  try { u = new URL(raw) } catch { return null }
+  if (u.protocol !== 'https:' || u.username || u.password || u.port) return null
+  if (!OPEN_HOSTS.includes(u.hostname)) return null
+  return u.href
+}
+
+// ---------- 🖱️ 마우스 (순수 함수: 요청 → 마우스 일꾼에게 보낼 한 줄) ----------
+
+const int = (v, min, max) => (Number.isInteger(v) && v >= min && v <= max ? v : null)
+
+/**
+ * 요청 → 한 줄 명령 (숫자와 정해진 글자만 들어감). 모르는 동작 · 범위를 벗어난 값이면 null
+ *   move   { dx, dy }        → "M dx dy"      지금 자리에서 dx · dy 만큼 (픽셀, ±2000까지)
+ *   to     { x, y }          → "A x y"        화면의 위치로 (0~1000, 가로 · 세로를 1000으로 나눈 눈금)
+ *   click  { button, count } → "C L|R 1|2"    왼쪽 · 오른쪽, 한 번 · 두 번
+ *   scroll { amount }        → "S n"          위(+) · 아래(−) 로 n칸 (±20까지)
+ */
+const mouseLine = (body) => {
+  const b = body && typeof body === 'object' ? body : {}
+  if (b.action === 'move') {
+    const dx = int(b.dx, -2000, 2000), dy = int(b.dy, -2000, 2000)
+    return dx === null || dy === null ? null : `M ${dx} ${dy}`
+  }
+  if (b.action === 'to') {
+    const x = int(b.x, 0, 1000), y = int(b.y, 0, 1000)
+    return x === null || y === null ? null : `A ${x} ${y}`
+  }
+  if (b.action === 'click') {
+    const button = b.button === 'right' ? 'R' : b.button === 'left' || b.button === undefined ? 'L' : null
+    const count = b.count === undefined ? 1 : int(b.count, 1, 2)
+    return button === null || count === null ? null : `C ${button} ${count}`
+  }
+  if (b.action === 'scroll') {
+    const n = int(b.amount, -20, 20)
+    return n === null || n === 0 ? null : `S ${n}`
+  }
+  return null
+}
+
+// 마우스 일꾼: 파워셸 하나를 켜 두고 한 줄씩 받아서 움직임 (명령마다 새로 켜면 1초씩 걸려서)
+// - 받는 줄은 위 mouseLine이 만든 것뿐. 일꾼은 숫자로 바꿀 수 없는 글자를 무시함
+const MOUSE_SCRIPT = `
+$ErrorActionPreference = 'SilentlyContinue'
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class SkMouse {
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X; public int Y; }
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, int data, UIntPtr extra);
+  [DllImport("user32.dll")] public static extern int GetSystemMetrics(int index);
+}
+"@
+$w = [SkMouse]::GetSystemMetrics(0)
+$h = [SkMouse]::GetSystemMetrics(1)
+function Clamp([int]$v, [int]$max) { if ($v -lt 0) { return 0 }; if ($v -gt ($max - 1)) { return ($max - 1) }; return $v }
+[Console]::Out.WriteLine('READY')
+while ($true) {
+  $line = [Console]::In.ReadLine()
+  if ($null -eq $line) { break }
+  $p = $line.Trim().Split(' ')
+  $a = 0; $b = 0
+  if ($p.Length -ge 2) { [void][int]::TryParse($p[1], [ref]$a) }
+  if ($p.Length -ge 3) { [void][int]::TryParse($p[2], [ref]$b) }
+  if ($p[0] -eq 'M') {
+    $pt = New-Object SkMouse+POINT
+    [void][SkMouse]::GetCursorPos([ref]$pt)
+    [void][SkMouse]::SetCursorPos((Clamp ($pt.X + $a) $w), (Clamp ($pt.Y + $b) $h))
+  } elseif ($p[0] -eq 'A') {
+    [void][SkMouse]::SetCursorPos((Clamp ([int]($w * $a / 1000)) $w), (Clamp ([int]($h * $b / 1000)) $h))
+  } elseif ($p[0] -eq 'C') {
+    $down = 0x0002; $up = 0x0004
+    if ($p[1] -eq 'R') { $down = 0x0008; $up = 0x0010 }
+    $n = 1; if ($b -eq 2) { $n = 2 }
+    for ($i = 0; $i -lt $n; $i++) {
+      [SkMouse]::mouse_event($down, 0, 0, 0, [UIntPtr]::Zero)
+      [SkMouse]::mouse_event($up, 0, 0, 0, [UIntPtr]::Zero)
+      Start-Sleep -Milliseconds 60
+    }
+  } elseif ($p[0] -eq 'S') {
+    [SkMouse]::mouse_event(0x0800, 0, 0, ($a * 120), [UIntPtr]::Zero)
+  }
+}
+`
+
+let mouseWorker = null
+const startMouseWorker = () => {
+  // -EncodedCommand: 스크립트를 파일로 쓰지 않고 넘김 (윈도우 파워셸은 UTF-16LE를 base64로 받음)
+  const encoded = Buffer.from(MOUSE_SCRIPT, 'utf16le').toString('base64')
+  const child = spawn('powershell.exe', ['-NoProfile', '-NoLogo', '-EncodedCommand', encoded], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true })
+  child.stdout.once('data', () => console.log('  🖱️ 마우스 기능이 준비됐어요.'))
+  child.on('exit', () => { if (mouseWorker === child) mouseWorker = null })
+  child.on('error', () => { if (mouseWorker === child) mouseWorker = null })
+  mouseWorker = child
+}
+
+const sendMouse = (line) => {
+  if (!mouseWorker || mouseWorker.killed) startMouseWorker()
+  mouseWorker.stdin.write(line + '\n')
 }
 
 // ---------- 이 PC에서 프로그램 찾기 ----------
@@ -187,8 +303,13 @@ const readBody = (req) => new Promise((resolve) => {
   req.on('error', () => resolve({}))
 })
 
-const createServer = (token) => {
+// mouse: 🖱️ 마우스 기능을 켰는지 (--mouse). onMouse: 한 줄 명령을 받을 곳 (테스트에서는 가짜)
+const openInBrowser = (target) => spawn('rundll32.exe', ['url.dll,FileProtocolHandler', target], { detached: true, stdio: 'ignore' }).unref()
+
+const createServer = (token, { mouse = false, onMouse = sendMouse, onOpen = openInBrowser } = {}) => {
   let lastLaunch = 0
+  let mouseCount = 0
+  let mouseWindow = 0
 
   return http.createServer(async (req, res) => {
     const origin = req.headers.origin
@@ -200,7 +321,7 @@ const createServer = (token) => {
     const url = (req.url || '').split('?')[0]
 
     // 도우미가 켜져 있는지만 (표 없이)
-    if (req.method === 'GET' && url === '/health') return send(res, 200, { ok: true, name: 'sklabs-pc-helper', version: VERSION }, origin)
+    if (req.method === 'GET' && url === '/health') return send(res, 200, { ok: true, name: 'sklabs-pc-helper', version: VERSION, mouse }, origin)
 
     if (!safeEqual(req.headers['x-sklabs-token'], token)) return send(res, 401, { ok: false, message: '연결 표가 맞지 않아요. 도우미를 --pair 로 다시 켜서 연결해 주세요.' }, origin)
 
@@ -231,6 +352,41 @@ const createServer = (token) => {
       }
     }
 
+    // 🌐 정해진 사이트를 기본 브라우저로 열기
+    if (req.method === 'POST' && url === '/open') {
+      const target = safeUrl((await readBody(req)).url)
+      if (!target) return send(res, 400, { ok: false, message: '열 수 없는 주소예요.' }, origin)
+      if (Date.now() - lastLaunch < 1000) return send(res, 429, { ok: false, message: '너무 빨라요. 잠시 뒤에 다시 해 주세요.' }, origin)
+      lastLaunch = Date.now()
+
+      try {
+        onOpen(target)
+        console.log(`  🌐 열기: ${new URL(target).hostname}`)
+        return send(res, 200, { ok: true }, origin)
+      } catch (e) {
+        return send(res, 500, { ok: false, message: `열지 못했어요: ${e.message}` }, origin)
+      }
+    }
+
+    // 🖱️ 마우스 (--mouse 로 켰을 때만)
+    if (req.method === 'POST' && url === '/mouse') {
+      if (!mouse) return send(res, 403, { ok: false, message: '마우스 기능이 꺼져 있어요. 도우미를 --mouse 로 켜 주세요.' }, origin)
+      const line = mouseLine(await readBody(req))
+      if (!line) return send(res, 400, { ok: false, message: '할 수 없는 마우스 동작이에요.' }, origin)
+
+      // 1초에 20번까지
+      const now = Date.now()
+      if (now - mouseWindow > 1000) { mouseWindow = now; mouseCount = 0 }
+      if (++mouseCount > 20) return send(res, 429, { ok: false, message: '너무 빨라요.' }, origin)
+
+      try {
+        onMouse(line)
+        return send(res, 200, { ok: true }, origin)
+      } catch (e) {
+        return send(res, 500, { ok: false, message: `마우스를 움직이지 못했어요: ${e.message}` }, origin)
+      }
+    }
+
     return send(res, 404, { ok: false, message: 'not found' }, origin)
   })
 }
@@ -246,7 +402,11 @@ const main = async () => {
   console.log('  이 PC에 설치된 프로그램을 찾는 중...')
   await scan()
 
-  const server = createServer(token)
+  const mouse = process.argv.includes('--mouse')
+  if (mouse) startMouseWorker()
+  else console.log('  🖱️ 마우스 기능은 꺼져 있어요. (말로 마우스를 움직이려면 --mouse 를 붙여서 켜세요)')
+
+  const server = createServer(token, { mouse })
   server.on('error', (e) => {
     console.log(e.code === 'EADDRINUSE' ? '  이미 켜져 있어요. (다른 창에서 실행 중)' : `  시작하지 못했어요: ${e.message}`)
     process.exit(1)
@@ -264,4 +424,4 @@ const main = async () => {
 
 if (require.main === module) main()
 
-module.exports = { allowedOrigin, allowedHost, safeEqual, makeId, startAppsFromJson, parseVdfPaths, parseAcf, launchCommand, dedupe, createServer, PORT, _setPrograms: (list) => { programs = list; scannedAt = Date.now() } }
+module.exports = { safeUrl, mouseLine, MOUSE_SCRIPT, allowedOrigin, allowedHost, safeEqual, makeId, startAppsFromJson, parseVdfPaths, parseAcf, launchCommand, dedupe, createServer, PORT, _setPrograms: (list) => { programs = list; scannedAt = Date.now() } }

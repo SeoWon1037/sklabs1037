@@ -119,6 +119,7 @@ public class AiChatController {
             body.put("sources", result.getSources());
             body.put("loginRequired", result.isLoginRequired());
             body.put("launch", result.getLaunch());       // 🖥️ "배틀그라운드 실행해줘" → 화면이 PC 도우미에게 이 이름을 실행시킴
+            body.put("openUrl", result.getOpenUrl());     // 🌐 "유튜브 열어줘" → 화면이 새 창으로 엶
             body.put("navigate", result.getNavigate());   // 🧭 "커플 페이지 열어줘" → 화면이 이 주소로 이동
 
             return ResponseEntity.ok(body);

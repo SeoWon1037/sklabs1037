@@ -145,6 +145,12 @@ public class AiChatServiceImpl implements IAiChatService {
                     Map.of("id", Map.of("type", "integer", "description", "지울 약속의 id"),
                             "all", Map.of("type", "boolean", "description", "반복 약속을 그 약속부터 뒤의 것까지 모두 지우려면 true")),
                     List.of("id")),
+            tool("open_website",
+                    "바깥 사이트를 새 창으로 연다 (정해진 사이트만). query를 주면 그 사이트에서 검색한 화면을 연다. 사용자가 열어 달라 · 찾아 달라고 했을 때만 쓴다.",
+                    Map.of("site", Map.of("type", "string", "enum", new ArrayList<>(AiChatRules.SITES.keySet()),
+                                    "description", "youtube=유튜브, youtube_music=유튜브 뮤직, naver=네이버, google=구글, daum=다음, naver_map=네이버 지도, kakao_map=카카오맵, gmail=지메일, netflix=넷플릭스, chzzk=치지직, twitch=트위치, instagram=인스타그램, github=깃허브, coupang=쿠팡"),
+                            "query", Map.of("type", "string", "description", "그 사이트에서 검색할 말 (없으면 넣지 않는다)")),
+                    List.of("site")),
             tool("open_page",
                     "SKLabs의 화면을 연다. 사용자가 어떤 화면을 열어 달라 · 가 달라 · 보여 달라고 했을 때만 쓴다. 성공하면 사용자의 화면이 그 화면으로 바뀐다.",
                     Map.of("page", Map.of("type", "string", "enum", new ArrayList<>(AiChatRules.PAGES.keySet()),
@@ -221,6 +227,7 @@ public class AiChatServiceImpl implements IAiChatService {
         vo.setLoginRequired(r.loginRequired());
         vo.setNavigate(r.navigate());
         vo.setLaunch(r.launch());
+        vo.setOpenUrl(r.openUrl());
         return finish(vo, r.answer(), r.toolsUsed());
 
     }
@@ -241,7 +248,8 @@ public class AiChatServiceImpl implements IAiChatService {
 
     // navigate: 🧭 open_page로 열기로 한 화면 주소 (없으면 null)
     // launch: 🖥️ launch_program으로 실행하기로 한 프로그램 이름 (실제 실행은 화면이 PC 도우미에게 시킴, 없으면 null)
-    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources, boolean loginRequired, String navigate, String launch) {
+    // openUrl: 🌐 open_website로 열기로 한 바깥 사이트 주소 (AiChatRules.SITES 표에서 만든 것, 없으면 null)
+    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources, boolean loginRequired, String navigate, String launch, String openUrl) {
     }
 
     // 질문 하나를 Claude + 도구 반복으로 답하기
@@ -254,6 +262,7 @@ public class AiChatServiceImpl implements IAiChatService {
         String systemPrompt = AiChatRules.systemPrompt(stockRules, userId != null, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")))
                 + AiChatRules.programsPrompt(programs);
         String launch = null;
+        String openUrl = null;
         boolean loginRequired = false;
         String navigate = null;
 
@@ -284,7 +293,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     answer += "\n\n(답변이 길어 일부가 생략되었습니다. 궁금한 부분을 나눠서 질문해주세요.)";
                 }
 
-                return new AgentResult(answer, toolsUsed, sources, loginRequired, navigate, launch);
+                return new AgentResult(answer, toolsUsed, sources, loginRequired, navigate, launch, openUrl);
 
             }
 
@@ -320,6 +329,7 @@ public class AiChatServiceImpl implements IAiChatService {
                         out = needLogin ? AiChatRules.loginRequired(toolName) : runTool(toolName, input, userId);
                     }
                     if ("open_page".equals(toolName) && out instanceof Map<?, ?> opened) navigate = String.valueOf(opened.get("open"));
+                    if ("open_website".equals(toolName) && out instanceof Map<?, ?> site) openUrl = String.valueOf(site.get("openUrl"));
                     collectSources(toolName, input, out, sources);
                     // 기사 주소는 화면용 (AI에게는 안 보냄 → 토큰 절약)
                     result.put("content", jsonMapper.writeValueAsString(withoutLinks(out)));
@@ -342,7 +352,7 @@ public class AiChatServiceImpl implements IAiChatService {
         }
 
         // 최대 횟수 안에 답을 못 끝낸 경우
-        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources, loginRequired, navigate, launch);
+        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources, loginRequired, navigate, launch, openUrl);
 
     }
 
@@ -686,6 +696,12 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "open_website": {
+
+                return AiChatRules.website(input.get("site"), input.get("query"));
+
+            }
+
             case "open_page": {
 
                 return AiChatRules.openPage(input.get("page"));
@@ -792,6 +808,7 @@ public class AiChatServiceImpl implements IAiChatService {
             case "list_plans"         -> "내 약속 조회";
             case "delete_plan"        -> "약속 지우기";
             case "launch_program"     -> "🖥️ 프로그램 실행 (" + str(input.get("name")) + ")";
+            case "open_website"       -> "🌐 사이트 열기 (" + str(input.get("site")) + (str(input.get("query")).isBlank() ? "" : " · " + str(input.get("query"))) + ")";
             case "open_page"          -> "🧭 화면 열기 (" + str(input.get("page")) + ")";
             case "search_market"      -> "🛍️ 장터 검색 (" + str(input.get("query")) + ")";
             case "screen_stocks"      -> "조건 검색 (" + describeScreen(input) + ")";

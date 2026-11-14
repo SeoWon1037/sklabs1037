@@ -17,7 +17,7 @@ import { canListen, listen, speak, stopSpeaking } from '../../voice/speech'
 import { voiceIntent } from '../../voice/voiceIntent'
 import { alwaysOn, onAlwaysChange, setAlways, wakeCommand } from '../../voice/alwaysListen'
 import { aiActed, onOpenVoice } from '../../voice/aiActed'
-import { launchByName, tryLaunch } from '../../pc/pcHelper'
+import { launchByName, openSite, tryLaunch, tryMouse } from '../../pc/pcHelper'
 import './VoiceCommand.css'
 
 const EXAMPLES = ['오늘 날씨 어때?', '커플한테 하트 보내줘', '토요일 7시 데이트 잡아줘', '모의투자 열어줘', '삼성전자 주가 보여줘']
@@ -34,6 +34,10 @@ function VoiceCommand() {
   const [message, setMessage] = useState('')
   const [typed, setTyped] = useState('')
   const [chat, setChat] = useState([])          // 이 시트에서 나눈 대화 [{ role: 'user' | 'ai', text, needLogin? }]
+  // 대화 기억은 항상 최신 것을 봐야 함: 답을 읽은 뒤 "다시 듣기"는 예전 화면 그림의 함수에서 시작되므로,
+  // 그 함수가 붙잡고 있는 chat은 한두 마디 전 것 → "그거 실행해"가 앞 대화 없이 전달되던 문제. ref는 언제나 최신
+  const chatRef = useRef([])
+  useEffect(() => { chatRef.current = chat }, [chat])
   const chatBox = useRef(null)
   useEffect(() => { if (chatBox.current) chatBox.current.scrollTop = chatBox.current.scrollHeight }, [chat])   // 새 답이 오면 아래로
   const openRef = useRef(false)                 // 답을 읽은 뒤 다시 들을지 판단용 (닫혔으면 안 들음)
@@ -51,6 +55,7 @@ function VoiceCommand() {
     session.current = null
     openRef.current = false
     stopSpeaking()
+    chatRef.current = []
     setChat([])
     setOpen(false)
     setState('idle')
@@ -76,8 +81,9 @@ function VoiceCommand() {
   // 그 자리에서 AI 챗봇에게 묻기 (AI 챗봇 화면과 같은 API · 같은 도구)
   // programs: 🖥️ PC 도우미가 연결되어 있고 "실행해줘" 같은 말일 때, 설치된 프로그램 이름 목록 (AI가 그중에서 고름)
   const askHere = async (question, programs) => {
-    const history = chat.filter((m) => m.text).slice(-6).map((m) => ({ role: m.role === 'ai' ? 'assistant' : 'user', text: m.text.slice(0, 500) }))
-    setChat((c) => [...c, { role: 'user', text: question }])
+    const history = chatRef.current.filter((m) => m.text).slice(-6).map((m) => ({ role: m.role === 'ai' ? 'assistant' : 'user', text: m.text.slice(0, 500) }))
+    chatRef.current = [...chatRef.current, { role: 'user', text: question }]
+    setChat(chatRef.current)
     setHeard('')
     setState('working')
     setMessage('생각하는 중...')
@@ -103,11 +109,17 @@ function VoiceCommand() {
       }
 
       if (!data.success) {
-        setChat((c) => [...c, { role: 'ai', text: data.message ?? 'AI 응답에 실패했어요.', needLogin: data.loginRequired === true }])
+        chatRef.current = [...chatRef.current, { role: 'ai', text: data.message ?? 'AI 응답에 실패했어요.', needLogin: data.loginRequired === true }]
+        setChat(chatRef.current)
         return
       }
 
-      setChat((c) => [...c, { role: 'ai', text: data.answer, needLogin: data.loginRequired === true }])
+      // 🌐 챗봇이 열기로 한 바깥 사이트 (못 열었으면 누를 수 있는 링크를 붙임)
+      let link = null
+      if (typeof data.openUrl === 'string' && data.openUrl && !(await openSite(data.openUrl))) link = data.openUrl
+
+      chatRef.current = [...chatRef.current, { role: 'ai', text: data.answer, needLogin: data.loginRequired === true, link }]
+      setChat(chatRef.current)
       if ((data.toolsUsed ?? []).length > 0) aiActed(data.toolsUsed)   // 하트 · 약속 등 → 보고 있는 화면 새로고침
 
       // 챗봇이 화면을 열기로 했으면 답을 읽으면서 이동
@@ -125,6 +137,16 @@ function VoiceCommand() {
 
   // 들은 말(또는 입력한 글)로 할 일 정하기
   const run = async (text) => {
+    // 🖱️ "마우스 오른쪽으로", "클릭", "스크롤 내려": 바로 움직이고, 소리 내어 답하지 않고 곧바로 다시 들음 (연달아 말할 수 있게)
+    const mouse = await tryMouse(text)
+    if (mouse.done || mouse.error) {
+      setHeard('')
+      setState('idle')
+      setMessage(mouse.done ? `🖱️ “${text}” → ${mouse.done}` : `🖱️ ${mouse.error}`)
+      if (mouse.done && supported && openRef.current) setTimeout(() => start(true), 250)
+      return undefined
+    }
+
     const intent = voiceIntent(text)
     setHeard(text)
 
@@ -137,9 +159,10 @@ function VoiceCommand() {
     const pc = await tryLaunch(text)
     if (pc.launched || pc.error) {
       const say = pc.launched ? `▶ ${pc.launched}을(를) 실행할게요.` : `실행하지 못했어요. ${pc.error}`
-      setChat((c) => [...c, { role: 'user', text }, { role: 'ai', text: say }])
+      chatRef.current = [...chatRef.current, { role: 'user', text }, { role: 'ai', text: say }]
+      setChat(chatRef.current)
       setHeard('')
-      return speak(say)
+      return speak(say, 'ko', () => { if (openRef.current && supported) start() })
     }
     if (pc.programs && intent.type !== 'stock') return askHere(text, pc.programs)   // ("삼성전자 열어줘"는 아래에서 종목부터 찾아봄)
 
@@ -159,10 +182,11 @@ function VoiceCommand() {
     }
   }
 
-  const start = () => {
+  // keepMessage: 🖱️ 마우스 동작 뒤에 다시 들을 때는 "무엇을 했는지" 글을 지우지 않음
+  const start = (keepMessage = false) => {
     stopSpeaking()
     setHeard('')
-    setMessage('')
+    if (keepMessage !== true) setMessage('')
     setState('listening')
     session.current = listen({
       onInterim: setHeard,
@@ -296,6 +320,7 @@ function VoiceCommand() {
                   <div key={i} className={`vc-msg vc-msg-${m.role}`}>
                     <p>{m.text.replace(/\*\*/g, '')}</p>
                     {m.needLogin && <Link to="/login" className="vc-login" onClick={close}>🔑 로그인하러 가기</Link>}
+                    {m.link && <a href={m.link} target="_blank" rel="noopener noreferrer" className="vc-login">🌐 눌러서 열기</a>}
                   </div>
                 ))}
               </div>

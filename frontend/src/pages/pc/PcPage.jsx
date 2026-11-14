@@ -1,12 +1,13 @@
 // ============================================
 // 🖥️ 내 PC 프로그램 실행 (주소: /pc)
 // - "배틀그라운드 실행해줘"처럼 말하면 내 PC에 설치된 프로그램을 실행 (윈도우 + PC 도우미가 켜져 있을 때)
+// - 🖱️ 말로 마우스 움직이기: 도우미를 --mouse 로 켜고(PC에서만 켤 수 있음) 이 화면에서도 켜야 동작
 // - 이 화면: 연결 상태 · 연결하는 법 · 찾은 프로그램 목록(검색 · 눌러서 실행) · 다시 찾기 · 연결 끊기
 // - 도우미가 처음 켜질 때 이 화면을 /pc#pair=연결표 로 엶 → 표를 이 브라우저에 저장하고 주소에서 지움
 //   (표는 # 뒤에 있어서 서버로 전송되지 않음)
 // ============================================
 import { useCallback, useEffect, useState } from 'react'
-import { pcHealth, pcLaunch, pcPaired, pcPrograms, setPcToken, tokenFromHash } from '../../pc/pcHelper'
+import { mouseOn, pcHealth, pcLaunch, pcMouseReady, pcPaired, pcPrograms, setMouseOn, setPcToken, tokenFromHash } from '../../pc/pcHelper'
 import './PcPage.css'
 
 function PcPage() {
@@ -16,6 +17,8 @@ function PcPage() {
   const [q, setQ] = useState('')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  const [mouseReady, setMouseReady] = useState(false)   // 도우미가 --mouse 로 켜져 있는지
+  const [mouse, setMouse] = useState(mouseOn)           // 이 브라우저에서 말로 마우스 쓰기를 켰는지
 
   const check = useCallback(async (fresh = false) => {
     setBusy(true)
@@ -23,6 +26,7 @@ function PcPage() {
       if (!(await pcHealth())) return setState('off')
       if (!pcPaired()) return setState('unpaired')
       setPrograms(await pcPrograms(fresh))
+      setMouseReady(await pcMouseReady())
       setState('on')
       if (fresh) setMsg('프로그램을 다시 찾았어요.')
     } catch (e) {
@@ -99,6 +103,29 @@ function PcPage() {
             🔒 도우미는 이 PC 안에서만 듣고, 이 사이트에서 온 요청과 연결 표가 맞는 브라우저의 요청만 받아요.
             실행할 수 있는 것은 시작 메뉴에 있는 프로그램과 스팀 게임뿐이고, 명령어나 파일을 받아서 실행하는 기능은 없어요.
           </p>
+        </section>
+      )}
+
+      {state === 'on' && (
+        <section className="pc-card">
+          <h2>🖱️ 말로 마우스 움직이기</h2>
+          {mouseReady ? (
+            <>
+              <div className="pc-mouse">
+                <span>{mouse ? '켜져 있어요. 🎤에 아래처럼 말해 보세요.' : '꺼져 있어요. 켜면 말로 마우스를 움직일 수 있어요.'}</span>
+                <button type="button" className={`pc-switch ${mouse ? 'pc-switch-on' : ''}`} onClick={() => { setMouseOn(!mouse); setMouse(!mouse) }} aria-pressed={mouse}>{mouse ? '켜짐' : '꺼짐'}</button>
+              </div>
+              <ul className="pc-says">
+                <li><b>움직이기</b> “마우스 오른쪽으로” · “마우스 위로 조금” · “마우스 아래로 많이” · “마우스 왼쪽으로 300”</li>
+                <li><b>위치로</b> “마우스 가운데” · “마우스 왼쪽 위” · “마우스 오른쪽 아래”</li>
+                <li><b>누르기</b> “클릭” · “더블클릭” · “우클릭”</li>
+                <li><b>스크롤</b> “스크롤 내려” · “스크롤 올려” · “스크롤 많이 내려”</li>
+              </ul>
+              <p className="pc-muted">화면에 무엇이 있는지는 볼 수 없어서 방향과 거리로만 움직여요. 글자를 입력하는 기능은 없어요. 항상 듣기를 켜 두면 주변 소리의 “클릭”에도 반응할 수 있으니 쓰지 않을 때는 꺼 두세요.</p>
+            </>
+          ) : (
+            <p className="pc-muted">도우미가 마우스 기능 없이 켜져 있어요. 도우미 창을 닫고 아래처럼 다시 켜면 쓸 수 있어요.<code>.\pc-helper.cmd --mouse</code></p>
+          )}
         </section>
       )}
 

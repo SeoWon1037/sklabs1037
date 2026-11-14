@@ -70,6 +70,54 @@ test('같은 이름은 하나만, 스팀 것을 남김', () => {
   assert.ok(list.some((p) => p.kind === 'steam'))
 })
 
+test('사이트 열기는 정해진 https 주소만', () => {
+  assert.strictEqual(h.safeUrl('https://www.youtube.com/'), 'https://www.youtube.com/')
+  assert.ok(h.safeUrl('https://www.youtube.com/results?search_query=%EC%95%84%EC%9D%B4%EC%9C%A0'))
+  assert.ok(h.safeUrl('https://music.youtube.com/'))
+  assert.strictEqual(h.safeUrl('http://www.youtube.com/'), null)                       // https 아님
+  assert.strictEqual(h.safeUrl('https://evil.example/'), null)                         // 표에 없음
+  assert.strictEqual(h.safeUrl('https://www.youtube.com.evil.example/'), null)
+  assert.strictEqual(h.safeUrl('https://www.youtube.com@evil.example/'), null)         // 아이디 자리에 숨긴 주소
+  assert.strictEqual(h.safeUrl('https://www.youtube.com:8443/'), null)
+  assert.strictEqual(h.safeUrl('file:///C:/Windows/System32/calc.exe'), null)
+  assert.strictEqual(h.safeUrl('steam://rungameid/1'), null)
+  assert.strictEqual(h.safeUrl('javascript:alert(1)'), null)
+  assert.strictEqual(h.safeUrl('calc.exe'), null)
+  assert.strictEqual(h.safeUrl('https://www.youtube.com/' + 'a'.repeat(600)), null)
+  assert.strictEqual(h.safeUrl(undefined), null)
+})
+
+test('마우스 요청은 숫자와 정해진 동작만', () => {
+  assert.strictEqual(h.mouseLine({ action: 'move', dx: 150, dy: 0 }), 'M 150 0')
+  assert.strictEqual(h.mouseLine({ action: 'move', dx: -50, dy: 400 }), 'M -50 400')
+  assert.strictEqual(h.mouseLine({ action: 'to', x: 500, y: 500 }), 'A 500 500')
+  assert.strictEqual(h.mouseLine({ action: 'click' }), 'C L 1')
+  assert.strictEqual(h.mouseLine({ action: 'click', button: 'right' }), 'C R 1')
+  assert.strictEqual(h.mouseLine({ action: 'click', count: 2 }), 'C L 2')
+  assert.strictEqual(h.mouseLine({ action: 'scroll', amount: -3 }), 'S -3')
+
+  // 범위를 벗어나거나 숫자가 아니면 거절
+  assert.strictEqual(h.mouseLine({ action: 'move', dx: 99999, dy: 0 }), null)
+  assert.strictEqual(h.mouseLine({ action: 'move', dx: '150; calc', dy: 0 }), null)
+  assert.strictEqual(h.mouseLine({ action: 'move', dx: 1.5, dy: 0 }), null)
+  assert.strictEqual(h.mouseLine({ action: 'to', x: 1001, y: 0 }), null)
+  assert.strictEqual(h.mouseLine({ action: 'click', button: 'middle' }), null)
+  assert.strictEqual(h.mouseLine({ action: 'click', count: 3 }), null)
+  assert.strictEqual(h.mouseLine({ action: 'scroll', amount: 0 }), null)
+  assert.strictEqual(h.mouseLine({ action: 'scroll', amount: 21 }), null)
+  // 키보드 · 모르는 동작은 없음
+  assert.strictEqual(h.mouseLine({ action: 'type', text: 'calc' }), null)
+  assert.strictEqual(h.mouseLine({ action: 'key', key: 'enter' }), null)
+  assert.strictEqual(h.mouseLine(null), null)
+
+  // 모든 결과는 "글자 하나 + 숫자/L/R" 뿐
+  for (const b of [{ action: 'move', dx: 1, dy: 2 }, { action: 'to', x: 1, y: 2 }, { action: 'click', button: 'right', count: 2 }, { action: 'scroll', amount: 5 }]) {
+    assert.ok(/^[MACS]( (-?\d+|[LR]))+$/.test(h.mouseLine(b)), h.mouseLine(b))
+  }
+  // 일꾼 스크립트에 글자 입력(SendKeys · keybd_event)은 없음
+  assert.ok(!/SendKeys|keybd_event|SendInput/i.test(h.MOUSE_SCRIPT))
+})
+
 // ----- 서버: 다른 사이트 · 표 없는 요청 · 목록에 없는 번호는 거절 -----
 const call = (port, path, { method = 'GET', origin, token, host, body } = {}) => new Promise((resolve) => {
   const headers = { Host: host ?? `127.0.0.1:${h.PORT}` }
@@ -118,6 +166,44 @@ test('서버 안전 장치', async () => {
   } finally {
     server.close()
   }
+})
+
+test('마우스는 켰을 때만, 표가 맞을 때만', async () => {
+  const TOKEN = 'T'.repeat(32)
+  const ok = 'https://sklabs1037.com'
+  const lines = []
+
+  const off = h.createServer(TOKEN, { mouse: false, onMouse: (l) => lines.push(l) })
+  await new Promise((r) => off.listen(0, '127.0.0.1', r))
+  try {
+    assert.strictEqual((await call(off.address().port, '/health', { origin: ok })).body.mouse, false)
+    assert.strictEqual((await call(off.address().port, '/mouse', { method: 'POST', origin: ok, token: TOKEN, body: { action: 'click' } })).status, 403)
+  } finally { off.close() }
+
+  const opened = []
+  const on = h.createServer(TOKEN, { mouse: true, onMouse: (l) => lines.push(l), onOpen: (u) => opened.push(u) })
+  await new Promise((r) => on.listen(0, '127.0.0.1', r))
+  const port = on.address().port
+  try {
+    assert.strictEqual((await call(port, '/health', { origin: ok })).body.mouse, true)
+    assert.strictEqual((await call(port, '/mouse', { method: 'POST', origin: ok, body: { action: 'click' } })).status, 401)                       // 표 없음
+    assert.strictEqual((await call(port, '/mouse', { method: 'POST', origin: 'https://evil.example', token: TOKEN, body: { action: 'click' } })).status, 403)
+    assert.strictEqual((await call(port, '/mouse', { method: 'POST', origin: ok, token: TOKEN, body: { action: 'type', text: 'x' } })).status, 400)   // 키보드 없음
+    assert.strictEqual((await call(port, '/mouse', { method: 'POST', origin: ok, token: TOKEN, body: { action: 'move', dx: 150, dy: 0 } })).status, 200)
+    assert.strictEqual((await call(port, '/mouse', { method: 'POST', origin: ok, token: TOKEN, body: { action: 'click', count: 2 } })).status, 200)
+    assert.deepStrictEqual(lines, ['M 150 0', 'C L 2'])
+
+    // 🌐 사이트 열기: 정해진 주소만 (테스트에서는 실제로 열지 않음)
+    assert.strictEqual((await call(port, '/open', { method: 'POST', origin: ok, token: TOKEN, body: { url: 'https://evil.example/' } })).status, 400)
+    assert.strictEqual((await call(port, '/open', { method: 'POST', origin: ok, body: { url: 'https://www.youtube.com/' } })).status, 401)
+    assert.strictEqual((await call(port, '/open', { method: 'POST', origin: ok, token: TOKEN, body: { url: 'https://www.youtube.com/' } })).status, 200)
+    assert.deepStrictEqual(opened, ['https://www.youtube.com/'])
+
+    // 1초에 20번까지
+    let limited = 0
+    for (let i = 0; i < 25; i++) if ((await call(port, '/mouse', { method: 'POST', origin: ok, token: TOKEN, body: { action: 'scroll', amount: 1 } })).status === 429) limited++
+    assert.ok(limited >= 1, 'rate limit')
+  } finally { on.close() }
 })
 
 ;(async () => {

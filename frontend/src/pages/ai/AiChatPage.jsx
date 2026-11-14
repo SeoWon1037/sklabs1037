@@ -15,7 +15,7 @@ import VoiceButton from '../../components/ai/VoiceButton'
 import { canSpeak, speak, stopSpeaking } from '../../voice/speech'
 import { alwaysOn } from '../../voice/alwaysListen'
 import { voiceIntent } from '../../voice/voiceIntent'
-import { launchByName, tryLaunch } from '../../pc/pcHelper'
+import { launchByName, openSite, tryLaunch, tryMouse } from '../../pc/pcHelper'
 
 // 🧾 답변 근거 종류
 const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속', MARKET: '장터' }
@@ -112,6 +112,10 @@ function AiChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 대화 기억은 항상 최신 것을 봐야 함 (다시 듣기에서 넘어온 예전 함수가 예전 대화를 붙잡고 있어도) → ref
+  const messagesRef = useRef([])
+  useEffect(() => { messagesRef.current = messages }, [messages])
+
   // byVoice: 🎤로 말한 질문 → 답을 다 읽은 뒤 마이크를 다시 켬 (계속 듣기: 버튼 없이 이어서 대화)
   const voiceRef = useRef(null)
   const sendMessage = async (text, byVoice = false) => {
@@ -131,6 +135,15 @@ function AiChatPage() {
       return
     }
 
+    // 🖱️ "마우스 오른쪽으로", "클릭": 바로 움직이고 (말로 했으면) 다시 들음
+    const mouse = await tryMouse(question)
+    if (mouse.done || mouse.error) {
+      setMessages((prev) => [...prev, { role: 'user', text: question }, { role: 'ai', text: `🖱️ ${mouse.done ?? mouse.error}`, error: Boolean(mouse.error) }])
+      setInput('')
+      if (mouse.done && (byVoice || always)) setTimeout(() => voiceRef.current?.start(), 250)
+      return
+    }
+
     // 🖥️ "배틀그라운드 실행해줘": PC 도우미가 연결되어 있으면 이름이 맞는 프로그램을 바로 실행, 애매하면 목록과 함께 AI에게
     const pc = await tryLaunch(question)
     if (pc.launched || pc.error) {
@@ -142,7 +155,7 @@ function AiChatPage() {
     }
 
     // 🧠 대화 기억: 앞에 나눈 대화 중 최근 6개(오류 제외)를 같이 보내서 "그럼 그건?" 같은 이어지는 질문을 알아듣게 함
-    const history = messages
+    const history = messagesRef.current
       .filter((m) => !m.error && m.text)
       .slice(-6)
       .map((m) => ({ role: m.role === 'ai' ? 'assistant' : 'user', text: (m.speech ?? m.text).slice(0, 500) }))
@@ -168,10 +181,14 @@ function AiChatPage() {
         }
       }
 
+      // 🌐 챗봇이 열기로 한 바깥 사이트 (못 열었으면 누를 수 있는 링크를 붙임)
+      let link = null
+      if (data.success && typeof data.openUrl === 'string' && data.openUrl && !(await openSite(data.openUrl))) link = data.openUrl
+
       if (data.success) {
         setMessages((prev) => [
           ...prev,
-          { role: 'ai', text: data.answer, tools: data.toolsUsed, sources: data.sources, chatId: data.chatId, rating: null, needLogin: data.loginRequired === true },
+          { role: 'ai', text: data.answer, tools: data.toolsUsed, sources: data.sources, chatId: data.chatId, rating: null, needLogin: data.loginRequired === true, link },
         ])
         // 🔊 음성 대화 중이면 답을 읽어줌. 말로 물었으면 다 읽고 나서 다시 들음
         // 🧭 챗봇이 화면을 열기로 했으면(open_page) 답을 잠깐 보여 준 뒤 이동 (서버가 정한 사이트 안 주소만)
@@ -317,6 +334,10 @@ function AiChatPage() {
               {/* 로그인해야 답할 수 있는 질문이었으면 바로 갈 수 있게 */}
               {m.needLogin && (
                 <Link to="/login" className="ai-login">🔑 로그인하러 가기</Link>
+              )}
+
+              {m.link && (
+                <a href={m.link} target="_blank" rel="noopener noreferrer" className="ai-login">🌐 눌러서 열기</a>
               )}
 
               {/* 🔊 이 답 듣기 (브리핑인데 자동으로 소리가 안 났으면 크게) */}

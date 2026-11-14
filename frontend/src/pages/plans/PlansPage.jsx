@@ -226,7 +226,7 @@ function PlansPage() {
                 <div className="plans-set">
                   <div>
                     <b>🟢 항상 듣기</b>
-                    <span>켜 두면 버튼 없이 “챗봇아, 오늘 날씨 어때?”처럼 부르면 돼요. 사이트가 열려 있는 동안만 들어요. (이 기기에서만)</span>
+                    <span>켜 두면 버튼을 누르지 않아도, 말하면 챗봇 창이 열리고 바로 물어봐요. 사이트가 열려 있는 동안만 들어요. (이 기기에서만)</span>
                   </div>
                   <button type="button" className={`plans-switch ${always ? 'plans-on' : ''}`} onClick={() => setAlways(!always)} aria-pressed={always}>
                     {always ? '켜짐' : '꺼짐'}

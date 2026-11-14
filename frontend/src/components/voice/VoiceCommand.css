@@ -1,0 +1,35 @@
+/* ============================================
+   🎤 말로 시키기 (vc-)
+   ============================================ */
+.vc-fab { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 40; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border: 0; border-radius: 50%; background: var(--primary); color: var(--primary-text); font-size: 22px; box-shadow: 0 6px 18px rgb(0 0 0 / 28%); }
+.vc-fab:hover { background: var(--primary-hover); }
+.vc-fab-raised { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }   /* 상품 화면: 아래에 붙은 찜 · 채팅 줄 위로 */
+
+.vc-backdrop { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: flex-end; justify-content: center; background: rgb(0 0 0 / 55%); }
+.vc-sheet { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 480px; max-height: 92dvh; padding: 26px 20px calc(20px + env(safe-area-inset-bottom, 0px)); border-radius: 20px 20px 0 0; background: var(--bg); color: var(--text); overflow-y: auto; }
+.vc-close { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 16px; }
+
+.vc-mic { display: flex; align-items: center; justify-content: center; width: 84px; height: 84px; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--text); font-size: 34px; }
+.vc-mic-on { background: color-mix(in srgb, #e5484d 20%, transparent); color: #e5484d; animation: vc-pulse 1.3s ease-in-out infinite; }
+.vc-mic:disabled { opacity: 0.5; }
+@keyframes vc-pulse { 50% { box-shadow: 0 0 0 14px color-mix(in srgb, #e5484d 14%, transparent); } }
+
+.vc-status { margin: 4px 0 0; color: var(--text-muted); font-size: 14px; line-height: 1.6; text-align: center; word-break: keep-all; }
+.vc-heard { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.5; text-align: center; overflow-wrap: anywhere; }
+
+.vc-form { display: flex; gap: 8px; width: 100%; margin-top: 6px; }
+.vc-form input { flex: 1; min-width: 0; height: 46px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--text) 4%, transparent); color: var(--text); font-size: 16px; }
+.vc-form input:focus { outline: none; border-color: var(--primary); }
+.vc-form button { flex: none; height: 46px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--primary); color: var(--primary-text); font-size: 14px; font-weight: 700; }
+.vc-form button:disabled { opacity: 0.5; }
+
+.vc-examples { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: 6px; }
+.vc-examples span { flex: 1 1 100%; color: var(--text-muted); font-size: 12px; }
+.vc-examples button { min-height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text); font-size: 13px; }
+.vc-examples button:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+
+@media (min-width: 641px) {
+  .vc-backdrop { align-items: center; }
+  .vc-sheet { border-radius: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .vc-mic-on { animation: none; } }

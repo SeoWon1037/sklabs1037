@@ -33,6 +33,7 @@ public class RateLimitGuard implements WebMvcConfigurer, HandlerInterceptor {
             new Rule("/api/user/demo", 20, 600),
             new Rule("/api/support", 5, 600),
             new Rule("/api/ai/chat", 30, 600),
+            new Rule("/api/ai/translate", 30, 600),   // 🌐 번역
             new Rule("/api/market/ai-write", 10, 600),
             new Rule("/api/market", 60, 600),   // 상품 올리기·찜·채팅·신고
             new Rule("/api/track/error", 20, 600),   // 🐞 화면 오류 보고 (/api/track 보다 먼저 와야 함)

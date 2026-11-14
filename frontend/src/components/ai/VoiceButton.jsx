@@ -1,6 +1,7 @@
 // ============================================
 // 🎤 말로 묻기 (AI 비서 입력칸 옆)
 // - 브라우저 음성 인식(Web Speech API, 한국어)으로 말한 내용을 입력칸에 채움 → 확인하고 [보내기]
+// - onFinal: 다 들은 뒤 한 번 불림 (🔊 음성 대화가 켜져 있으면 AI 비서가 바로 보냄)
 // - 지원하지 않는 브라우저(일부 PC 파이어폭스 등)면 버튼을 안 보여줌
 // - 음성은 브라우저(구글·애플) 쪽에서 글자로 바뀌고, 우리 서버로는 글자만 감
 // ============================================
@@ -8,7 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 
 const Recognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null
 
-function VoiceButton({ onText, disabled }) {
+function VoiceButton({ onText, onFinal, disabled }) {
 
   const [listening, setListening] = useState(false)
   const [error, setError] = useState('')
@@ -24,14 +25,18 @@ function VoiceButton({ onText, disabled }) {
     r.lang = 'ko-KR'
     r.interimResults = true
     r.continuous = false
+    let heard = ''
     r.onresult = (e) => {
-      const text = Array.from(e.results).map((x) => x[0].transcript).join('')
-      onText(text)
+      heard = Array.from(e.results).map((x) => x[0].transcript).join('')
+      onText(heard)
     }
     r.onerror = (e) => {
       setError(e.error === 'not-allowed' ? '마이크 권한을 허용해주세요.' : e.error === 'no-speech' ? '말소리가 들리지 않았어요.' : '음성 인식을 하지 못했어요.')
     }
-    r.onend = () => setListening(false)
+    r.onend = () => {
+      setListening(false)
+      if (heard.trim()) onFinal?.(heard.trim())   // 다 들은 뒤 (음성 대화 중이면 바로 보내는 데 씀)
+    }
     rec.current = r
     setListening(true)
     r.start()

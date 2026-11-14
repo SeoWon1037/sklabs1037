@@ -215,4 +215,43 @@
            AND ID        = #{id}
            AND COUPLE_ID = #{coupleId}
     </delete>
+    <!-- ===== 🎂 생일 ===== -->
+    <select id="selectBirthdays" resultType="java.util.LinkedHashMap">
+        SELECT  B.USER_ID       AS "userId"
+               ,B.BIRTH_MONTH   AS "month"
+               ,B.BIRTH_DAY     AS "day"
+          FROM T_COUPLE_BIRTHDAY B
+         WHERE B.COUPLE_ID = #{coupleId}
+    </select>
+
+    <insert id="upsertBirthday">
+        INSERT INTO T_COUPLE_BIRTHDAY (COUPLE_ID, USER_ID, BIRTH_MONTH, BIRTH_DAY, UPD_BY)
+        VALUES (#{coupleId}, #{userId}, #{month}, #{day}, #{updBy})
+        ON CONFLICT (COUPLE_ID, USER_ID) DO UPDATE
+           SET  BIRTH_MONTH = EXCLUDED.BIRTH_MONTH
+               ,BIRTH_DAY   = EXCLUDED.BIRTH_DAY
+               ,UPD_BY      = EXCLUDED.UPD_BY
+               ,UPD_DAY     = NOW()
+    </insert>
+
+    <delete id="deleteBirthday">
+        DELETE FROM T_COUPLE_BIRTHDAY WHERE COUPLE_ID = #{coupleId} AND USER_ID = #{userId}
+    </delete>
+
+    <select id="selectBirthdaysOn" resultType="java.util.LinkedHashMap">
+        SELECT  B.COUPLE_ID     AS "coupleId"
+               ,B.USER_ID       AS "userId"
+               ,U.NICKNAME      AS "name"
+               ,CASE WHEN C.REQUESTER_ID = B.USER_ID THEN C.PARTNER_ID ELSE C.REQUESTER_ID END AS "partnerId"
+               ,B.BIRTH_MONTH   AS "month"
+               ,B.BIRTH_DAY     AS "day"
+          FROM T_COUPLE_BIRTHDAY B
+          JOIN T_COUPLE C ON C.ID = B.COUPLE_ID AND C.STATUS = 'ACTIVE'
+          JOIN T_USER U   ON U.ID = B.USER_ID AND U.DEL_DAY IS NULL
+         WHERE 1=1
+           AND B.BIRTH_MONTH = #{month}
+           AND B.BIRTH_DAY   = #{day}
+           AND (C.REQUESTER_ID = B.USER_ID OR C.PARTNER_ID = B.USER_ID)
+         ORDER BY B.COUPLE_ID, B.USER_ID
+    </select>
 </mapper>

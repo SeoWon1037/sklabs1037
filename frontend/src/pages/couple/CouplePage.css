@@ -175,3 +175,21 @@
 @media (min-width: 641px) {
   .ca-grid { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* 🎂 생일 */
+.cp-bday { margin-top: 18px; padding: 14px; border-radius: 14px; background: color-mix(in srgb, var(--cp-pink) 7%, transparent); text-align: left; }
+.cp-bday h2 { margin: 0 0 8px; font-size: 15px; }
+.cp-bday ul { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cp-bday li { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.cp-bday-name { flex: 1; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.cp-bday-date { flex: none; color: var(--cp-muted); font-size: 13px; }
+.cp-bday-dday { flex: none; min-width: 52px; color: var(--cp-pink); font-size: 15px; text-align: right; font-variant-numeric: tabular-nums; }
+.cp-bday-today { font-size: 14px; }
+.cp-bday-btn { flex: none; min-height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer; }
+.cp-bday-add { border-color: var(--cp-pink); color: var(--cp-pink); }
+.cp-bday li.cp-bday-edit { flex-wrap: wrap; padding: 8px 0; }
+.cp-bday-selects { display: flex; gap: 6px; }
+.cp-bday-selects select { height: 40px; padding: 0 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg, transparent); color: var(--text); font-size: 16px; }
+.cp-bday-actions { display: flex; flex: 1 1 100%; gap: 6px; }
+.cp-bday-actions .btn { flex: 1; min-height: 40px; padding: 0 8px; font-size: 13px; }
+.cp-bday > p { margin: 8px 0 0; color: var(--cp-muted); font-size: 12px; line-height: 1.6; }

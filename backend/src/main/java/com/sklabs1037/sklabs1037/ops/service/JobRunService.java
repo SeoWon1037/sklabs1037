@@ -265,6 +265,7 @@ public class JobRunService {
             Map.entry("VOICE_MORNING", "아침 음성 브리핑"),
             Map.entry("VOICE_CLOSE", "장 마감 음성 브리핑"),
             Map.entry("PLAN_REMIND", "약속 알림"),
+            Map.entry("COUPLE_BIRTHDAY", "커플 생일 알림"),
             Map.entry("WATCHDOG", "작업 감시")
     );
 

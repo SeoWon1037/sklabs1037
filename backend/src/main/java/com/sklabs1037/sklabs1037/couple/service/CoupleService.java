@@ -64,6 +64,7 @@ public class CoupleService {
             Long partnerId = partnerOf(id, userId);
             c.put("heartsSent", coupleDao.selectHeartCounts(id, userId));
             c.put("heartsReceived", partnerId == null ? Map.of("total", 0, "today", 0) : coupleDao.selectHeartCounts(id, partnerId));
+            c.put("birthdays", birthdays(id, userId, String.valueOf(active.get("myName")), String.valueOf(active.get("partnerName")), today));
             result.put("couple", c);
         } else {
             result.put("couple", null);
@@ -171,6 +172,105 @@ public class CoupleService {
 
         Long other = userId.equals(num(c.get("requesterId"))) ? num(c.get("partnerId")) : num(c.get("requesterId"));
         notificationService.notify(other, "COUPLE", "💔 커플 연결이 끝났어요", myName(userId) + "님이 커플 연결을 끊었어요", "/couple");
+
+    }
+
+    // ============================================
+    // 🎂 생일
+    // ============================================
+    // { me: {name, month, day, date, dDay, text} | null, partner: … | null }
+    private Map<String, Object> birthdays(Long coupleId, Long userId, String myName, String partnerName, LocalDate today) {
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("me", null);
+        m.put("partner", null);
+
+        try {
+            for (Map<String, Object> b : coupleDao.selectBirthdays(coupleId)) {
+                boolean mine = userId.equals(num(b.get("userId")));
+                java.time.MonthDay md = java.time.MonthDay.of(((Number) b.get("month")).intValue(), ((Number) b.get("day")).intValue());
+                m.put(mine ? "me" : "partner", BirthdayRules.view(mine ? myName : partnerName, md, today));
+            }
+        } catch (Exception e) {
+            // 표가 아직 없어도 커플 화면은 보여야 함
+            log.warn("커플 생일 읽기 실패: {}", e.getMessage());
+        }
+        return m;
+
+    }
+
+    // who: "me" = 내 생일, "partner" = 상대 생일. month가 비어 있으면 지움
+    public void setBirthday(Long userId, String who, Object month, Object day) {
+
+        Map<String, Object> active = coupleDao.selectActive(userId);
+        if (active == null) throw new IllegalArgumentException("커플이 된 뒤에 생일을 넣을 수 있어요.");
+
+        Long id = num(active.get("id"));
+        Long target = "partner".equals(who) ? partnerOf(id, userId) : userId;
+        if (target == null) throw new IllegalArgumentException("상대를 찾지 못했어요.");
+
+        if (month == null || String.valueOf(month).isBlank()) {
+            coupleDao.deleteBirthday(id, target);
+            return;
+        }
+
+        java.time.MonthDay md = BirthdayRules.monthDay(month, day);
+        coupleDao.upsertBirthday(id, target, md.getMonthValue(), md.getDayOfMonth(), userId);
+
+    }
+
+    // AI 챗봇 get_couple_info 도구용: 함께한 날 · 다음 기념일 · 두 사람 생일
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> info(Long userId) {
+
+        Map<String, Object> c = (Map<String, Object>) mine(userId).get("couple");
+        if (c == null) throw new IllegalArgumentException("아직 커플이 아니에요. 커플 화면(/couple)에서 신청할 수 있어요.");
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("today", today().toString());
+        m.put("myName", c.get("myName"));
+        m.put("partnerName", c.get("partnerName"));
+        m.put("startDate", c.get("startDate"));
+        m.put("daysTogether", c.get("days"));
+        m.put("nextAnniversary", c.get("next"));
+        m.put("birthdays", c.get("birthdays"));
+        m.put("note", "birthdays의 me · partner가 null이면 아직 입력하지 않은 것 → 커플 화면(/couple)에서 생일을 넣으라고 안내");
+        return m;
+
+    }
+
+    // 매일 09:00 (작업 COUPLE_BIRTHDAY): 생일 7일 전 · 하루 전 · 당일에 상대에게 알림, 당일에는 본인에게도 축하
+    public com.sklabs1037.sklabs1037.ops.service.JobRunService.JobOutcome birthdayRemindAll() {
+
+        LocalDate today = today();
+        int sent = 0;
+        int failed = 0;
+
+        for (int left : BirthdayRules.REMIND_DAYS) {
+            LocalDate target = today.plusDays(left);
+
+            // 그날이 생일인 사람 (+ 윤년이 아닌 해의 2월 28일에는 2월 29일생도)
+            List<Map<String, Object>> rows = new ArrayList<>(coupleDao.selectBirthdaysOn(target.getMonthValue(), target.getDayOfMonth()));
+            if (target.getMonthValue() == 2 && target.getDayOfMonth() == 28 && !target.isLeapYear()) rows.addAll(coupleDao.selectBirthdaysOn(2, 29));
+
+            for (Map<String, Object> b : rows) {
+                try {
+                    String name = String.valueOf(b.get("name"));
+                    java.time.MonthDay md = java.time.MonthDay.of(((Number) b.get("month")).intValue(), ((Number) b.get("day")).intValue());
+                    BirthdayRules.Message msg = BirthdayRules.partnerMessage(name, md, left);
+                    String key = "BDAY:" + b.get("coupleId") + ":" + b.get("userId") + ":" + target + ":D" + left;
+
+                    notificationService.notify(num(b.get("partnerId")), "COUPLE", msg.title(), msg.body(), "/couple", key);
+                    if (left == 0) notificationService.notify(num(b.get("userId")), "COUPLE", "🎂 " + name + "님, 생일 축하해요!", "오늘 하루 행복하게 보내세요 🎉", "/couple", key + ":ME");
+                    sent++;
+                } catch (Exception e) {
+                    failed++;
+                    log.warn("커플 생일 알림 실패: {}", e.getMessage());
+                }
+            }
+        }
+
+        return com.sklabs1037.sklabs1037.ops.service.JobRunService.JobOutcome.of(sent + failed, failed, "생일 알림 " + sent + "건 (7일 전 · 하루 전 · 당일)");
 
     }
 

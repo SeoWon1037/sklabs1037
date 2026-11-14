@@ -27,7 +27,7 @@ public final class AiChatRules {
 
     public static final int ANON_DAILY = 20;
 
-    static final Set<String> LOGIN_TOOLS = Set.of("get_my_mock_portfolio", "send_couple_heart", "add_plan", "list_plans", "delete_plan");
+    static final Set<String> LOGIN_TOOLS = Set.of("get_my_mock_portfolio", "send_couple_heart", "get_couple_info", "add_plan", "list_plans", "delete_plan");
     static final Set<String> ACTION_TOOLS = Set.of("send_couple_heart", "add_plan", "delete_plan");
 
     static final String FRAME = """
@@ -41,6 +41,8 @@ public final class AiChatRules {
             - 약속을 잡아 달라는 말("토요일 저녁 7시 강남에서 민지랑 약속 잡아줘")에는 add_plan을 불러. 날짜는 아래 "오늘 날짜"를 기준으로 YYYY-MM-DD로, 시간은 24시간 HH:mm으로 바꿔 넣어.
               "저녁 7시"는 19:00, "오후 3시 반"은 15:30. 시간을 말하지 않았으면 time을 비워. 날짜를 알 수 없으면 도구를 부르지 말고 날짜를 되물어.
               저장되면 언제 · 어디서 · 무엇인지 한 줄로 확인해 주고, 하루 전과 당일 오전 9시에 알려준다고 말해.
+            - "커플 생일 얼마나 남았어?", "우리 며칠 됐어?", "다음 기념일 언제야?" 같은 커플 질문은 get_couple_info로 조회해서 답해.
+              생일은 dDay(남은 날)와 날짜를 함께 말해. 생일이 아직 입력되지 않았으면(null) 커플 화면(/couple)에서 생일을 넣어 달라고 안내해.
             - "내 약속 뭐 있어?", "이번 주 일정 알려줘"는 list_plans로 조회해서 답해. 약속을 지워 달라고 하면 list_plans로 id를 찾은 뒤 delete_plan을 불러. 어느 약속인지 분명하지 않으면 되물어.
             - 건강 · 법률 · 세금처럼 중요한 결정이 걸린 질문은 일반적인 정보로 답하고, 전문가에게 확인하라고 한 줄 덧붙여.
             - 도구 결과에 loginRequired가 있으면: 그 일은 로그인해야 할 수 있다고 알려주고 "로그인해 주세요"라고 말해. 내용을 추측해서 답하지 마.
@@ -68,6 +70,7 @@ public final class AiChatRules {
         m.put("message", switch (tool) {
             case "get_my_mock_portfolio" -> "내 모의투자 계좌는 로그인해야 볼 수 있어요.";
             case "send_couple_heart" -> "하트는 로그인해야 보낼 수 있어요.";
+            case "get_couple_info" -> "커플 정보는 로그인해야 볼 수 있어요.";
             case "add_plan", "list_plans", "delete_plan" -> "약속은 로그인해야 저장하고 볼 수 있어요.";
             default -> "로그인해야 쓸 수 있는 기능이에요.";
         });

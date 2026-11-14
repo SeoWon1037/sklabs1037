@@ -24,6 +24,7 @@ import java.util.Map;
  *   POST /api/couple/request { nickname, startDate }   신청
  *   POST /api/couple/{id}/accept | decline | cancel
  *   POST /api/couple/end                 커플 끊기
+ *   POST /api/couple/birthday            🎂 생일 넣기 { who: me | partner, month, day } (month가 없으면 지움) → 커플 정보
  *   POST /api/couple/heart               💗 하트 날리기 (커플끼리만) → { sent: {total, today} }
  *   GET  /api/couple/photos              📸 기념일 앨범 (칸 + 사진 목록)
  *   POST /api/couple/photos { milestone, caption, image(base64) }   사진 올리기
@@ -149,6 +150,19 @@ public class CoupleController {
         if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
 
         return run("하트", () -> coupleService.heart(userId));
+
+    }
+
+    @PostMapping("/birthday")
+    public ResponseEntity<Map<String, Object>> birthday(@RequestBody Map<String, Object> req, HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+
+        return run("생일", () -> {
+            coupleService.setBirthday(userId, str(req, "who"), req.get("month"), req.get("day"));
+            return coupleService.mine(userId);
+        });
 
     }
 

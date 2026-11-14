@@ -56,6 +56,17 @@ public interface CoupleDao {
     // 상대가 아직 안 읽은 하트 알림은 지우고 새로 1줄 (알림함이 하트로 가득 차지 않게)
     int deleteUnreadHeartNotifications(@Param("userId") Long userId);
 
+    // ===== 🎂 생일 =====
+    // 이 커플의 생일 { userId, month, day }
+    List<Map<String, Object>> selectBirthdays(@Param("coupleId") Long coupleId);
+
+    int upsertBirthday(@Param("coupleId") Long coupleId, @Param("userId") Long userId, @Param("month") int month, @Param("day") int day, @Param("updBy") Long updBy);
+
+    int deleteBirthday(@Param("coupleId") Long coupleId, @Param("userId") Long userId);
+
+    // 그 월 · 일이 생일인 사람 (지금 커플인 쌍만) { coupleId, userId, name, partnerId, month, day }
+    List<Map<String, Object>> selectBirthdaysOn(@Param("month") int month, @Param("day") int day);
+
     // ===== 📸 기념일 앨범 =====
     int insertPhoto(Map<String, Object> photo);   // coupleId, uploaderId, milestone, caption, contentType, bytes, data(byte[])
 

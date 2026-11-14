@@ -4,6 +4,7 @@
 // - 아니면: 상대 닉네임 + 시작일로 신청 / 받은 신청 수락·거절 / 보낸 신청 취소
 // - 커플 정보는 두 사람에게만 보여요
 // - 백엔드: GET /api/couple, POST /api/couple/request, /api/couple/{id}/accept|decline|cancel, /api/couple/end
+// - 🎂 생일: POST /api/couple/birthday { who: me | partner, month, day } → 커플 정보 (couple.birthdays.me / partner: { month, day, dDay })
 // ============================================
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -18,6 +19,58 @@ const post = (url, body) =>
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   }).then((res) => res.json())
+
+// 🎂 생일 한 줄: 입력 전에는 [생일 넣기], 입력 뒤에는 날짜와 D-day (두 사람 모두 서로의 생일을 넣고 고칠 수 있음)
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
+const daysIn = (month) => new Date(2024, month, 0).getDate()   // 2024 = 윤년 → 2월 29일도 고를 수 있음
+
+function BirthdayRow({ who, name, birthday, busy, onSave }) {
+
+  const [editing, setEditing] = useState(false)
+  const [month, setMonth] = useState(birthday?.month ?? 1)
+  const [day, setDay] = useState(birthday?.day ?? 1)
+
+  const changeMonth = (m) => {
+    setMonth(m)
+    setDay((d) => Math.min(d, daysIn(m)))
+  }
+
+  if (editing) {
+    return (
+      <li className="cp-bday-edit">
+        <span className="cp-bday-name">🎂 {name}</span>
+        <div className="cp-bday-selects">
+          <select value={month} onChange={(e) => changeMonth(Number(e.target.value))} aria-label={`${name} 생일 월`}>
+            {MONTHS.map((m) => <option key={m} value={m}>{m}월</option>)}
+          </select>
+          <select value={day} onChange={(e) => setDay(Number(e.target.value))} aria-label={`${name} 생일 일`}>
+            {Array.from({ length: daysIn(month) }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}일</option>)}
+          </select>
+        </div>
+        <div className="cp-bday-actions">
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => { onSave(who, month, day); setEditing(false) }}>저장</button>
+          {birthday && <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => { onSave(who, null, null); setEditing(false) }}>지우기</button>}
+          <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)}>취소</button>
+        </div>
+      </li>
+    )
+  }
+
+  return (
+    <li>
+      <span className="cp-bday-name">🎂 {name}</span>
+      {birthday ? (
+        <>
+          <span className="cp-bday-date">{birthday.month}월 {birthday.day}일</span>
+          <b className={`cp-bday-dday ${birthday.dDay === 0 ? 'cp-bday-today' : ''}`}>{birthday.dDay === 0 ? '오늘! 🎉' : `D-${birthday.dDay}`}</b>
+          <button type="button" className="cp-bday-btn" onClick={() => setEditing(true)}>수정</button>
+        </>
+      ) : (
+        <button type="button" className="cp-bday-btn cp-bday-add" onClick={() => setEditing(true)}>생일 넣기</button>
+      )}
+    </li>
+  )
+}
 
 function CouplePage() {
 
@@ -83,6 +136,9 @@ function CouplePage() {
     }
   }
 
+  const saveBirthday = (who, month, day) =>
+    act('/api/couple/birthday', { who, month, day }, month ? '🎂 생일을 저장했어요.' : '생일을 지웠어요.')
+
   if (needLogin) {
     return (
       <div className="cp-page">
@@ -129,6 +185,18 @@ function CouplePage() {
               보낸 하트 <b>{c.heartsSent.total.toLocaleString()}</b> (오늘 {c.heartsSent.today}) · 받은 하트 <b>{c.heartsReceived.total.toLocaleString()}</b> (오늘 {c.heartsReceived.today})
             </p>
           </div>
+
+          {/* 🎂 생일: 얼마나 남았는지 (7일 전 · 하루 전 · 당일 오전 9시에 알림) */}
+          {c.birthdays && (
+            <div className="cp-bday">
+              <h2>🎂 생일</h2>
+              <ul>
+                <BirthdayRow who="partner" name={c.partnerName} birthday={c.birthdays.partner} busy={busy} onSave={saveBirthday} />
+                <BirthdayRow who="me" name={c.myName} birthday={c.birthdays.me} busy={busy} onSave={saveBirthday} />
+              </ul>
+              <p>생일 7일 전 · 하루 전 · 당일 오전 9시에 알려드려요. AI 챗봇에게 “커플 생일 얼마나 남았어?”라고 물어도 돼요.</p>
+            </div>
+          )}
 
           <p className="cp-private">커플 정보는 두 분에게만 보여요.</p>
 

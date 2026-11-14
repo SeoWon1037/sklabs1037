@@ -315,4 +315,4 @@
 
 /* 🎤 상단 말하기 버튼: 넓은 화면에서만 (휴대폰은 오른쪽 아래 동그란 버튼이 잘 보이고, 상단은 자리가 좁음) */
 .hdr-voice { display: none; }
-@media (min-width: 1000px) { .hdr-voice { display: inline-flex; } }
+@media (min-width: 1000px) { .hdr-voice { display: inline-flex; align-items: center; justify-content: center; padding: 0; line-height: 1; } }

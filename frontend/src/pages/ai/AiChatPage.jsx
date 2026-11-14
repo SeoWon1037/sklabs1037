@@ -1,6 +1,7 @@
 // ============================================
 // AI 챗봇 화면 (주소: /ai) — 로그인 없이도 질문 가능 (하루 20번), 내 계좌 · 하트처럼 로그인이 필요한 답은 [로그인하러 가기]
 // - 백엔드 API
+// - 🧭 "○○ 열어줘"는 바로 그 화면을 엶 (voiceIntent로 먼저 가리고, 못 가린 말은 AI가 open_page 도구로 → 응답의 navigate)
 //   POST /api/ai/chat     { message, history(앞 대화 최근 6개) }         → { success, chatId, answer, toolsUsed, sources(🧾 참고한 기사·종목) }
 //   POST /api/ai/feedback { chatId, rating }  → { success }
 //   GET  /api/watchlist                       → 관심 종목 (브리핑 버튼용)
@@ -9,10 +10,11 @@
 // - /ai?briefing=1 로 들어오면 관심 종목 브리핑 질문을 미리 채움 (메인 화면의 "AI 브리핑 받기")
 // ============================================
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import VoiceButton from '../../components/ai/VoiceButton'
 import { canSpeak, speak, stopSpeaking } from '../../voice/speech'
 import { alwaysOn } from '../../voice/alwaysListen'
+import { voiceIntent } from '../../voice/voiceIntent'
 
 // 🧾 답변 근거 종류
 const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속', MARKET: '장터' }
@@ -43,6 +45,7 @@ function AiChatPage() {
 
   // 주소의 ?q= / ?briefing= 값 (메인 화면에서 넘어온 질문)
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const wantBriefing = searchParams.get('briefing') === '1'
 
   // 대화 목록: { role: 'user' | 'ai', text, tools?, chatId?, rating?, error? }
@@ -115,6 +118,18 @@ function AiChatPage() {
     const question = text.trim()
     if (question === '' || loading) return
 
+    // 🧭 "커플 페이지 열어줘"처럼 화면을 열어 달라는 말은 AI에게 묻지 않고 바로 엶 (빠르고 비용 0)
+    const intent = voiceIntent(question)
+    // ("모의투자"처럼 이름만 쓴 것은 질문일 수 있으니, 열어 달라는 말이 붙었을 때만)
+    if (intent.type === 'go' && intent.to !== '/ai' && /(열어|가\s?줘|가자|보여|이동|들어가|넘어가|켜\s?줘|띄워)/.test(question)) {
+      const say = `${intent.label} 화면을 열게요.`
+      setMessages((prev) => [...prev, { role: 'user', text: question }, { role: 'ai', text: `🧭 ${say}` }])
+      setInput('')
+      if (talkRef.current) speak(say)
+      setTimeout(() => navigate(intent.to), 700)
+      return
+    }
+
     // 🧠 대화 기억: 앞에 나눈 대화 중 최근 6개(오류 제외)를 같이 보내서 "그럼 그건?" 같은 이어지는 질문을 알아듣게 함
     const history = messages
       .filter((m) => !m.error && m.text)
@@ -139,6 +154,13 @@ function AiChatPage() {
           { role: 'ai', text: data.answer, tools: data.toolsUsed, sources: data.sources, chatId: data.chatId, rating: null, needLogin: data.loginRequired === true },
         ])
         // 🔊 음성 대화 중이면 답을 읽어줌. 말로 물었으면 다 읽고 나서 다시 들음
+        // 🧭 챗봇이 화면을 열기로 했으면(open_page) 답을 잠깐 보여 준 뒤 이동 (서버가 정한 사이트 안 주소만)
+        if (typeof data.navigate === 'string' && data.navigate.startsWith('/') && !data.navigate.startsWith('//')) {
+          if (talkRef.current) speak(data.answer)
+          setTimeout(() => navigate(data.navigate), 1200)
+          return
+        }
+
         if (talkRef.current) speak(data.answer, 'ko', byVoice || always ? () => { if (talkRef.current) voiceRef.current?.start() } : undefined)
         else if (always) setTimeout(() => voiceRef.current?.start(), 300)
       } else {

@@ -22,7 +22,7 @@ import java.util.Map;
  * AI 챗봇 Controller
  *
  * API 목록
- *   POST /api/ai/chat       질문하기   { message }          → { success, chatId, answer, toolsUsed, sources, loginRequired }
+ *   POST /api/ai/chat       질문하기   { message }          → { success, chatId, answer, toolsUsed, sources, loginRequired, navigate }
  *   POST /api/ai/feedback   답변 평가  { chatId, rating }   → { success }   (rating: UP / DOWN)
  *
  * 비용 보호
@@ -118,6 +118,7 @@ public class AiChatController {
             body.put("toolsUsed", result.getToolsUsed());
             body.put("sources", result.getSources());
             body.put("loginRequired", result.isLoginRequired());
+            body.put("navigate", result.getNavigate());   // 🧭 "커플 페이지 열어줘" → 화면이 이 주소로 이동
 
             return ResponseEntity.ok(body);
 

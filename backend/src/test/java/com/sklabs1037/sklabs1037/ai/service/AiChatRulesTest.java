@@ -155,4 +155,17 @@ class AiChatRulesTest {
         assertEquals(AiChatRules.HISTORY_TEXT + 1, String.valueOf(h.get(1).get("content")).length());
 
     }
+
+    @Test
+    void 화면_열기는_표에_있는_화면만() {
+
+        assertEquals("/couple", AiChatRules.openPage("couple").get("open"));
+        assertEquals("커플", AiChatRules.openPage(" Couple ").get("label"));
+        assertEquals("/market/new", AiChatRules.openPage("market_sell").get("open"));
+        assertThrows(IllegalArgumentException.class, () -> AiChatRules.openPage("admin"));
+        assertThrows(IllegalArgumentException.class, () -> AiChatRules.openPage("https://evil.example"));
+        assertThrows(IllegalArgumentException.class, () -> AiChatRules.openPage(null));
+        assertTrue(AiChatRules.PAGES.values().stream().allMatch(p -> p[0].startsWith("/") && !p[0].startsWith("//") && !p[0].startsWith("/admin")));
+
+    }
 }

@@ -141,6 +141,11 @@ public class AiChatServiceImpl implements IAiChatService {
                     Map.of("id", Map.of("type", "integer", "description", "지울 약속의 id"),
                             "all", Map.of("type", "boolean", "description", "반복 약속을 그 약속부터 뒤의 것까지 모두 지우려면 true")),
                     List.of("id")),
+            tool("open_page",
+                    "SKLabs의 화면을 연다. 사용자가 어떤 화면을 열어 달라 · 가 달라 · 보여 달라고 했을 때만 쓴다. 성공하면 사용자의 화면이 그 화면으로 바뀐다.",
+                    Map.of("page", Map.of("type", "string", "enum", new ArrayList<>(AiChatRules.PAGES.keySet()),
+                            "description", "home=첫 화면, stock=주식 종목, mock=모의투자, market=중고거래, market_sell=판매하기, market_my=내 장터, messages=메시지, couple=커플, plans=내 약속·음성 브리핑, translate=번역, calendar=증시 일정, whatif=그때 샀더라면, league=AI 리그, predict=예측 게임, quiz=뉴스 퀴즈, persona=투자 성향 테스트, tree=글자 트리, duel=친구 대결, activity=내 활동, mypage=마이페이지, login=로그인, support=문의하기, about=만든 사람")),
+                    List.of("page")),
             tool("search_market",
                     "SKLabs 중고거래 장터에서 지금 판매 중인 상품을 찾는다. 제목 · 가격(원) · 지역 · 판매자를 최대 8개 준다.",
                     Map.of("query", Map.of("type", "string", "description", "찾을 낱말 (예: 아이폰 15)"),
@@ -196,6 +201,7 @@ public class AiChatServiceImpl implements IAiChatService {
 
         vo.setSources(r.sources());
         vo.setLoginRequired(r.loginRequired());
+        vo.setNavigate(r.navigate());
         return finish(vo, r.answer(), r.toolsUsed());
 
     }
@@ -214,7 +220,8 @@ public class AiChatServiceImpl implements IAiChatService {
 
     }
 
-    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources, boolean loginRequired) {
+    // navigate: 🧭 open_page로 열기로 한 화면 주소 (없으면 null)
+    record AgentResult(String answer, List<String> toolsUsed, List<Map<String, Object>> sources, boolean loginRequired, String navigate) {
     }
 
     // 질문 하나를 Claude + 도구 반복으로 답하기
@@ -225,6 +232,7 @@ public class AiChatServiceImpl implements IAiChatService {
         // 고정 틀(무엇이든 답하기 · 로그인 안내 · 하트) + 주식 규칙
         String systemPrompt = AiChatRules.systemPrompt(stockRules, userId != null, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")));
         boolean loginRequired = false;
+        String navigate = null;
 
         // 대화 기록 (질문 → 도구 요청 → 도구 결과 → ... 순서로 쌓임)
         List<Map<String, Object>> messages = new ArrayList<>(history);
@@ -253,7 +261,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     answer += "\n\n(답변이 길어 일부가 생략되었습니다. 궁금한 부분을 나눠서 질문해주세요.)";
                 }
 
-                return new AgentResult(answer, toolsUsed, sources, loginRequired);
+                return new AgentResult(answer, toolsUsed, sources, loginRequired, navigate);
 
             }
 
@@ -280,6 +288,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     boolean needLogin = AiChatRules.needsLogin(toolName, userId);
                     if (needLogin) loginRequired = true;
                     Object out = needLogin ? AiChatRules.loginRequired(toolName) : runTool(toolName, input, userId);
+                    if ("open_page".equals(toolName) && out instanceof Map<?, ?> opened) navigate = String.valueOf(opened.get("open"));
                     collectSources(toolName, input, out, sources);
                     // 기사 주소는 화면용 (AI에게는 안 보냄 → 토큰 절약)
                     result.put("content", jsonMapper.writeValueAsString(withoutLinks(out)));
@@ -302,7 +311,7 @@ public class AiChatServiceImpl implements IAiChatService {
         }
 
         // 최대 횟수 안에 답을 못 끝낸 경우
-        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources, loginRequired);
+        return new AgentResult("질문이 복잡해서 답변을 끝내지 못했어요. 조금 더 구체적으로 질문해주세요.", toolsUsed, sources, loginRequired, navigate);
 
     }
 
@@ -639,6 +648,12 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "open_page": {
+
+                return AiChatRules.openPage(input.get("page"));
+
+            }
+
             case "search_market": {
 
                 return searchMarket(str(input.get("query")), input.get("max_price"));
@@ -737,6 +752,7 @@ public class AiChatServiceImpl implements IAiChatService {
             case "add_plan"           -> "🗓️ 약속 저장 (" + str(input.get("title")) + ")";
             case "list_plans"         -> "내 약속 조회";
             case "delete_plan"        -> "약속 지우기";
+            case "open_page"          -> "🧭 화면 열기 (" + str(input.get("page")) + ")";
             case "search_market"      -> "🛍️ 장터 검색 (" + str(input.get("query")) + ")";
             case "screen_stocks"      -> "조건 검색 (" + describeScreen(input) + ")";
             default                   -> toolName;

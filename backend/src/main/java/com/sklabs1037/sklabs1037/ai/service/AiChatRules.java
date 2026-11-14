@@ -38,6 +38,9 @@ public final class AiChatRules {
               "투자 판단은 본인 책임입니다." 문구는 주식 · 투자 답변에만 붙여.
             - 너는 인터넷 검색을 할 수 없어. 방금 일어난 일, 실시간 교통처럼 최신 정보가 필요한데 도구로 확인할 수 없으면 모른다고 말하고, 아는 범위까지만 답해. 지어내지 마.
             - 날씨 질문("오늘 날씨 어때?", "수원 비 와?")은 get_weather로 조회한 값만 말해. 서울 · 경기권(도구의 supportedRegions)만 되고, 다른 지역은 아직 지원하지 않는다고 말해. 지역을 말하지 않으면 서울로 조회해.
+            - "커플 페이지 열어줘", "sklabs에서 모의투자 화면으로 가줘"처럼 SKLabs의 화면을 열어 달라는 말에는 open_page 도구를 불러.
+              도구가 성공하면 화면이 자동으로 열리니까 "○○ 화면을 열게요."라고 한 줄만 답해. 주소를 글로 안내하지 마.
+              표에 없는 화면이면 열 수 없다고 말하고 ☰ 전체 메뉴를 안내해.
             - 앞에 나눈 대화가 함께 올 수 있어. "그럼 그 종목 뉴스는?", "그거 다시 설명해줘"처럼 앞 대화를 가리키는 말은 그 흐름을 이어서 답해.
               단, 앞 대화에 있던 주가 · 수익률 같은 숫자는 그대로 다시 쓰지 말고 필요하면 도구로 다시 조회해.
             - 중고거래 상품을 찾는 질문("아이폰 15 중고 있어?", "30만 원 이하 자전거 찾아줘")은 search_market으로 찾아 답해.
@@ -57,6 +60,52 @@ public final class AiChatRules {
               사용자가 보내 달라고 하지 않았는데 먼저 보내지 마. 한 번에 한 개만 보낼 수 있어.
             - SKLabs 사용법 질문: 주식 종목(/stock), 모의투자(/mock), 중고거래(/market), 번역(/translate), 커플(/couple), 내 약속 · 음성 브리핑(/plans) 화면이 있어. 모르는 기능은 ☰ 전체 메뉴를 보라고 안내해.
             """;
+
+    // 🧭 화면 열기: 챗봇이 열 수 있는 화면 (이 표에 있는 주소로만 이동 → AI가 아무 주소나 만들 수 없음)
+    public static final Map<String, String[]> PAGES = pages();
+
+    private static Map<String, String[]> pages() {
+
+        Map<String, String[]> m = new LinkedHashMap<>();
+        m.put("home", new String[]{"/", "첫 화면"});
+        m.put("stock", new String[]{"/stock", "주식 종목"});
+        m.put("mock", new String[]{"/mock", "모의투자"});
+        m.put("market", new String[]{"/market", "중고거래"});
+        m.put("market_sell", new String[]{"/market/new", "판매하기"});
+        m.put("market_my", new String[]{"/market/my", "내 장터"});
+        m.put("messages", new String[]{"/messages", "메시지"});
+        m.put("couple", new String[]{"/couple", "커플"});
+        m.put("plans", new String[]{"/plans", "내 약속 · 음성 브리핑"});
+        m.put("translate", new String[]{"/translate", "번역"});
+        m.put("calendar", new String[]{"/calendar", "증시 일정"});
+        m.put("whatif", new String[]{"/whatif", "그때 샀더라면"});
+        m.put("league", new String[]{"/league", "AI 리그"});
+        m.put("predict", new String[]{"/predict", "예측 게임"});
+        m.put("quiz", new String[]{"/quiz", "뉴스 퀴즈"});
+        m.put("persona", new String[]{"/persona", "투자 성향 테스트"});
+        m.put("tree", new String[]{"/tree", "글자 트리"});
+        m.put("duel", new String[]{"/duel", "친구 대결"});
+        m.put("activity", new String[]{"/activity", "내 활동"});
+        m.put("mypage", new String[]{"/mypage", "마이페이지"});
+        m.put("login", new String[]{"/login", "로그인"});
+        m.put("support", new String[]{"/support", "문의하기"});
+        m.put("about", new String[]{"/about", "만든 사람"});
+        return java.util.Collections.unmodifiableMap(m);
+
+    }
+
+    /** open_page 도구 결과: 표에 있는 화면이면 { open: 주소, label } , 아니면 예외 */
+    public static Map<String, Object> openPage(Object page) {
+
+        String[] p = page == null ? null : PAGES.get(String.valueOf(page).strip().toLowerCase());
+        if (p == null) throw new IllegalArgumentException("열 수 없는 화면이에요. 열 수 있는 화면: " + String.join(", ", PAGES.keySet()));
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("open", p[0]);
+        m.put("label", p[1]);
+        return m;
+
+    }
 
     // 🧠 대화 기억: 화면이 보내 준 앞 대화 중 최근 몇 개만, 길이를 잘라서 Claude에게 같이 보냄
     public static final int HISTORY_MAX = 6;          // 메시지 수 (질문 3 + 답 3)

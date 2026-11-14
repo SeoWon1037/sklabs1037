@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🔑 로그인 유지 (T_LOGIN_KEEP) -->
+<mapper namespace="com.sklabs1037.sklabs1037.user.keep.KeepLoginDao">
+
+    <insert id="insert">
+        INSERT INTO T_LOGIN_KEEP (TOKEN_HASH, USER_ID, EXPIRES_AT)
+        VALUES (#{hash}, #{userId}, #{expiresAt})
+    </insert>
+
+    <select id="selectUser" resultType="com.sklabs1037.sklabs1037.user.vo.UserLoginVO">
+        SELECT  U.ID
+               ,U.EMAIL
+               ,U.NICKNAME
+               ,U.ROLE
+          FROM T_LOGIN_KEEP K
+          JOIN T_USER U ON U.ID = K.USER_ID
+         WHERE 1=1
+           AND K.TOKEN_HASH = #{hash}
+           AND K.EXPIRES_AT &gt; #{now}
+           AND U.DEL_DAY IS NULL
+           AND COALESCE(U.PROVIDER, '') NOT IN ('DEMO', 'AI')
+    </select>
+
+    <update id="touch">
+        UPDATE T_LOGIN_KEEP
+           SET  LAST_USED_AT = #{now}
+               ,EXPIRES_AT   = #{expiresAt}
+         WHERE TOKEN_HASH = #{hash}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM T_LOGIN_KEEP WHERE TOKEN_HASH = #{hash}
+    </delete>
+
+    <delete id="deleteByUser">
+        DELETE FROM T_LOGIN_KEEP WHERE USER_ID = #{userId}
+    </delete>
+
+    <delete id="deleteByEmail">
+        DELETE FROM T_LOGIN_KEEP WHERE USER_ID IN (SELECT ID FROM T_USER WHERE EMAIL = #{email})
+    </delete>
+
+    <delete id="deleteExpired">
+        DELETE FROM T_LOGIN_KEEP WHERE EXPIRES_AT &lt; #{now}
+    </delete>
+</mapper>

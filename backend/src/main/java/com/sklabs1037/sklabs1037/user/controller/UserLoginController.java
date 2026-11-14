@@ -32,10 +32,15 @@ public class UserLoginController {
     @Autowired
     private IUserLoginService userLoginService;
 
+    // 🔑 로그인 유지 (서버가 다시 켜져도 · 30분이 지나도 풀리지 않게, 기기에 30일짜리 표를 줌)
+    @Autowired
+    private com.sklabs1037.sklabs1037.user.keep.KeepLoginService keepLoginService;
+
     // 로그인
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody UserLoginVO vo,
-                                                     HttpServletRequest request) throws Exception {
+                                                     HttpServletRequest request,
+                                                     jakarta.servlet.http.HttpServletResponse response) throws Exception {
 
         // 1. 필수값 체크
         if (isBlank(vo.getEmail()) || isBlank(vo.getPassword())) {
@@ -60,6 +65,9 @@ public class UserLoginController {
             // 4. 새 세션을 만들어서 회원 정보 저장 → 브라우저에 새 번호표(JSESSIONID) 발급
             HttpSession session = request.getSession(true);       // true = 새로 만들기
             session.setAttribute(LOGIN_USER, user);
+
+            // 5. 로그인 유지 표 발급
+            keepLoginService.issue(user.getId(), response);
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -105,7 +113,11 @@ public class UserLoginController {
 
     // 로그아웃
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, Object>> logout(HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> logout(HttpServletRequest request,
+                                                      jakarta.servlet.http.HttpServletResponse response) {
+
+        // 로그인 유지 표도 지움 (안 지우면 다음 요청에서 다시 로그인됨)
+        keepLoginService.revoke(request, response);
 
         // 세션을 통째로 삭제 → 번호표가 무효가 됨
         HttpSession session = request.getSession(false);

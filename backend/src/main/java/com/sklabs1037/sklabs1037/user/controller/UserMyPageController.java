@@ -39,6 +39,10 @@ public class UserMyPageController {
     @Autowired
     private IUserMyPageService userMyPageService;
 
+    // 🔑 로그인 유지 표: 비밀번호를 바꾸거나 탈퇴하면 모든 기기의 표를 지움
+    @Autowired
+    private com.sklabs1037.sklabs1037.user.keep.KeepLoginService keepLoginService;
+
     // 내 정보
     @GetMapping
     public ResponseEntity<Map<String, Object>> myInfo(HttpServletRequest request) {
@@ -103,7 +107,8 @@ public class UserMyPageController {
     // 비밀번호 변경
     @PostMapping("/password")
     public ResponseEntity<Map<String, Object>> changePassword(@RequestBody UserMyPageVO vo,
-                                                              HttpServletRequest request) {
+                                                              HttpServletRequest request,
+                                                              jakarta.servlet.http.HttpServletResponse response) {
 
         UserLoginVO loginUser = getLoginUser(request);
         if (loginUser == null) return fail(HttpStatus.UNAUTHORIZED, "로그인 후 이용할 수 있습니다.");
@@ -111,6 +116,10 @@ public class UserMyPageController {
         try {
 
             userMyPageService.changePassword(loginUser.getId(), vo.getCurrentPassword(), vo.getNewPassword());
+
+            // 다른 기기는 모두 로그아웃되게 표를 지우고, 지금 이 기기에는 새 표를 줌
+            keepLoginService.revokeAll(loginUser.getId());
+            keepLoginService.issue(loginUser.getId(), response);
 
             return ok();
 
@@ -134,7 +143,8 @@ public class UserMyPageController {
 
             userMyPageService.withdraw(loginUser.getId(), vo.getCurrentPassword(), vo.getConfirmText());
 
-            // 탈퇴하면 바로 로그아웃
+            // 탈퇴하면 바로 로그아웃 (로그인 유지 표도 모두 지움)
+            keepLoginService.revokeAll(loginUser.getId());
             HttpSession session = request.getSession(false);
             if (session != null) session.invalidate();
 

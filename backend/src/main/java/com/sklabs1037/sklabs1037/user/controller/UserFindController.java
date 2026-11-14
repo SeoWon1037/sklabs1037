@@ -48,6 +48,10 @@ public class UserFindController {
     @Autowired
     private IUserFindService userFindService;
 
+    // 🔑 비밀번호를 다시 정하면 예전에 로그인해 둔 기기의 로그인 유지 표를 모두 지움
+    @Autowired
+    private com.sklabs1037.sklabs1037.user.keep.KeepLoginService keepLoginService;
+
     // ============================================
     // 아이디 찾기
     // ============================================
@@ -161,6 +165,8 @@ public class UserFindController {
         if (!userFindService.resetPassword(email, password)) {
             return fail(HttpStatus.BAD_REQUEST, "비밀번호를 변경할 수 없는 계정입니다.");
         }
+
+        keepLoginService.revokeAllByEmail(email);
 
         // 한 번 쓴 인증은 끝
         session.removeAttribute(RESET_EMAIL);

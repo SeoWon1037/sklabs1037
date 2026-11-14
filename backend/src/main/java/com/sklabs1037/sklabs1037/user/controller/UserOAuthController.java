@@ -52,6 +52,9 @@ public class UserOAuthController {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
+    @Autowired
+    private com.sklabs1037.sklabs1037.user.keep.KeepLoginService keepLoginService;
+
     // 예측 불가능한 랜덤값 생성기
     private final SecureRandom random = new SecureRandom();
 
@@ -80,9 +83,10 @@ public class UserOAuthController {
     public ResponseEntity<Void> naverCallback(@RequestParam(required = false) String code,
                                               @RequestParam(required = false) String state,
                                               @RequestParam(required = false) String error,
-                                              HttpServletRequest request) {
+                                              HttpServletRequest request,
+                                              jakarta.servlet.http.HttpServletResponse response) {
 
-        return handleCallback(request, NAVER_STATE, code, state, error,
+        return handleCallback(request, response, NAVER_STATE, code, state, error,
                 () -> userOAuthService.loginWithNaver(code, state));
 
     }
@@ -106,9 +110,10 @@ public class UserOAuthController {
     public ResponseEntity<Void> kakaoCallback(@RequestParam(required = false) String code,
                                               @RequestParam(required = false) String state,
                                               @RequestParam(required = false) String error,
-                                              HttpServletRequest request) {
+                                              HttpServletRequest request,
+                                              jakarta.servlet.http.HttpServletResponse response) {
 
-        return handleCallback(request, KAKAO_STATE, code, state, error,
+        return handleCallback(request, response, KAKAO_STATE, code, state, error,
                 () -> userOAuthService.loginWithKakao(code));
 
     }
@@ -129,6 +134,7 @@ public class UserOAuthController {
 
     // 돌아온 요청 처리 (네이버/카카오 공통 흐름)
     private ResponseEntity<Void> handleCallback(HttpServletRequest request,
+                                                jakarta.servlet.http.HttpServletResponse response,
                                                 String stateKey,
                                                 String code,
                                                 String state,
@@ -163,7 +169,11 @@ public class UserOAuthController {
 
             // 5. 일반 로그인과 "같은 이름(LOGIN_USER), 같은 모양(UserLoginVO)"으로 저장
             //    → 상단바의 /api/user/me 가 코드 수정 없이 소셜 회원도 알아봄
-            session.setAttribute(UserLoginController.LOGIN_USER, toLoginUser(user));
+            UserLoginVO loginUser = toLoginUser(user);
+            session.setAttribute(UserLoginController.LOGIN_USER, loginUser);
+
+            // 6. 🔑 로그인 유지 표 발급 (서버가 다시 켜져도 풀리지 않게)
+            keepLoginService.issue(loginUser.getId(), response);
 
             return result("success");
 

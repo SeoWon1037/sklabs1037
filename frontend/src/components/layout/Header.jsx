@@ -15,6 +15,7 @@ import { acceptRef } from '../../invite'
 import './Header.css'
 import './HeaderUser.css'
 import CommandPalette from './CommandPalette'
+import { openVoice } from '../../voice/aiActed'
 
 // 상단 메뉴: 큰 목록은 둘뿐 — 투자(첫 화면) · 중고거래
 // - 지금 있는 쪽의 작은 메뉴가 그 옆에 이어서 나옴 (나머지는 ☰ 전체 메뉴에서)
@@ -137,6 +138,10 @@ function Header() {
         {/* 오른쪽 버튼 영역 */}
         <div className="header-actions">
           <CommandPalette />
+          {/* 🎤 말로 시키기 (오른쪽 아래 동그란 버튼과 같은 것 — 넓은 화면에서는 구석이라 잘 안 보여서 여기에도) */}
+          {!location.pathname.startsWith('/ai') && (
+            <button type="button" className="theme-toggle hdr-voice" onClick={openVoice} aria-label="말로 시키기 (AI 챗봇)" title="말로 시키기 (AI 챗봇)">🎤</button>
+          )}
           <button
             type="button"
             className="theme-toggle"

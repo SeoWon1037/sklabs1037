@@ -15,7 +15,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { canListen, listen, speak, stopSpeaking } from '../../voice/speech'
 import { voiceIntent } from '../../voice/voiceIntent'
 import { alwaysOn, onAlwaysChange, setAlways, wakeCommand } from '../../voice/alwaysListen'
-import { aiActed } from '../../voice/aiActed'
+import { aiActed, onOpenVoice } from '../../voice/aiActed'
 import './VoiceCommand.css'
 
 const EXAMPLES = ['오늘 날씨 어때?', '커플한테 하트 보내줘', '토요일 7시 데이트 잡아줘', '모의투자 열어줘', '삼성전자 주가 보여줘']
@@ -155,6 +155,11 @@ function VoiceCommand() {
     if (supported) start()
   }
 
+  // 상단의 🎤 버튼을 눌렀을 때도 같은 시트를 엶
+  const opener = useRef(null)
+  useEffect(() => { opener.current = openSheet })
+  useEffect(() => onOpenVoice(() => opener.current?.()), [])
+
   // 부르는 말을 들었을 때: 부르기만 했으면 "네" 하고 시트를 열어 다음 말을 듣고, 뒤에 시킬 말이 있으면 바로 실행
   useEffect(() => {
     wake.current = (command) => {
@@ -226,6 +231,7 @@ function VoiceCommand() {
       <button type="button" className={`vc-fab ${RAISED.some((re) => re.test(pathname)) ? 'vc-fab-raised' : ''} ${live ? 'vc-fab-live' : ''}`} onClick={openSheet}
         aria-label={live ? '말로 시키기 (항상 듣는 중: 챗봇아 하고 불러 보세요)' : '말로 시키기'} title={live ? '항상 듣는 중 · “챗봇아”라고 불러 보세요' : '말로 시키기'}>
         <span aria-hidden="true">🎤</span>
+        <b className="vc-fab-label">말하기</b>
       </button>
 
       {open && createPortal(

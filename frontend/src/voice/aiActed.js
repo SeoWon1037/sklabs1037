@@ -6,6 +6,14 @@ const EVENT = 'sklabs:ai-acted'
 
 export const aiActed = (tools) => window.dispatchEvent(new CustomEvent(EVENT, { detail: tools ?? [] }))
 
+// 🎤 상단 버튼 등 어디서든 "말로 시키기" 시트를 열기
+const OPEN = 'sklabs:voice-open'
+export const openVoice = () => window.dispatchEvent(new CustomEvent(OPEN))
+export const onOpenVoice = (fn) => {
+  window.addEventListener(OPEN, fn)
+  return () => window.removeEventListener(OPEN, fn)
+}
+
 // 해제 함수를 돌려줌 (useEffect에서 그대로 return)
 export const onAiActed = (fn) => {
   const handler = (e) => fn(e.detail)

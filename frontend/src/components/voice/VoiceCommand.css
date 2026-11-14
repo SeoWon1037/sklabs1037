@@ -5,6 +5,13 @@
 .vc-fab:hover { background: var(--primary-hover); }
 .vc-fab-raised { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }   /* 상품 화면: 아래에 붙은 찜 · 채팅 줄 위로 */
 
+/* 넓은 화면: 구석의 동그라미만으로는 눈에 안 띄어서 "말하기" 글자를 붙인 알약 모양으로 */
+.vc-fab-label { display: none; }
+@media (min-width: 1000px) {
+  .vc-fab { right: 24px; bottom: 24px; gap: 6px; width: auto; height: 52px; padding: 0 20px 0 16px; border-radius: 999px; font-size: 20px; }
+  .vc-fab-label { display: inline; font-size: 15px; font-weight: 700; }
+}
+
 /* 🟢 항상 듣는 중: 초록 테두리가 천천히 퍼짐 */
 .vc-fab-live { box-shadow: 0 6px 18px rgb(0 0 0 / 28%), 0 0 0 3px #22c55e; animation: vc-live 2.4s ease-in-out infinite; }
 @keyframes vc-live { 50% { box-shadow: 0 6px 18px rgb(0 0 0 / 28%), 0 0 0 7px color-mix(in srgb, #22c55e 35%, transparent); } }

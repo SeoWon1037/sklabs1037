@@ -26,6 +26,7 @@ export const SERVICES = {
   messages: { icon: '💬', label: '메시지', to: '/messages', color: '#22c55e', desc: '1:1 대화' },
   couple: { icon: '💕', label: '커플', to: '/couple', color: '#ec4899', desc: '함께한 날 세기' },
   pc: { icon: '🖥️', label: 'PC 프로그램 실행', to: '/pc', color: '#64748b', desc: '말로 내 PC 프로그램 켜기' },
+  brain: { icon: '🧠', label: '세컨드 브레인', to: '/brain', color: '#7F77DD', desc: '내 메모 · AI 정리' },
   plans: { icon: '🗓️', label: '내 약속', to: '/plans', color: '#6366f1', desc: '약속 알림 · 음성 브리핑' },
   about: { icon: '👤', label: '만든 사람', to: '/about', color: '#0ea5e9', desc: '경력 · 기술 스택' },
   app: { icon: '📲', label: '앱 설치', to: '/app', color: '#0ea5e9', desc: '휴대폰 · PC에 설치' },
@@ -44,6 +45,6 @@ export const CATEGORIES = [
   { title: '모의투자', icon: '💰', keys: ['mock', 'league', 'duel'] },
   { title: '놀이터', icon: '🎮', keys: ['whatif', 'predict', 'quiz', 'persona', 'tree', 'lotto'] },
   { title: '중고거래', icon: '🛍️', keys: ['market', 'sell', 'mymarket', 'messages'] },
-  { title: '내 공간', icon: '🙋', keys: ['messages', 'plans', 'pc', 'activity', 'couple', 'mypage'] },
+  { title: '내 공간', icon: '🙋', keys: ['messages', 'plans', 'brain', 'pc', 'activity', 'couple', 'mypage'] },
   { title: 'SKLabs', icon: '🧪', keys: ['support', 'ideas', 'status', 'app', 'about'] },
 ]

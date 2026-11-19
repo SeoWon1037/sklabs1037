@@ -88,7 +88,9 @@ public final class SchemaExpect {
             Map.entry("T_COUPLE_BIRTHDAY", "2026-11-14-02-couple-birthday.sql"),
             Map.entry("T_LOGIN_KEEP", "2026-11-14-03-login-keep.sql"),
             Map.entry("T_COUPLE_NOTE", "2026-11-14-05-couple-note.sql"),
-            Map.entry("T_PLAN_PHOTO", "2026-11-14-06-plan-photo.sql"));
+            Map.entry("T_PLAN_PHOTO", "2026-11-14-06-plan-photo.sql"),
+            Map.entry("T_BRAIN_NOTE", "2026-11-19-01-brain.sql"),
+            Map.entry("T_BRAIN_LINK", "2026-11-19-01-brain.sql"));
 
     // "표.칸" → 그 칸을 더하는 SQL 파일 (나중에 ALTER TABLE로 더한 칸만)
     public static final Map<String, String> COLUMNS = Map.ofEntries(

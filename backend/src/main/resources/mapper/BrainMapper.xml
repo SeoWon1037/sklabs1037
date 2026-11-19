@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 🧠 세컨드 브레인 (T_BRAIN_NOTE · T_BRAIN_LINK) — 모든 조회에 USER_ID 조건 -->
+<mapper namespace="com.sklabs1037.sklabs1037.brain.dao.BrainDao">
+
+    <!-- 찾을 말(like): 제목 · 본문 · 주제 중 하나에 들어 있으면 (like는 BrainRules.likeEscape 를 거친 글) -->
+    <sql id="likeWhere">
+        AND (   N.TITLE ILIKE '%' || #{like} || '%' ESCAPE '\'
+             OR N.BODY  ILIKE '%' || #{like} || '%' ESCAPE '\'
+             OR (',' || N.TOPICS || ',') ILIKE '%,' || #{like} || ',%' ESCAPE '\' )
+    </sql>
+
+    <select id="countNotes" resultType="int">
+        SELECT COUNT(*) FROM T_BRAIN_NOTE WHERE USER_ID = #{userId}
+    </select>
+
+    <select id="selectNotes" resultType="java.util.LinkedHashMap">
+        SELECT  N.ID                    AS "id"
+               ,N.KIND                  AS "kind"
+               ,N.TITLE                 AS "title"
+               ,N.TOPICS                AS "topics"
+               ,LEFT(N.BODY, 300)       AS "body"
+               ,TO_CHAR(N.UPDATED_AT, 'YYYY-MM-DD HH24:MI') AS "updatedAt"
+          FROM T_BRAIN_NOTE N
+         WHERE 1=1
+           AND N.USER_ID = #{userId}
+           <if test="kind != null">AND N.KIND = #{kind}</if>
+           <if test="like != null"><include refid="likeWhere"/></if>
+         ORDER BY N.UPDATED_AT DESC, N.ID DESC
+         LIMIT #{limit}
+    </select>
+
+    <select id="selectNote" resultType="java.util.LinkedHashMap">
+        SELECT  N.ID                    AS "id"
+               ,N.KIND                  AS "kind"
+               ,N.TITLE                 AS "title"
+               ,N.BODY                  AS "body"
+               ,N.TOPICS                AS "topics"
+               ,TO_CHAR(N.CREATED_AT, 'YYYY-MM-DD HH24:MI') AS "createdAt"
+               ,TO_CHAR(N.UPDATED_AT, 'YYYY-MM-DD HH24:MI') AS "updatedAt"
+          FROM T_BRAIN_NOTE N
+         WHERE N.ID = #{id}
+           AND N.USER_ID = #{userId}
+    </select>
+
+    <insert id="insertNote" parameterType="map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_BRAIN_NOTE (USER_ID, KIND, TITLE, BODY, TOPICS)
+        VALUES (#{userId}, #{kind}, #{title}, #{body}, #{topics})
+    </insert>
+
+    <update id="updateNote">
+        UPDATE T_BRAIN_NOTE
+           SET  TITLE      = #{title}
+               ,BODY       = #{body}
+               ,TOPICS     = #{topics}
+               ,UPDATED_AT = NOW()
+         WHERE ID = #{id}
+           AND USER_ID = #{userId}
+    </update>
+
+    <delete id="deleteNote">
+        DELETE FROM T_BRAIN_NOTE WHERE ID = #{id} AND USER_ID = #{userId}
+    </delete>
+
+    <insert id="insertLink">
+        INSERT INTO T_BRAIN_LINK (FROM_ID, TO_ID, USER_ID)
+        VALUES (#{fromId}, #{toId}, #{userId})
+        ON CONFLICT (FROM_ID, TO_ID) DO NOTHING
+    </insert>
+
+    <delete id="deleteLinksOf">
+        DELETE FROM T_BRAIN_LINK
+         WHERE USER_ID = #{userId}
+           AND (FROM_ID = #{id} OR TO_ID = #{id})
+    </delete>
+
+    <select id="selectLinkedTo" resultType="java.util.LinkedHashMap">
+        SELECT  N.ID AS "id", N.KIND AS "kind", N.TITLE AS "title"
+          FROM T_BRAIN_LINK L
+          JOIN T_BRAIN_NOTE N ON N.ID = L.TO_ID AND N.USER_ID = L.USER_ID
+         WHERE L.USER_ID = #{userId}
+           AND L.FROM_ID = #{id}
+         ORDER BY N.ID
+    </select>
+
+    <select id="selectLinkedFrom" resultType="java.util.LinkedHashMap">
+        SELECT  N.ID AS "id", N.KIND AS "kind", N.TITLE AS "title"
+          FROM T_BRAIN_LINK L
+          JOIN T_BRAIN_NOTE N ON N.ID = L.FROM_ID AND N.USER_ID = L.USER_ID
+         WHERE L.USER_ID = #{userId}
+           AND L.TO_ID = #{id}
+         ORDER BY N.ID DESC
+    </select>
+
+    <select id="selectGraphNotes" resultType="java.util.LinkedHashMap">
+        SELECT  N.ID AS "id", N.KIND AS "kind", N.TITLE AS "title", N.TOPICS AS "topics"
+          FROM T_BRAIN_NOTE N
+         WHERE N.USER_ID = #{userId}
+         ORDER BY N.UPDATED_AT DESC
+         LIMIT #{limit}
+    </select>
+
+    <select id="selectLinks" resultType="java.util.LinkedHashMap">
+        SELECT L.FROM_ID AS "fromId", L.TO_ID AS "toId"
+          FROM T_BRAIN_LINK L
+         WHERE L.USER_ID = #{userId}
+    </select>
+
+    <select id="searchRaw" resultType="java.util.LinkedHashMap">
+        SELECT  N.ID AS "id", N.TITLE AS "title", N.BODY AS "body", N.TOPICS AS "topics"
+          FROM T_BRAIN_NOTE N
+         WHERE 1=1
+           AND N.USER_ID = #{userId}
+           AND N.KIND = 'RAW'
+           <include refid="likeWhere"/>
+         ORDER BY N.UPDATED_AT DESC
+         LIMIT #{limit}
+    </select>
+
+    <select id="countWikiToday" resultType="int">
+        SELECT COUNT(*)
+          FROM T_BRAIN_NOTE
+         WHERE USER_ID = #{userId}
+           AND KIND = 'WIKI'
+           AND CREATED_AT &gt;= NOW() - INTERVAL '1 day'
+    </select>
+</mapper>

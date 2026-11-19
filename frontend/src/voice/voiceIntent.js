@@ -29,6 +29,7 @@ export const PAGES = [
   { to: '/mypage', label: '마이페이지', names: ['마이페이지', '마이 페이지', '내 정보'] },
   { to: '/couple', label: '커플', names: ['커플'] },
   { to: '/pc', label: 'PC 프로그램 실행', names: ['pc 프로그램 실행', 'pc 연결', '피씨 연결', 'pc 도우미'] },
+  { to: '/brain', label: '세컨드 브레인', names: ['세컨드 브레인', '세컨드브레인', '내 메모', '메모장'] },
   { to: '/plans', label: '내 약속', names: ['내 약속', '약속 목록', '음성 브리핑', '브리핑 설정'] },
   { to: '/lotto', label: '오늘의 숫자', names: ['오늘의 숫자', '로또'] },
   { to: '/support', label: '문의', names: ['문의하기', '고객센터', '문의'] },

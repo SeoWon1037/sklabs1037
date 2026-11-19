@@ -154,8 +154,21 @@ public class AiChatServiceImpl implements IAiChatService {
             tool("open_page",
                     "SKLabs의 화면을 연다. 사용자가 어떤 화면을 열어 달라 · 가 달라 · 보여 달라고 했을 때만 쓴다. 성공하면 사용자의 화면이 그 화면으로 바뀐다.",
                     Map.of("page", Map.of("type", "string", "enum", new ArrayList<>(AiChatRules.PAGES.keySet()),
-                            "description", "home=첫 화면, stock=주식 종목, mock=모의투자, market=중고거래, market_sell=판매하기, market_my=내 장터, messages=메시지, couple=커플, plans=내 약속·음성 브리핑, pc=PC 프로그램 실행(PC 도우미 연결), translate=번역, calendar=증시 일정, whatif=그때 샀더라면, league=AI 리그, predict=예측 게임, quiz=뉴스 퀴즈, persona=투자 성향 테스트, tree=글자 트리, duel=친구 대결, activity=내 활동, mypage=마이페이지, login=로그인, support=문의하기, about=만든 사람")),
+                            "description", "home=첫 화면, stock=주식 종목, mock=모의투자, market=중고거래, market_sell=판매하기, market_my=내 장터, messages=메시지, couple=커플, plans=내 약속·음성 브리핑, brain=세컨드 브레인(내 메모), pc=PC 프로그램 실행(PC 도우미 연결), translate=번역, calendar=증시 일정, whatif=그때 샀더라면, league=AI 리그, predict=예측 게임, quiz=뉴스 퀴즈, persona=투자 성향 테스트, tree=글자 트리, duel=친구 대결, activity=내 활동, mypage=마이페이지, login=로그인, support=문의하기, about=만든 사람")),
                     List.of("page")),
+            tool("save_memo",
+                    "사용자의 세컨드 브레인(메모장)에 메모를 하나 남긴다. 사용자가 메모 · 기록해 달라고 했을 때만 쓴다.",
+                    Map.of("text", Map.of("type", "string", "description", "남길 말 (사용자가 말한 그대로)"),
+                            "topics", Map.of("type", "array", "items", Map.of("type", "string"), "description", "주제 태그 0~3개 (예: spring)")),
+                    List.of("text")),
+            tool("search_memos",
+                    "사용자의 세컨드 브레인에서 찾을 말이 제목 · 본문 · 주제에 들어간 노트를 8개까지 찾는다 (id, kind, title, topics, snippet).",
+                    Map.of("query", Map.of("type", "string", "description", "찾을 말 (예: JPA)")),
+                    List.of("query")),
+            tool("organize_memos",
+                    "사용자의 메모 중 주제(query)가 들어간 것을 모아 AI가 정리 문서를 만들고 저장한다. 성공하면 사용자 화면에 그 문서가 열린다. 하루 20번까지.",
+                    Map.of("query", Map.of("type", "string", "description", "정리할 주제 낱말 (예: Spring)")),
+                    List.of("query")),
             tool("search_market",
                     "SKLabs 중고거래 장터에서 지금 판매 중인 상품을 찾는다. 제목 · 가격(원) · 지역 · 판매자를 최대 8개 준다.",
                     Map.of("query", Map.of("type", "string", "description", "찾을 낱말 (예: 아이폰 15)"),
@@ -195,6 +208,9 @@ public class AiChatServiceImpl implements IAiChatService {
 
     @Autowired
     private com.sklabs1037.sklabs1037.market.service.MarketService marketService;
+
+    @Autowired
+    private com.sklabs1037.sklabs1037.brain.service.BrainService brainService;
 
     @Autowired
     private com.sklabs1037.sklabs1037.plan.service.VoiceBriefService voiceBriefService;
@@ -328,7 +344,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     } else {
                         out = needLogin ? AiChatRules.loginRequired(toolName) : runTool(toolName, input, userId);
                     }
-                    if ("open_page".equals(toolName) && out instanceof Map<?, ?> opened) navigate = String.valueOf(opened.get("open"));
+                    if (("open_page".equals(toolName) || "organize_memos".equals(toolName)) && out instanceof Map<?, ?> opened && opened.get("open") != null) navigate = String.valueOf(opened.get("open"));
                     if ("open_website".equals(toolName) && out instanceof Map<?, ?> site) openUrl = String.valueOf(site.get("openUrl"));
                     collectSources(toolName, input, out, sources);
                     // 기사 주소는 화면용 (AI에게는 안 보냄 → 토큰 절약)
@@ -425,6 +441,7 @@ public class AiChatServiceImpl implements IAiChatService {
                     addSource(sources, "DOC", str(r.get("name")) + " · " + str(r.get("title")), str(r.get("symbol")), "/stock?symbol=" + str(r.get("symbol"))));
             case "get_my_mock_portfolio" -> addSource(sources, "MOCK", "내 모의투자 계좌", "", "/mock");
             case "add_plan", "list_plans" -> addSource(sources, "PLAN", "내 약속", "", "/plans");
+            case "save_memo", "search_memos", "organize_memos" -> addSource(sources, "BRAIN", "세컨드 브레인", "", "/brain");
             case "search_market" -> {
                 if (out instanceof Map<?, ?> m && m.get("items") instanceof List<?> items) {
                     items.stream().limit(5).forEach(o -> {
@@ -708,6 +725,30 @@ public class AiChatServiceImpl implements IAiChatService {
 
             }
 
+            case "save_memo": {
+
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+                Map<String, Object> note = brainService.create(userId, "RAW", null, input.get("text"), input.get("topics"), null);
+                return Map.of("saved", Map.of("id", note.get("id"), "title", note.get("title"), "topics", note.get("topics")));
+
+            }
+
+            case "search_memos": {
+
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+                return Map.of("memos", brainService.search(userId, input.get("query")));
+
+            }
+
+            case "organize_memos": {
+
+                if (userId == null) throw new IllegalArgumentException("로그인 정보가 없습니다.");
+                Map<String, Object> wiki = brainService.organize(userId, input.get("query"));
+                // 화면이 이 주소로 이동해서 정리 문서를 보여 줌 (AgentResult.navigate)
+                return Map.of("open", "/brain?note=" + wiki.get("id"), "title", wiki.get("title"), "memoCount", wiki.get("sourceCount"));
+
+            }
+
             case "search_market": {
 
                 return searchMarket(str(input.get("query")), input.get("max_price"));
@@ -810,6 +851,9 @@ public class AiChatServiceImpl implements IAiChatService {
             case "launch_program"     -> "🖥️ 프로그램 실행 (" + str(input.get("name")) + ")";
             case "open_website"       -> "🌐 사이트 열기 (" + str(input.get("site")) + (str(input.get("query")).isBlank() ? "" : " · " + str(input.get("query"))) + ")";
             case "open_page"          -> "🧭 화면 열기 (" + str(input.get("page")) + ")";
+            case "save_memo"          -> "🧠 메모 남기기";
+            case "search_memos"       -> "🧠 메모 찾기 (" + str(input.get("query")) + ")";
+            case "organize_memos"     -> "🧠 메모 정리 (" + str(input.get("query")) + ")";
             case "search_market"      -> "🛍️ 장터 검색 (" + str(input.get("query")) + ")";
             case "screen_stocks"      -> "조건 검색 (" + describeScreen(input) + ")";
             default                   -> toolName;

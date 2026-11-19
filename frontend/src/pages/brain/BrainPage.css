@@ -1,0 +1,64 @@
+/* 🧠 세컨드 브레인 (brain-) */
+.brain-page { max-width: 1000px; margin: 0 auto; padding: 24px 16px 56px; }
+.brain-page h1 { margin: 0; font-size: 24px; }
+.brain-muted { margin: 8px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.brain-login { display: inline-flex; margin-top: 16px; }
+
+.brain-graph-card { position: relative; margin-top: 18px; overflow: hidden; border-radius: 18px; background: #0d1220; }
+.brain-canvas { display: block; width: 100%; height: 280px; }
+.brain-loading { display: flex; align-items: center; justify-content: center; color: #8fa3d6; font-size: 13px; }
+.brain-legend { position: absolute; top: 10px; left: 12px; right: 12px; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: #c9d2ee; font-size: 12px; pointer-events: none; }
+.brain-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.brain-legend i { width: 9px; height: 9px; border-radius: 50%; }
+.brain-legend .brain-hub-dot { width: 11px; height: 11px; border: 1.5px solid #fff; background: #7F77DD; }
+.brain-legend b { margin-left: auto; font-weight: 600; color: #fff; }
+.brain-empty { position: absolute; inset: auto 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; background: rgba(13, 18, 32, 0.85); color: #dfe5f7; font-size: 13px; text-align: center; }
+.brain-empty p { margin: 0; }
+
+.brain-organize { margin-top: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 16px; }
+.brain-organize label { display: block; margin-bottom: 8px; font-size: 15px; font-weight: 700; }
+.brain-organize > div { display: flex; gap: 8px; }
+.brain-organize input, .brain-search, .brain-edit input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font-size: 16px; }
+.brain-organize button { flex: none; min-height: 44px; }
+.brain-msg { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--primary) 10%, transparent); font-size: 13px; }
+
+.brain-viewer { margin-top: 16px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; scroll-margin-top: 80px; }
+.brain-viewer-top { display: flex; align-items: center; justify-content: space-between; }
+.brain-badge { padding: 3px 9px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 600; }
+.brain-x { width: 36px; height: 36px; border: none; border-radius: 10px; background: transparent; color: var(--text-muted); font-size: 16px; cursor: pointer; }
+.brain-viewer h2 { margin: 10px 0 0; font-size: 20px; word-break: keep-all; }
+.brain-topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.brain-topics button { padding: 3px 9px; border: none; border-radius: 999px; background: color-mix(in srgb, #7F77DD 16%, transparent); color: #6d64d6; font-size: 12px; cursor: pointer; }
+.brain-body { margin-top: 12px; font-size: 15px; line-height: 1.75; }
+.brain-body h3 { margin: 18px 0 4px; font-size: 16px; }
+.brain-body p { margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
+.brain-body ul { margin: 4px 0; padding-left: 20px; }
+.brain-ref { margin: 0 2px; padding: 0 6px; border: none; border-radius: 6px; background: color-mix(in srgb, #E24B4A 14%, transparent); color: #c53a39; font-size: 12px; cursor: pointer; }
+.brain-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; font-size: 13px; }
+.brain-links b { margin-right: 4px; color: var(--text-muted); font-weight: 600; }
+.brain-links button { max-width: 100%; overflow: hidden; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.brain-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.brain-actions .btn { min-height: 42px; }
+.brain-danger { color: #e5484d; }
+.brain-edit { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.brain-edit textarea, .brain-card textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font: inherit; font-size: 16px; line-height: 1.6; resize: vertical; }
+
+.brain-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 16px; }
+.brain-card { min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: 16px; }
+.brain-card h2 { margin: 0 0 12px; font-size: 16px; }
+.brain-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.brain-filters button { min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 13px; cursor: pointer; }
+.brain-filters button.on { border-color: var(--primary); background: var(--primary); color: #fff; }
+.brain-search { width: 100%; box-sizing: border-box; }
+.brain-list { display: flex; flex-direction: column; gap: 6px; max-height: 460px; margin: 10px 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.brain-list button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.brain-list button.on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.brain-list i { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.brain-list span { display: flex; flex-direction: column; min-width: 0; }
+.brain-list b { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.brain-list small { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .brain-grid { grid-template-columns: 1fr; }
+  .brain-organize > div { flex-direction: column; }
+}

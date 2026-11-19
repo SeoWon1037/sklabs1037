@@ -18,7 +18,7 @@ import { voiceIntent } from '../../voice/voiceIntent'
 import { launchByName, openSite, tryLaunch, tryMouse } from '../../pc/pcHelper'
 
 // 🧾 답변 근거 종류
-const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속', MARKET: '장터' }
+const SOURCE_TYPE = { NEWS: '뉴스', STOCK: '종목', DOC: '문서', MOCK: '내 계좌', DATA: '데이터', PLAN: '약속', MARKET: '장터', BRAIN: '메모' }
 import './AiChatPage.css'
 
 // 예시 질문 (처음 화면에 버튼으로 표시)

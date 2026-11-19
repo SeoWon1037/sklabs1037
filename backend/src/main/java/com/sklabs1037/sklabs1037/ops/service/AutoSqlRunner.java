@@ -52,6 +52,7 @@ public class AutoSqlRunner {
     // 마지막 실행 결과 (자가 점검이 읽음)
     private volatile Map<String, Object> last = Map.of("ran", false);
 
+    @org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)   // 표를 먼저 만들고 나서 다른 시작 작업
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
 

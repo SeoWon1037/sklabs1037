@@ -30,6 +30,13 @@
 .brain-topics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .brain-topics button { padding: 3px 9px; border: none; border-radius: 999px; background: color-mix(in srgb, #7F77DD 16%, transparent); color: #6d64d6; font-size: 12px; cursor: pointer; }
 .brain-body { margin-top: 12px; font-size: 15px; line-height: 1.75; }
+.brain-body h4 { margin: 14px 0 2px; font-size: 15px; }
+.brain-code { margin: 8px 0; padding: 12px; overflow-x: auto; border-radius: 10px; background: #0d1220; color: #dfe5f7; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+.brain-import { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 14px 16px; border: 1px solid color-mix(in srgb, #7F77DD 40%, var(--border)); border-radius: 16px; background: color-mix(in srgb, #7F77DD 7%, transparent); }
+.brain-import > div { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
+.brain-import b { font-size: 14px; }
+.brain-import span, .brain-import small { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.brain-import .btn { flex: none; min-height: 40px; }
 .brain-body h3 { margin: 18px 0 4px; font-size: 16px; }
 .brain-body p { margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
 .brain-body ul { margin: 4px 0; padding-left: 20px; }
@@ -59,6 +66,7 @@
 .brain-list small { overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (max-width: 720px) {
+  .brain-import { flex-direction: column; align-items: stretch; }
   .brain-grid { grid-template-columns: 1fr; }
   .brain-organize > div { flex-direction: column; }
 }

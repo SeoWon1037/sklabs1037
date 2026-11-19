@@ -22,6 +22,7 @@
                ,N.TOPICS                AS "topics"
                ,LEFT(N.BODY, 300)       AS "body"
                ,TO_CHAR(N.UPDATED_AT, 'YYYY-MM-DD HH24:MI') AS "updatedAt"
+               ,N.SOURCE_KEY            AS "sourceKey"
           FROM T_BRAIN_NOTE N
          WHERE 1=1
            AND N.USER_ID = #{userId}
@@ -39,6 +40,7 @@
                ,N.TOPICS                AS "topics"
                ,TO_CHAR(N.CREATED_AT, 'YYYY-MM-DD HH24:MI') AS "createdAt"
                ,TO_CHAR(N.UPDATED_AT, 'YYYY-MM-DD HH24:MI') AS "updatedAt"
+               ,N.SOURCE_KEY            AS "sourceKey"
           FROM T_BRAIN_NOTE N
          WHERE N.ID = #{id}
            AND N.USER_ID = #{userId}
@@ -124,5 +126,50 @@
          WHERE USER_ID = #{userId}
            AND KIND = 'WIKI'
            AND CREATED_AT &gt;= NOW() - INTERVAL '1 day'
+    </select>
+
+    <!-- ===== 📥 사이트 코드 기록 ===== -->
+    <select id="selectSourceNote" resultType="java.util.LinkedHashMap">
+        SELECT  ID           AS "id"
+               ,SOURCE_HASH  AS "storedHash"
+               ,MD5(BODY)    AS "bodyHash"
+          FROM T_BRAIN_NOTE
+         WHERE USER_ID = #{userId}
+           AND SOURCE_KEY = #{key}
+    </select>
+
+    <select id="countSeen" resultType="int">
+        SELECT COUNT(*) FROM T_BRAIN_SEEN WHERE USER_ID = #{userId} AND SOURCE_KEY = #{key}
+    </select>
+
+    <insert id="insertSeen">
+        INSERT INTO T_BRAIN_SEEN (USER_ID, SOURCE_KEY) VALUES (#{userId}, #{key})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <insert id="insertSourceNote" parameterType="map" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO T_BRAIN_NOTE (USER_ID, KIND, TITLE, BODY, TOPICS, SOURCE_KEY, SOURCE_HASH)
+        VALUES (#{userId}, #{kind}, #{title}, #{body}, #{topics}, #{key}, #{hash})
+    </insert>
+
+    <update id="updateSourceNote">
+        UPDATE T_BRAIN_NOTE
+           SET  TITLE       = #{title}
+               ,BODY        = #{body}
+               ,TOPICS      = #{topics}
+               ,SOURCE_HASH = #{hash}
+               ,UPDATED_AT  = NOW()
+         WHERE USER_ID = #{userId}
+           AND ID = #{id}
+           AND MD5(BODY) = SOURCE_HASH
+    </update>
+
+    <!-- 한 번이라도 받은 사람 (서버가 켜질 때 새 기록을 자동으로 넣어 줄 대상) -->
+    <select id="selectImportUsers" resultType="long">
+        SELECT DISTINCT USER_ID FROM T_BRAIN_SEEN
+    </select>
+
+    <select id="countImported" resultType="int">
+        SELECT COUNT(*) FROM T_BRAIN_NOTE WHERE USER_ID = #{userId} AND SOURCE_KEY IS NOT NULL
     </select>
 </mapper>

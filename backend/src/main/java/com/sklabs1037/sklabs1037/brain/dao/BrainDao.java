@@ -48,4 +48,23 @@ public interface BrainDao {
 
     // 최근 24시간 동안 만든 WIKI 수 — AI 정리 하루 한도
     int countWikiToday(Long userId);
+
+    // ===== 📥 사이트 코드 기록 (BrainImportService) =====
+    // { id, storedHash, bodyHash } (없으면 null)
+    Map<String, Object> selectSourceNote(@Param("userId") Long userId, @Param("key") String key);
+
+    int countSeen(@Param("userId") Long userId, @Param("key") String key);
+
+    int insertSeen(@Param("userId") Long userId, @Param("key") String key);
+
+    // row: { userId, kind, title, body, topics, key, hash } → 저장 후 row.id
+    int insertSourceNote(Map<String, Object> row);
+
+    // 내가 고치지 않은 노트만 바뀜 (MD5(BODY) = SOURCE_HASH) → 바뀐 줄 수
+    int updateSourceNote(@Param("userId") Long userId, @Param("id") Long id, @Param("title") String title, @Param("body") String body, @Param("topics") String topics, @Param("hash") String hash);
+
+    List<Long> selectImportUsers();
+
+    int countImported(Long userId);
+
 }

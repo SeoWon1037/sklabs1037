@@ -90,7 +90,8 @@ public final class SchemaExpect {
             Map.entry("T_COUPLE_NOTE", "2026-11-14-05-couple-note.sql"),
             Map.entry("T_PLAN_PHOTO", "2026-11-14-06-plan-photo.sql"),
             Map.entry("T_BRAIN_NOTE", "2026-11-19-01-brain.sql"),
-            Map.entry("T_BRAIN_LINK", "2026-11-19-01-brain.sql"));
+            Map.entry("T_BRAIN_LINK", "2026-11-19-01-brain.sql"),
+            Map.entry("T_BRAIN_SEEN", "2026-11-19-02-brain-import.sql"));
 
     // "표.칸" → 그 칸을 더하는 SQL 파일 (나중에 ALTER TABLE로 더한 칸만)
     public static final Map<String, String> COLUMNS = Map.ofEntries(
@@ -110,7 +111,9 @@ public final class SchemaExpect {
             Map.entry("T_STOCK.HISTORY_DAY", "stock-history.sql"),
             Map.entry("T_STOCK.SHARES_OUTSTANDING", "stock-shares.sql"),
             Map.entry("T_PLAN.SHARED_YN", "2026-11-14-04-plan-shared-repeat.sql"),
-            Map.entry("T_PLAN.REPEAT_ID", "2026-11-14-04-plan-shared-repeat.sql"));
+            Map.entry("T_PLAN.REPEAT_ID", "2026-11-14-04-plan-shared-repeat.sql"),
+            Map.entry("T_BRAIN_NOTE.SOURCE_KEY", "2026-11-19-02-brain-import.sql"),
+            Map.entry("T_BRAIN_NOTE.SOURCE_HASH", "2026-11-19-02-brain-import.sql"));
 
     /**
      * @param tables  실제 DB에 있는 표 이름들 (대문자)

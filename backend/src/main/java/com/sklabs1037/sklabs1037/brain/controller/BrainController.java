@@ -1,5 +1,7 @@
 package com.sklabs1037.sklabs1037.brain.controller;
 
+import com.sklabs1037.sklabs1037.admin.service.IAdminFeedbackService;
+import com.sklabs1037.sklabs1037.brain.service.BrainImportService;
 import com.sklabs1037.sklabs1037.brain.service.BrainService;
 import com.sklabs1037.sklabs1037.user.controller.UserLoginController;
 import com.sklabs1037.sklabs1037.user.vo.UserLoginVO;
@@ -26,6 +28,8 @@ import java.util.Map;
  *   GET  /api/brain/graph                 그래프 { nodes, hubs, edges }
  *   POST /api/brain/organize              🤖 AI 정리 { query } → { note } (WIKI, 하루 20번)
  *   POST /api/brain/sample                예시 메모 6개 (노트가 없을 때만)
+ *   GET  /api/brain/import                📥 SKLabs 스프링 코드 기록 상태 { admin, available, imported, on }
+ *   POST /api/brain/import                📥 받기 (관리자만) → { added, updated } — 그 뒤로는 배포 때마다 자동
  */
 @Slf4j
 @RestController
@@ -34,6 +38,12 @@ public class BrainController {
 
     @Autowired
     private BrainService brainService;
+
+    @Autowired
+    private BrainImportService brainImportService;
+
+    @Autowired
+    private IAdminFeedbackService adminFeedbackService;
 
     @GetMapping("/notes")
     public ResponseEntity<Map<String, Object>> list(@RequestParam(required = false) String kind, @RequestParam(required = false) String q, HttpServletRequest request) {
@@ -115,6 +125,33 @@ public class BrainController {
         if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
 
         return run("예시 메모", () -> Map.of("added", brainService.sample(userId)));
+
+    }
+
+    // 📥 SKLabs 스프링 코드 기록 (사이트를 만든 사람 = 관리자만)
+    @GetMapping("/import")
+    public ResponseEntity<Map<String, Object>> importStatus(HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+        if (!adminFeedbackService.isAdmin(userId)) return run("코드 기록", () -> Map.of("admin", false));
+
+        return run("코드 기록", () -> {
+            Map<String, Object> m = new HashMap<>(brainImportService.status(userId));
+            m.put("admin", true);
+            return m;
+        });
+
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<Map<String, Object>> importNotes(HttpServletRequest request) {
+
+        Long userId = userId(request);
+        if (userId == null) return fail(HttpStatus.UNAUTHORIZED, "로그인이 필요해요.");
+        if (!adminFeedbackService.isAdmin(userId)) return fail(HttpStatus.FORBIDDEN, "관리자만 받을 수 있어요.");
+
+        return run("코드 기록 받기", () -> brainImportService.sync(userId));
 
     }
 

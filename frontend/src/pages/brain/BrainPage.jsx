@@ -36,22 +36,80 @@ function Inline({ text, onOpen }) {
   })
 }
 
-// 본문: "## 제목", "- 항목", 나머지는 문단 (HTML로 넣지 않음 → 안전)
+// 본문: "## 제목", "### 작은 제목", "- 항목", ``` 코드 ```, `코드`, 나머지는 문단 (HTML로 넣지 않음 → 안전)
 function NoteBody({ body, onOpen }) {
   const blocks = []
   let list = null
+  let code = null
   body.split('\n').forEach((line, i) => {
     const t = line.trim()
+    if (code) {
+      if (t.startsWith('```')) { blocks.push(<pre key={`c${i}`} className="brain-code"><code>{code.join('\n')}</code></pre>); code = null }
+      else code.push(line)
+      return
+    }
+    if (t.startsWith('```')) { code = []; list = null; return }
     if (t.startsWith('- ')) {
       if (!list) { list = []; blocks.push({ list }) }
       list.push(<li key={i}><Inline text={t.slice(2)} onOpen={onOpen} /></li>)
       return
     }
     list = null
-    if (t.startsWith('## ')) blocks.push(<h3 key={i}>{t.slice(3)}</h3>)
+    if (t.startsWith('### ')) blocks.push(<h4 key={i}>{t.slice(4)}</h4>)
+    else if (t.startsWith('## ')) blocks.push(<h3 key={i}>{t.slice(3)}</h3>)
     else if (t) blocks.push(<p key={i}><Inline text={t} onOpen={onOpen} /></p>)
   })
+  if (code) blocks.push(<pre key="c-end" className="brain-code"><code>{code.join('\n')}</code></pre>)
   return <div className="brain-body">{blocks.map((b, i) => (b.list ? <ul key={`u${i}`}>{b.list}</ul> : b))}</div>
+}
+
+// 📥 SKLabs 스프링 코드 기록 (관리자만 보임): 한 번 받으면 배포할 때마다 서버가 새 기록을 넣어 줌
+function CodeImport({ onDone }) {
+  const [st, setSt] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const load = useCallback(() => {
+    fetch('/api/brain/import')
+      .then((res) => res.json())
+      .then((json) => setSt(json.success && json.admin ? json : null))
+      .catch(() => setSt(null))
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  if (!st) return null
+
+  const pull = async () => {
+    setBusy(true)
+    setMsg('')
+    try {
+      const json = await post('/api/brain/import')
+      setMsg(json.added || json.updated ? `새로 ${json.added}개, 바뀜 ${json.updated}개` : '이미 최신이에요.')
+      load()
+      onDone()
+    } catch (e) {
+      setMsg(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="brain-import">
+      <div>
+        <b>📥 SKLabs 스프링 코드 기록</b>
+        <span>
+          {st.on
+            ? `자동 저장 중 · 내 브레인에 ${st.imported}개 · 업데이트(배포)할 때마다 새 기록이 들어와요`
+            : `패키지별 코드 요약 + 업데이트 기록 ${st.available}개를 내 브레인에 넣어요. 한 번 받으면 그 뒤로는 자동이에요.`}
+        </span>
+        {msg && <small>{msg}</small>}
+      </div>
+      <button type="button" className={`btn ${st.on ? '' : 'btn-primary'}`} onClick={pull} disabled={busy}>
+        {busy ? '받는 중…' : st.on ? '지금 다시 받기' : '받기'}
+      </button>
+    </section>
+  )
 }
 
 function BrainPage() {
@@ -207,6 +265,8 @@ function BrainPage() {
         <p className="brain-muted">흩어진 메모를 모으고, AI가 주제별로 정리해 줘요. 정리는 AI가, 남길지 말지는 내가.</p>
       </header>
 
+      <CodeImport onDone={reload} />
+
       <section className="brain-graph-card">
         <div className="brain-legend">
           {Object.entries(KIND_LABEL).map(([k, label]) => (
@@ -243,7 +303,7 @@ function BrainPage() {
       {note && (
         <article className="brain-viewer" ref={viewer}>
           <div className="brain-viewer-top">
-            <span className="brain-badge" style={{ background: KIND_COLOR[note.kind] }}>{KIND_LABEL[note.kind]}</span>
+            <span className="brain-badge" style={{ background: KIND_COLOR[note.kind] }}>{KIND_LABEL[note.kind]}{note.sourceKey ? ' · 📥 코드 기록' : ''}</span>
             <button type="button" className="brain-x" onClick={() => open(null)} aria-label="닫기">✕</button>
           </div>
           {editing ? (

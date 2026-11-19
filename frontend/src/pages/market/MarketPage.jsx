@@ -103,7 +103,7 @@ function MarketPage() {
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="어떤 물건을 찾으세요? (예: 아이폰, 자전거)"
+            placeholder="찾는 물건 (예: 아이폰, 자전거)"
             aria-label="상품 검색"
             maxLength={30}
             enterKeyHint="search"

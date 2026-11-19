@@ -104,13 +104,29 @@ function AiChatPage() {
   // 질문 보내기
   // ============================================
   // 🟢 항상 듣기: 이 화면에 들어오면 마이크를 바로 켜고, 말이 없어도 계속 듣고, 답한 뒤에도 다시 들음 ("챗봇아"라고 부르지 않아도 됨)
+  // ⏸ 관리자가 AI를 멈춰 두었으면(보류 중) 안내만 보여 주고 입력을 막음
+  const [paused, setPaused] = useState('')
+  const pausedRef = useRef('')
+  const pause = (message) => {
+    pausedRef.current = message || '이 기능은 현재 보류 중입니다.'
+    setPaused(pausedRef.current)
+    voiceRef.current?.stop()
+  }
+  useEffect(() => {
+    fetch('/api/ai/status')
+      .then((res) => res.json())
+      .then((json) => { if (json.paused) pause(json.message) })
+      .catch(() => {})
+  }, [])
+
   const [always] = useState(alwaysOn)
   useEffect(() => {
     if (!always || searchParams.get('voice') === '1' || searchParams.get('brief')) return undefined
-    const timer = setTimeout(() => voiceRef.current?.start(), 500)
+    const timer = setTimeout(() => { if (!pausedRef.current) voiceRef.current?.start() }, 500)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
 
   // 대화 기억은 항상 최신 것을 봐야 함 (다시 듣기에서 넘어온 예전 함수가 예전 대화를 붙잡고 있어도) → ref
   const messagesRef = useRef([])
@@ -121,7 +137,7 @@ function AiChatPage() {
   const sendMessage = async (text, byVoice = false) => {
 
     const question = text.trim()
-    if (question === '' || loading) return
+    if (question === '' || loading || pausedRef.current) return
 
     // 🧭 "커플 페이지 열어줘"처럼 화면을 열어 달라는 말은 AI에게 묻지 않고 바로 엶 (빠르고 비용 0)
     const intent = voiceIntent(question)
@@ -201,6 +217,7 @@ function AiChatPage() {
         if (talkRef.current) speak(data.answer, 'ko', byVoice || always ? () => { if (talkRef.current) voiceRef.current?.start() } : undefined)
         else if (always) setTimeout(() => voiceRef.current?.start(), 300)
       } else {
+        if (data.paused) pause(data.message)
         setMessages((prev) => [...prev, { role: 'ai', text: data.message, error: true, needLogin: data.loginRequired === true }])
       }
 
@@ -416,23 +433,26 @@ function AiChatPage() {
           </div>
         )}
 
+        {paused && <p className="ai-paused" role="status">⏸ {paused}</p>}
+
         {/* 입력창 */}
         <div className="ai-input-row">
           <textarea
             className="ai-input"
             rows={2}
             maxLength={500}
-            placeholder="무엇이든 물어보세요"
+            placeholder={paused ? '지금은 쓸 수 없어요' : '무엇이든 물어보세요'}
+            disabled={!!paused}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <VoiceButton ref={voiceRef} keep={always} onText={setInput} onFinal={(text) => { if (talkRef.current) sendMessage(text, true) }} disabled={loading} />
+          <VoiceButton ref={voiceRef} keep={always} onText={setInput} onFinal={(text) => { if (talkRef.current) sendMessage(text, true) }} disabled={loading || !!paused} />
           <button
             type="button"
             className="btn btn-primary ai-send"
             onClick={() => sendMessage(input)}
-            disabled={loading || input.trim() === ''}
+            disabled={loading || !!paused || input.trim() === ''}
           >
             보내기
           </button>

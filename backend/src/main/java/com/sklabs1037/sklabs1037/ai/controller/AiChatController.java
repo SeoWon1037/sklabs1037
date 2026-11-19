@@ -44,12 +44,30 @@ public class AiChatController {
     @Autowired
     private ClaudeApiClient claudeApiClient;
 
+    @Autowired
+    private com.sklabs1037.sklabs1037.ops.service.AiUsageService aiUsageService;
+
     // 세션의 로그인 정보에서 회원 ID를 꺼낼 때 사용
     @Autowired
     private JsonMapper jsonMapper;
 
     // "날짜:IP" → 로그인하지 않은 사람이 오늘 질문한 횟수 (서버 메모리)
     private final Map<String, Integer> anonymousCounts = new java.util.concurrent.ConcurrentHashMap<>();
+
+    // ============================================
+    // ⏸ 지금 AI를 쓸 수 있나 (관리자 긴급 정지면 화면이 "보류 중" 안내를 띄우고 입력을 막음)
+    // ============================================
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> status() {
+
+        boolean paused = aiUsageService.paused();
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", true);
+        body.put("paused", paused);
+        if (paused) body.put("message", com.sklabs1037.sklabs1037.ops.service.AiUsageService.PAUSED_MESSAGE);
+        return ResponseEntity.ok(body);
+
+    }
 
     // ============================================
     // 질문하기
@@ -123,6 +141,15 @@ public class AiChatController {
             body.put("navigate", result.getNavigate());   // 🧭 "커플 페이지 열어줘" → 화면이 이 주소로 이동
 
             return ResponseEntity.ok(body);
+
+        } catch (com.sklabs1037.sklabs1037.client.AiBudgetException e) {
+
+            // ⏸ 긴급 정지(보류 중) · 오늘 한도 → Claude를 부르지 않았음, 그 이유를 그대로 보여 줌
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", false);
+            body.put("paused", true);
+            body.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
 
         } catch (RestClientResponseException e) {
 

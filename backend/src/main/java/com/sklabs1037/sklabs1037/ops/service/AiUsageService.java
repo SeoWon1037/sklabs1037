@@ -80,7 +80,7 @@ public class AiUsageService {
 
         refresh(false);
 
-        if (paused) throw new AiBudgetException("AI 기능을 잠시 멈췄어요. (관리자 점검 중) 조금 뒤에 다시 시도해주세요.");
+        if (paused) throw new AiBudgetException(PAUSED_MESSAGE);
         if (todayCost >= limit()) throw new AiBudgetException("오늘 AI 사용량이 많아서 잠시 멈췄어요. 내일 다시 쓸 수 있어요.");
 
     }
@@ -139,6 +139,17 @@ public class AiUsageService {
         m.put("month", aiUsageDao.selectMonth());
         m.put("prices", prices());
         return m;
+
+    }
+
+    // ⏸ 관리자 긴급 정지(/admin/ai-cost) 중일 때 모든 AI 기능이 보여 주는 말
+    public static final String PAUSED_MESSAGE = "이 기능은 현재 보류 중입니다.";
+
+    // 화면 안내용: 관리자가 AI를 멈춰 두었나 (오늘 한도와는 별개)
+    public boolean paused() {
+
+        refresh(false);
+        return paused;
 
     }
 
